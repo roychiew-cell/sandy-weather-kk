@@ -65,7 +65,7 @@ def om(host, **q):
 # ---------------------------------------------------------------- official + airport
 metmy = fetch("metmalaysia_forecast", "https://api.data.gov.my/weather/forecast/?contains=Kota%20Kinabalu@location__location_name&limit=50")
 warn = fetch("metmalaysia_warnings", "https://api.data.gov.my/weather/warning/?limit=100")
-metar = fetch("wbkk_metar", "https://aviationweather.gov/api/data/metar?ids=WBKK&format=json&hours=36")
+metar = fetch("wbkk_metar", "https://aviationweather.gov/api/data/metar?ids=WBKK&format=json&hours=48")
 taf = fetch("wbkk_taf", "https://aviationweather.gov/api/data/taf?ids=WBKK&format=json")
 
 # ---------------------------------------------------------------- models
@@ -126,14 +126,16 @@ if prev and obs_y and len(obs_y) >= 18:
                         "window_mm": storm, "window_ge1mm": None if storm is None else storm >= 1.0}
 
 # ---------------------------------------------------------------- derive: forecasts per model, ensemble
-days = blend["daily"]["time"] if blend else []
+days = sorted({*(blend["daily"]["time"] if blend else []), *(det["daily"]["time"] if det else []), *(ens["daily"]["time"] if ens else [])})
 fc = {}
 if det:
     dd = det["daily"]
     for key, name in MODELS.items():
         sfx = "" if len(MODELS) == 1 else f"_{key}"
-        fc[name] = {"tmax": dd.get(f"temperature_2m_max{sfx}"), "tmin": dd.get(f"temperature_2m_min{sfx}"),
-                    "rain": dd.get(f"precipitation_sum{sfx}")}
+        idx = {d: i for i, d in enumerate(dd["time"])}
+        pick = lambda arr: [arr[idx[d]] if (arr and d in idx) else None for d in days]
+        fc[name] = {"tmax": pick(dd.get(f"temperature_2m_max{sfx}")), "tmin": pick(dd.get(f"temperature_2m_min{sfx}")),
+                    "rain": pick(dd.get(f"precipitation_sum{sfx}"))}
 ens_days = []
 if ens:
     e = ens["daily"]
@@ -145,7 +147,7 @@ if ens:
         if len(v) < 40:
             ens_days.append({"day": d, "n": len(v)}); continue
         n = len(v)
-        q = lambda p: round(v[min(n - 1, int(round((n - 1) * p)))], 1)   # nearest-rank on the sorted members
+        q = lambda p: round(v[min(n - 1, int(round((n - 1) * p)))], 1)   # sorted member at index round((n-1)*p); equals the linear-interpolation percentile position for n=51
         ens_days.append({"day": d, "n": n, "members": v,
                          "p1": round(100 * sum(x >= 1 for x in v) / n), "p10": round(100 * sum(x >= 10 for x in v) / n),
                          "p20": round(100 * sum(x >= 20 for x in v) / n),
@@ -162,20 +164,65 @@ metmy_out = {k: {"kind": {"Ds": "district", "Tn": "town", "St": "state"}.get(k[:
                  "name": v[0]["location"]["location_name"], "days": v} for k, v in metmy_by_id.items()}
 
 warnings = []
+import re
+MONTHS = {m: i + 1 for i, m in enumerate(["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"])}
+PLACES = ["Kota Kinabalu", "Western Sabah", "Eastern Sabah", "Labuan", "Kudat", "Sandakan", "Tawau", "Lahad Datu", "Interior", "Penampang", "Papar", "Tuaran", "Beaufort", "Kota Belud", "Ranau", "Layang-Layang", "Sulu", "Sulawesi", "Reef North", "Reef South", "Condore", "Sabah", "Sarawak", "Kelantan", "Terengganu", "Pahang", "Johor", "Selangor", "Perak", "Penang", "Kedah", "Perlis", "Melaka", "N. Sembilan", "Samui", "Tioman", "Phuket", "Straits Of Melaka"]
+
+
+def parse_date(s):
+    m = re.search(r"(\d{1,2})\s+([A-Z][a-z]+)\s+(\d{4})", s)
+    if not m or m.group(2) not in MONTHS:
+        return None
+    return f"{m.group(3)}-{MONTHS[m.group(2)]:02d}-{int(m.group(1)):02d}"
+
+
+def parse_time(s):
+    m = re.search(r"(\d{1,2})[:.](\d{2})\s*(AM|PM)", s, re.I)
+    if not m:
+        return None
+    h = int(m.group(1)) % 12 + (12 if m.group(3).upper() == "PM" else 0)
+    return f"{h:02d}:{m.group(2)}"
+
+
+def subsections(text):
+    """Split a MetMalaysia composite bulletin into numbered subsections with their own validity."""
+    parts = re.split(r"(?=(?:\b[IVX]+\)|\b\d\))\s)", text)
+    out = []
+    for p in parts:
+        p = p.strip()
+        if len(p) < 30 or not re.match(r"(?:[IVX]+|\d)\)", p):
+            continue
+        sub = {"text": p, "areas": [a for a in PLACES if a in p], "from": None, "to": None}
+        m = re.search(r"within the period of\s+(.+?)\s+until\s+(.+?)(?:\.|$)", p)
+        if m:
+            d1, d2 = parse_date(m.group(1)), parse_date(m.group(2))
+            if d1 and d2:
+                sub["from"], sub["to"] = d1 + "T00:00:00", d2 + "T23:59:59"
+        else:
+            m = re.search(r"until\s+(\d{1,2}[:.]\d{2}\s*(?:AM|PM))\s*;?\s*([A-Za-z]+,\s*\d{1,2}\s+[A-Z][a-z]+\s+\d{4})", p, re.I)
+            if m:
+                d, tm = parse_date(m.group(2)), parse_time(m.group(1))
+                if d and tm:
+                    sub["to"] = d + "T" + tm + ":00"
+        out.append(sub)
+    return out
+
+
 for w in warn or []:
     tx = w.get("text_en") or ""
     head = (w.get("heading_en") or w["warning_issue"].get("title_en") or "")
     kind = ("cyclone" if "cyclone" in (head + tx).lower() and "warning" not in head.lower()
             else "marine" if "SEAS" in head.upper() or "WIND" in head.upper()
             else "rain" if "RAIN" in head.upper() else "other")
-    # named areas we care about, as they appear in MetMalaysia text
-    areas = [a for a in ("Kota Kinabalu", "Western Sabah", "Eastern Sabah", "Labuan", "Sabah", "Kudat", "Sandakan", "Tawau", "Interior", "Penampang", "Papar", "Tuaran") if a in tx]
+    subs = subsections(tx)
     warnings.append({"issued": w["warning_issue"]["issued"], "heading": head, "kind": kind,
                      "valid_from": w.get("valid_from"), "valid_to": w.get("valid_to"), "text": tx,
-                     "areas": areas, "names_kk_land": "Kota Kinabalu" in tx and kind in ("rain", "other")})
+                     "areas": [a for a in PLACES if a in tx], "subsections": subs,
+                     "parsed": all(s["to"] for s in subs) and bool(subs),
+                     "names_kk_land": any("Kota Kinabalu" in s["text"] for s in subs) if subs else "Kota Kinabalu" in tx})
 seen, uniq = set(), []
 for w in warnings:
-    k = (w["heading"], w["valid_from"], w["valid_to"], w["text"][:120])
+    k = (w["heading"], w["text"][:400])
     if k not in seen:
         seen.add(k); uniq.append(w)
 
@@ -202,7 +249,7 @@ out = {
     "taf": taf_out, "metmy": metmy_out, "warnings": uniq, "warnings_retrieved": len(warn or []),
     "ens": ens_days, "scores": scores, "score_window": list(STORM_WINDOW), "fc": fc, "days": days,
     "blend": {"daily": blend["daily"], "hourly": {k: v[:72] for k, v in blend["hourly"].items()}, "units": blend.get("hourly_units")} if blend else None,
-    "aq": {"current": aq.get("current"), "units": aq.get("current_units"), "time_utc": (aq.get("current") or {}).get("time")} if aq else None,
+    "aq": {"current": aq.get("current"), "units": aq.get("current_units"), "time_myt": (aq.get("current") or {}).get("time")} if aq else None,
 }
 with open(os.path.join(ROOT, "data", "latest.json"), "w") as f:
     json.dump(out, f, separators=(",", ":"))

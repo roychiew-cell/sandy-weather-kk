@@ -1,18 +1,19 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sandy · Kota Kinabalu weather</title>
 <meta name="description" content="Sandy's live weather dashboard for Kota Kinabalu: MetMalaysia, KK airport readings, ECMWF ensemble and model comparison, refreshed twice a day.">
 <style>
-:root{--bg:#0b1624;--card:rgba(255,255,255,.07);--bd:rgba(255,255,255,.13);--tx:#eaf2fb;--mu:#9fb3c8;--ac:#5cc8ff;--wet:#4aa3ff;--hot:#ffb347;--ok:#5fe3a1;--bad:#ff6b6b;--warn:#ffd166}
+:root{--bg:#0b1624;--card:rgba(10,20,36,.55);--bd:rgba(255,255,255,.13);--tx:#eaf2fb;--mu:#a9bdd2;--ac:#5cc8ff;--wet:#4aa3ff;--hot:#ffb347;--ok:#5fe3a1;--bad:#ff6b6b;--warn:#ffd166}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 -apple-system,system-ui,Segoe UI,sans-serif}
 #sky{position:fixed;inset:0;width:100%;height:100%;z-index:0}
-main{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:20px 16px 60px}
+main{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:20px 16px 70px}
 h1{font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin:0 0 4px;font-weight:600}
 a{color:var(--ac)}
-.hero{display:flex;flex-wrap:wrap;gap:24px;align-items:center;padding:16px 0}
+.hero{display:flex;flex-wrap:wrap;gap:24px;align-items:center;padding:16px;background:var(--card);border:1px solid var(--bd);border-radius:16px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);margin-bottom:16px}
+h1,.hero{text-shadow:0 1px 6px rgba(0,0,0,.5)}
 .big{font-size:88px;font-weight:200;line-height:1}.big small{font-size:32px}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:16px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);margin-bottom:16px;animation:rise .7s both}
 .card h2{margin:0 0 10px;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);font-weight:600}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));gap:10px}
 .tile{margin:0}.tile b{display:block;font-size:24px;font-weight:300}.tile span{color:var(--mu);font-size:12px}
 .call{border-left:4px solid var(--ac)}.call p{margin:8px 0}
 .pill{display:inline-block;padding:2px 10px;border-radius:99px;font-size:12px;background:rgba(92,200,255,.18);color:var(--ac);margin-right:6px}
@@ -30,268 +31,396 @@ svg text{fill:var(--mu);font-size:11px}#score text{font-size:15px}
 .ticker{overflow:hidden;white-space:nowrap;font:12px ui-monospace,Menlo,monospace;color:var(--mu);border-top:1px solid var(--bd);padding-top:8px;margin-top:8px}
 .ticker span{display:inline-block;padding-left:100%;animation:tick 70s linear infinite}
 @keyframes tick{to{transform:translateX(-100%)}}
-.count{font-size:34px;font-weight:300;color:var(--warn)}
+.count{font-size:34px;font-weight:300;color:var(--warn)}.count.live{animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{50%{text-shadow:0 0 18px rgba(255,209,102,.9)}}
 .tag{font-size:11px;padding:1px 8px;border-radius:99px;border:1px solid var(--bd);color:var(--mu);white-space:nowrap}
 .tag.core{border-color:var(--ok);color:var(--ok)}.tag.sec{border-color:var(--hot);color:var(--hot)}.tag.drop{border-color:var(--bad);color:var(--bad)}
 .unavail{color:var(--mu);font-style:italic}
 details summary{cursor:pointer;color:var(--mu);font-size:12px}
-button.pause{position:fixed;right:12px;bottom:12px;z-index:2;background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:99px;padding:6px 12px;font-size:12px}
-@media(max-width:520px){.big{font-size:64px}}
-.rm *{animation:none!important;transition:none!important}.rm .ticker span{padding-left:0;white-space:normal}
-</style></head><body><canvas id="sky"></canvas><button class="pause" id="pause" hidden>Pause animation</button><main>
+.ctl{position:fixed;left:50%;transform:translateX(-50%);bottom:12px;z-index:2;display:flex;gap:8px;align-items:center;background:rgba(10,20,36,.75);border:1px solid var(--bd);border-radius:99px;padding:6px 10px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-size:12px;max-width:calc(100% - 24px)}
+.ctl button{background:rgba(255,255,255,.08);color:var(--tx);border:1px solid var(--bd);border-radius:99px;padding:5px 11px;font-size:12px;cursor:pointer}
+.ctl button.on{background:rgba(92,200,255,.3);border-color:var(--ac)}
+.ctl input[type=range]{width:120px}
+#hud{position:fixed;top:12px;right:12px;z-index:2;background:rgba(10,20,36,.7);border:1px solid var(--bd);border-radius:12px;padding:8px 12px;font-size:13px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);max-width:260px}
+#hud b{font-size:18px;font-weight:400}
+#radar{width:100%;border-radius:10px;display:block;background:#223}
+@media(max-width:520px){.big{font-size:64px}.ctl input[type=range]{width:80px}}
+.rm *,.paused *{animation-play-state:paused!important}
+.rm .ticker span,.paused .ticker span{animation:none!important;padding-left:0;white-space:normal}
+.rm .bar i{transition:none}
+</style></head><body><canvas id="sky"></canvas>
+<div id="hud" hidden></div>
+<div class="ctl"><button id="play">▶ Play next 24 h</button><input id="scrub" type="range" min="0" max="48" step="0.25" value="0" aria-label="Scrub forecast hours ahead" hidden><button id="live" hidden>● Live</button><button id="pause">Pause motion</button></div>
+<main>
 <h1>Sandy · weather expert</h1>
 <div id="stale" class="stale" hidden></div>
 <div class="hero"><div><div style="color:var(--mu)">Kota Kinabalu, Sabah · <span id="stamp">loading…</span></div><div class="big"><span id="temp">--</span><small>°C</small></div><div id="cond" style="font-size:18px"></div></div>
 <div class="grid" style="flex:1;min-width:280px" id="tiles"></div></div>
 <div class="card call" id="call"><h2>Sandy's call</h2><p class="unavail">Loading…</p></div>
 <div class="card warn" id="warn"><h2>MetMalaysia warnings</h2><p class="unavail">Loading…</p></div>
-<div class="card"><h2>Storm clock · airport forecast (TAF)</h2><div style="display:flex;flex-wrap:wrap;gap:20px;align-items:center"><div><div class="count" id="countdown"></div><div class="note" id="countnote"></div></div><svg id="clock" viewBox="0 0 640 90" style="flex:1;min-width:260px" role="img" aria-label="Today's timeline with the forecast thunderstorm window"></svg></div><div class="ticker"><span id="tick"></span></div></div>
+<div class="card"><h2>Storm clock · airport forecast (TAF)</h2><div style="display:flex;flex-wrap:wrap;gap:20px;align-items:center"><div><div class="count" id="countdown"></div><div class="note" id="countnote"></div></div><svg id="clock" viewBox="0 0 640 90" style="flex:1;min-width:260px" role="img" aria-label="Today's timeline with the forecast thunderstorm periods"></svg></div><div class="ticker"><span id="tick"></span></div></div>
+<div class="card"><h2>Radar now · MetMalaysia composite, Sabah and Sarawak</h2><a href="https://www.met.gov.my/pencerapan/radar-sabah-and-sarawak" target="_blank" rel="noopener"><img id="radar" alt="MetMalaysia composite radar image for Sabah and Sarawak; the time is printed on the image"></a><div class="note">Live image from MetMalaysia (time stamp printed top right, MYT); reloaded every 10 minutes while the page is open. Reference only: Sandy's written call says whether a radar check was made. Kota Kinabalu is on the west coast of the northern land mass.</div></div>
 <div class="card"><h2>What actually happened · KK airport, last 36 hours</h2><svg id="obs" viewBox="0 0 1000 230" width="100%" role="img" aria-label="Measured airport temperature over the last 36 hours"></svg><div class="note" id="obsnote"></div><details><summary>Data table</summary><div style="overflow:auto;max-height:260px"><table id="obstbl"></table></div></details></div>
-<div class="card"><h2 id="hrtitle">Next hours · rain chance and temperature</h2><svg id="hr" viewBox="0 0 1000 260" width="100%" role="img" aria-label="Hourly rain chance bars and temperature line"></svg><div class="note">Bars = rain chance % (Open-Meteo blend, left axis). Orange line = temperature (right axis). Yellow band = TAF thunderstorm period. Times are MYT.</div><details><summary>Data table</summary><div style="overflow:auto;max-height:260px"><table id="hrtbl"></table></div></details></div>
-<div class="card"><h2>7-day outlook</h2><div class="days" id="days"></div><div class="note">Icon and temperatures: MetMalaysia town forecast. Bar and odds: ECMWF 51-member ensemble, chance of 10 mm+ at the airport grid point.</div></div>
+<div class="card"><h2 id="hrtitle">Next hours · rain chance and temperature</h2><svg id="hr" viewBox="0 0 1000 260" width="100%" role="img" aria-label="Hourly rain chance bars and temperature line"></svg><div class="note">Bars = rain chance % (Open-Meteo blend, left axis; a gap means no value). Orange line = temperature (right axis). Yellow band = TAF thunderstorm period. Times are MYT.</div><details><summary>Data table</summary><div style="overflow:auto;max-height:260px"><table id="hrtbl"></table></div></details></div>
+<div class="card"><h2>7-day outlook</h2><div class="days" id="days"></div><div class="note">Icon and temperatures: MetMalaysia town forecast. Bar and odds: ECMWF ensemble, chance of 10 mm+ at the airport grid point.</div></div>
 <div class="card"><h2>Official forecast · MetMalaysia</h2><div style="overflow:auto"><table id="mmt"></table></div><div class="note" id="mmnote"></div></div>
-<div class="card"><h2>Rain odds · ECMWF ensemble</h2><svg id="ens" viewBox="0 0 1000 250" width="100%" role="img" aria-label="Daily chance of rain and heavy rain, with likely rainfall range"></svg><div class="note">Blue = chance of any rain (1 mm+). Red = chance of a heavy day (10 mm+), left axis. Yellow whisker = 10th–90th percentile of the 51 members (mm, right axis), dot = median. Amounts are for one grid point; storms are patchy.</div></div>
-<div class="card"><h2>Exploratory comparison · yesterday's forecasts against the airport</h2><svg id="score" viewBox="0 0 1000 330" width="100%" role="img" aria-label="Model temperature error and bias for yesterday"></svg><div class="note" id="scorenote"></div><details><summary>Data table</summary><div style="overflow:auto"><table id="scoretbl"></table></div></details></div>
-<div class="card"><h2>Model rain forecasts · mm per day</h2><div style="overflow:auto"><table id="tbl"></table></div><div class="note">Core models: ECMWF, GFS, UK Met Office, JMA, and the Open-Meteo blend. Others are shown for spread. Roles are a judgment from regional reputation and the running comparison above, not a proven ranking.</div></div>
-<div class="card"><h2>All sources · picked for Kota Kinabalu</h2><div style="overflow:auto"><table id="src"></table></div><div class="note">Sources are chosen fresh for each location. For KK the order of trust is MetMalaysia and the airport's own readings first, then the models. "Analysed" = its data is used in this page; "reference" = a link for you to look at; "attempted" = requested in this run.</div></div>
+<div class="card"><h2>Rain odds · ECMWF ensemble</h2><svg id="ens" viewBox="0 0 1000 250" width="100%" role="img" aria-labelledby="enstitle" aria-describedby="ensnote"></svg><title id="enstitle" hidden>Daily chance of rain and heavy rain with likely rainfall range</title><div class="note" id="ensnote">Blue = chance of any rain (1 mm+). Red = chance of a heavy day (10 mm+), left axis. Yellow whisker = 10th–90th percentile of the members (mm, right axis), dot = median. Amounts are for one grid point; storms are patchy.</div><details><summary>Data table</summary><div style="overflow:auto"><table id="enstbl"></table></div></details></div>
+<div class="card"><h2>Exploratory comparison · yesterday's 24-hour-ahead forecasts against the airport</h2><svg id="score" viewBox="0 0 1000 330" width="100%" role="img" aria-label="Model temperature error and bias for yesterday"></svg><div class="note" id="scorenote"></div><details><summary>Data table</summary><div style="overflow:auto"><table id="scoretbl"></table></div></details></div>
+<div class="card"><h2>Model rain forecasts · mm per day</h2><div style="overflow:auto"><table id="tbl"></table></div><div class="note">"Core" and "2nd opinion" are Sandy's editorial grouping (ECMWF, GFS, UK Met Office, JMA and the blend as core), informed by regional reputation and the running comparison above; it is not a computed weighting.</div></div>
+<div class="card"><h2>All sources · picked for Kota Kinabalu</h2><div style="overflow:auto"><table id="src"></table></div><div class="note">Sources are chosen fresh for each location. For KK the order of trust is MetMalaysia and the airport's own readings first, then the models. "Analysed" = its data is used in this page; "reference" = a link or image for you to look at, not analysed by the page.</div></div>
 <div class="note" id="foot"></div>
 </main>
 <script>
-(async function(){
+(function(){
+'use strict';
 const $=s=>document.querySelector(s), pad=n=>String(n).padStart(2,'0');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fin=v=>typeof v==='number'&&Number.isFinite(v);
+const num=(v,d=0)=>fin(v)?v.toFixed(d):'–';
 const RM=matchMedia('(prefers-reduced-motion: reduce)').matches; if(RM)document.body.classList.add('rm');
+let paused=RM;
 const anim=(attr,from,to,dur,begin)=>RM?'':`<animate attributeName="${attr}" from="${from}" to="${to}" dur="${dur}" begin="${begin||'0s'}" fill="freeze"/>`;
-const dn=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-// --- time helpers: everything is MYT (+08:00). Dates in the data carry the offset; MetMalaysia dates are plain days.
-const P=s=>{s=String(s);if(/^\d{4}-\d\d-\d\d$/.test(s))return new Date(s+'T00:00:00+08:00');return new Date(s.length<=19&&!/[Z+]/.test(s)?s+'+08:00':s)};  // MYT assumed where no offset
-const myt=d=>new Date(d.getTime()+8*3600e3);                                 // shift so getUTC* give MYT fields
-const fmtT=s=>{const m=myt(P(s));return pad(m.getUTCHours())+':'+pad(m.getUTCMinutes())};
-const fmtD=s=>{const m=myt(P(s));return dn[m.getUTCDay()]+' '+m.getUTCDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m.getUTCMonth()]};
+const dn=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+// --- time: everything is MYT (+08:00). ISO strings without an offset are MYT; plain dates are MYT days.
+const P=s=>{s=String(s??'');if(/^\d{4}-\d\d-\d\d$/.test(s))return new Date(s+'T00:00:00+08:00');return new Date(s.length<=19&&!/[Z+]/.test(s)?s+'+08:00':s)};
+const myt=d=>new Date(d.getTime()+8*3600e3);
+const fmtT=s=>{const d=P(s);if(isNaN(d))return'–';const m=myt(d);return pad(m.getUTCHours())+':'+pad(m.getUTCMinutes())};
+const fmtD=s=>{const d=P(s);if(isNaN(d))return'–';const m=myt(d);return dn[m.getUTCDay()]+' '+m.getUTCDate()+' '+mn[m.getUTCMonth()]};
 const fmtDT=s=>fmtD(s)+' '+fmtT(s);
 const nowMYT=()=>myt(new Date());
-let D,C;
-try{D=await (await fetch('data/latest.json?'+Date.now())).json()}catch(e){$('#stamp').textContent='data file could not be loaded';return}
-try{C=await (await fetch('call.json?'+Date.now())).json()}catch(e){C=null}
-const gen=P(D.generated), ageH=(Date.now()-gen.getTime())/3600e3;
-$('#stamp').textContent='data fetched '+fmtDT(D.generated)+' MYT';
-if(ageH>18){$('#stale').hidden=false;$('#stale').textContent='This data is '+Math.round(ageH)+' hours old (fetched '+fmtDT(D.generated)+' MYT). The automatic refresh may have failed; treat warnings and the storm clock as out of date.'}
-const todayStr=D.today, viewToday=(()=>{const m=nowMYT();return m.getUTCFullYear()+'-'+pad(m.getUTCMonth()+1)+'-'+pad(m.getUTCDate())})();
-const bh=D.blend&&D.blend.hourly, bd=D.blend&&D.blend.daily;
-// --- latest observation
-const ob=(D.obs||[]).filter(o=>o.temp!=null).slice(-1)[0];
-const rh=(T,Td)=>Math.round(100*Math.exp(17.625*Td/(243.04+Td))/Math.exp(17.625*T/(243.04+T)));
-const dir=d=>['N','NE','E','SE','S','SW','W','NW'][Math.round(d/45)%8];
-const sky={CLR:'Clear',SKC:'Clear',CAVOK:'Clear',FEW:'Few clouds',SCT:'Partly cloudy',BKN:'Mostly cloudy',OVC:'Overcast'};
-let raining=false;
-if(ob){
-  raining=/TS|RA|SH|DZ/.test(ob.wx);
-  const w=ob.wx.includes('TS')?'⛈️ Thunderstorm':/RA|SH|DZ/.test(ob.wx)?'🌧️ Rain':ob.wx?'🌫️ '+esc(ob.wx):(ob.cover=='FEW'||ob.cover=='CLR'||ob.cover=='SKC')?'🌤️ '+(sky[ob.cover]||ob.cover):'⛅ '+(sky[ob.cover]||ob.cover||'');
-  $('#stamp').textContent='airport reading '+fmtDT(ob.t)+' MYT · data fetched '+fmtT(D.generated);
-  let t0=0;if(RM)$('#temp').textContent=Math.round(ob.temp);else requestAnimationFrame(function a(ts){t0||(t0=ts);const p=Math.min(1,(ts-t0)/1200);$('#temp').textContent=Math.round(ob.temp*p);if(p<1)requestAnimationFrame(a)});
-  const hIdx=bh?bh.time.findIndex(t=>t>=ob.t.slice(0,13)):-1;
-  const feels=hIdx>=0&&bh.apparent_temperature[hIdx]!=null?' · feels '+Math.round(bh.apparent_temperature[hIdx])+'°C (model, '+bh.time[hIdx].slice(11)+')':'';
-  $('#cond').textContent=w+feels;
-}else{$('#temp').textContent='–';$('#cond').textContent='No airport observation available';}
-const aq=D.aq&&D.aq.current, aqi=aq&&aq.us_aqi;
-const aqCat=v=>v==null?'–':v<=50?'Good':v<=100?'Moderate':v<=150?'Unhealthy for sensitive groups':v<=200?'Unhealthy':v<=300?'Very unhealthy':'Hazardous';
-const uvCat=v=>v==null?'–':v<3?'low':v<6?'moderate':v<8?'high':v<11?'very high':'extreme';
-const capeMax=bh?Math.max(...bh.cape.slice(0,24).filter(v=>v!=null)):null;
-const tiles=[];
-if(ob){tiles.push(['Humidity (from airport temp/dew point)',rh(ob.temp,ob.dewp)+'%'],['Wind (measured)',(ob.wspd?Math.round(ob.wspd*1.852):0)+' km/h '+(ob.wdir?dir(ob.wdir):'variable')])}
-tiles.push(['Yesterday high (measured, '+(D.obs_y_hours||0)+' hourly readings)',D.obs_y_max!=null?D.obs_y_max+'°C':'–']);
-if(C&&C.today_high)tiles.push(["Today high (Sandy's call)",C.today_high]);
-tiles.push(['Air quality · US AQI, CAMS model'+(aq?' '+fmtT(aq.time)+' MYT':''),aqi!=null?aqi+' · '+aqCat(aqi):'–']);
-if(bd)tiles.push(['UV peak today (model)',bd.uv_index_max[0]!=null?bd.uv_index_max[0].toFixed(0)+' · '+uvCat(bd.uv_index_max[0]):'–'],['Sunrise / set',bd.sunrise[0].slice(11)+' / '+bd.sunset[0].slice(11)],['Storm fuel today (CAPE, model)',capeMax!=null?capeMax.toFixed(0)+' J/kg · '+(capeMax>2500?'high':capeMax>1000?'moderate':'low'):'–']);
-tiles.forEach(([k,v],i)=>$('#tiles').insertAdjacentHTML('beforeend',`<div class="card tile" style="animation-delay:${i*70}ms"><b>${esc(v)}</b><span>${esc(k)}</span></div>`));
-// --- TAF thunderstorm periods (structured, MYT instants)
-const tsPer=(D.taf&&D.taf.periods||[]).filter(p=>/TS/.test(p.wx)).map(p=>({from:P(p.from),to:P(p.to),change:p.change,prob:p.prob}));
-// --- Sandy's call (hand-written JSON, dated)
-if(C){
-  const cAge=(Date.now()-P(C.written_at).getTime())/3600e3;
-  let h='<h2>Sandy\'s call · written '+fmtDT(C.written_at)+' MYT, from data of '+fmtDT(C.based_on_data_at)+'</h2>';
-  if(cAge>30)h+=`<div class="stale">This written forecast is ${Math.round(cAge/24)} day(s) old. The numbers, warnings and charts below are refreshed automatically; the written call is only updated when Roy asks Sandy for a weather update.</div>`;
-  C.sections.forEach(s=>h+=`<p><span class="pill">${esc(s.label)}</span>${esc(s.text)}</p>`);
-  $('#call').innerHTML=h;
-}else $('#call').innerHTML='<h2>Sandy\'s call</h2><p class="unavail">No written call available.</p>';
-// --- warnings, derived from the records
-(function(){
-  const W=D.warnings||[]; let h='<h2>MetMalaysia warnings</h2>';
-  if(!D.status||!D.status.metmalaysia_warnings||!D.status.metmalaysia_warnings.ok){$('#warn').innerHTML=h+'<p class="unavail">Warning status unavailable: the MetMalaysia warnings feed did not answer in this run. Check <a href="https://www.met.gov.my/en/forecast/warning" target="_blank" rel="noopener">met.gov.my</a>.</p>';return}
-  const kkLand=W.filter(w=>w.names_kk_land);
-  h+=kkLand.length?'<p><b>Warnings naming Kota Kinabalu:</b></p>':`<p><b>No warning naming Kota Kinabalu land was found in the ${D.warnings_retrieved} bulletins retrieved at ${fmtDT(D.generated)} MYT.</b></p>`;
-  const rel=W.filter(w=>w.areas.length||w.kind=='cyclone');
+const dayStr=d=>d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate());
+const section=(id,fn)=>{try{fn()}catch(e){console.error(id,e);const el=$(id);if(el)el.insertAdjacentHTML('afterbegin',`<p class="unavail">This section could not be drawn from the current data (${esc(e.message)}).</p>`)}};
+let D=null,C=null,tsPer=[],ob=null,raining=false,hourIdx=0;
+
+async function load(first){
+  let nd,nc;
+  try{nd=await (await fetch('data/latest.json?'+Date.now(),{cache:'no-store'})).json()}catch(e){if(first){$('#stamp').textContent='data file could not be loaded';}return}
+  try{nc=await (await fetch('call.json?'+Date.now(),{cache:'no-store'})).json()}catch(e){nc=null}
+  const changed=!D||nd.generated!==D.generated||JSON.stringify(nc)!==JSON.stringify(C);
+  if(changed){D=nd;C=nc;render();}
+}
+function render(){
+  const bh=D.blend&&D.blend.hourly, bd=D.blend&&D.blend.daily;
+  const hv=(k,i)=>bh&&Array.isArray(bh[k])?bh[k][i]:null;
+  const viewToday=dayStr(nowMYT());
+  // ---------- hero
+  ob=(D.obs||[]).filter(o=>fin(o.temp)).slice(-1)[0]||null;
+  const rh=(T,Td)=>Math.round(100*Math.exp(17.625*Td/(243.04+Td))/Math.exp(17.625*T/(243.04+T)));
+  const dir=d=>['N','NE','E','SE','S','SW','W','NW'][Math.round(d/45)%8];
+  const sky={CLR:'Clear',SKC:'Clear',CAVOK:'Clear',FEW:'Few clouds',SCT:'Partly cloudy',BKN:'Mostly cloudy',OVC:'Overcast'};
+  raining=false;
+  if(ob){
+    const wx=String(ob.wx||'');raining=/TS|RA|SH|DZ/.test(wx);
+    const cov=sky[ob.cover]||'';
+    const w=wx.includes('TS')?'⛈️ Thunderstorm':/RA|SH|DZ/.test(wx)?'🌧️ Rain':wx?'🌫️ '+wx:(ob.cover=='FEW'||ob.cover=='CLR'||ob.cover=='SKC')?'🌤️ '+cov:'⛅ '+cov;
+    $('#stamp').textContent='airport reading '+fmtDT(ob.t)+' MYT · data fetched '+fmtDT(D.generated);
+    const target=Math.round(ob.temp);let t0=0;
+    if(RM)$('#temp').textContent=target;else requestAnimationFrame(function a(ts){t0||(t0=ts);const p=Math.min(1,(ts-t0)/1200);$('#temp').textContent=Math.round(target*(1-Math.pow(1-p,3)));if(p<1)requestAnimationFrame(a)});
+    const hIdx=bh?bh.time.findIndex(t=>t>=String(ob.t).slice(0,13)):-1;
+    const feels=hIdx>=0&&fin(hv('apparent_temperature',hIdx))?' · feels '+Math.round(hv('apparent_temperature',hIdx))+'°C (model, '+bh.time[hIdx].slice(11)+')':'';
+    $('#cond').textContent=w+feels;
+  }else{$('#temp').textContent='–';$('#cond').textContent='No airport observation available';$('#stamp').textContent='data fetched '+fmtDT(D.generated)+' MYT'}
+  const aq=D.aq&&D.aq.current, aqi=aq&&fin(aq.us_aqi)?aq.us_aqi:null;
+  const aqCat=v=>v==null?'–':v<=50?'Good':v<=100?'Moderate':v<=150?'Unhealthy for sensitive groups':v<=200?'Unhealthy':v<=300?'Very unhealthy':'Hazardous';
+  const uvCat=v=>!fin(v)?'–':v<3?'low':v<6?'moderate':v<8?'high':v<11?'very high':'extreme';
+  const capeArr=bh&&Array.isArray(bh.cape)?bh.cape.slice(0,24).filter(fin):[], capeMax=capeArr.length?Math.max(...capeArr):null;
+  const tiles=[];
+  if(ob){tiles.push(['Humidity (from airport temp/dew point)',fin(ob.dewp)?rh(ob.temp,ob.dewp)+'%':'–']);tiles.push(['Wind (measured)',fin(ob.wspd)?(ob.wspd===0?'calm':Math.round(ob.wspd*1.852)+' km/h '+(fin(ob.wdir)?dir(ob.wdir):'variable')):'–'])}
+  tiles.push(['Yesterday high (measured, '+(fin(D.obs_y_hours)?D.obs_y_hours:0)+' hourly readings)',fin(D.obs_y_max)?D.obs_y_max+'°C':'–']);
+  const callValid=C&&C.valid_for===viewToday;
+  if(callValid&&C.today_high)tiles.push(["Today high (Sandy's call)",C.today_high]);
+  tiles.push(['Air quality · US AQI, CAMS model'+(aq&&aq.time?' '+fmtT(aq.time)+' MYT':''),aqi!=null?aqi+' · '+aqCat(aqi):'–']);
+  if(bd){const uv=bd.uv_index_max&&bd.uv_index_max[0];tiles.push(['UV peak today (model)',fin(uv)?uv.toFixed(0)+' · '+uvCat(uv):'–']);tiles.push(['Sunrise / set',bd.sunrise&&bd.sunset?String(bd.sunrise[0]).slice(11)+' / '+String(bd.sunset[0]).slice(11):'–']);tiles.push(['Storm fuel today (CAPE, model)',capeMax!=null?capeMax.toFixed(0)+' J/kg · '+(capeMax>2500?'high':capeMax>1000?'moderate':'low'):'–'])}
+  $('#tiles').innerHTML=tiles.map(([k,v],i)=>`<div class="card tile" style="animation-delay:${i*70}ms"><b>${esc(v)}</b><span>${esc(k)}</span></div>`).join('');
+  // ---------- TAF periods
+  tsPer=(D.taf&&Array.isArray(D.taf.periods)?D.taf.periods:[]).filter(p=>/TS/.test(String(p.wx||''))).map(p=>({from:P(p.from),to:P(p.to),change:p.change||'',prob:fin(p.prob)?p.prob:null,wx:String(p.wx||'')})).filter(p=>!isNaN(p.from)&&!isNaN(p.to)).sort((a,b)=>a.from-b.from);
+  const perLabel=p=>(p.prob!=null?'PROB'+p.prob+' ':'')+(p.change||'')+' '+p.wx;
+  const perWords=p=>(p.prob!=null?p.prob+'% probability of ':'')+(p.change=='TEMPO'?'temporary spells of ':p.change=='BECMG'?'a change to ':'')+(p.wx.includes('TSRA')?'thunderstorm rain':'thunderstorms');
+  // ---------- Sandy's call
+  section('#call',()=>{
+    if(!C||!Array.isArray(C.sections)){$('#call').innerHTML='<h2>Sandy\'s call</h2><p class="unavail">No written call available.</p>';return}
+    const cAge=(Date.now()-P(C.written_at).getTime())/3600e3;
+    let h='<h2>Sandy\'s call · '+(callValid?'for today, ':'archived forecast for '+fmtD(C.valid_for)+', ')+'written '+fmtDT(C.written_at)+' MYT from data of '+fmtDT(C.based_on_data_at)+'</h2>';
+    if(!callValid)h+=`<div class="stale">This written forecast was for ${fmtD(C.valid_for)}${cAge>30?' ('+Math.round(cAge/24)+' day(s) ago)':''}. The numbers, warnings and charts on this page refresh automatically; the written call is only updated when Roy asks Sandy for a weather update.</div>`;
+    if(C.radar_checked)h+=`<p class="note">Radar check: ${esc(C.radar_checked)}</p>`;
+    C.sections.forEach(s=>h+=`<p><span class="pill">${esc(s.label)}</span>${esc(s.text)}</p>`);
+    $('#call').innerHTML=h;
+  });
+  // ---------- warnings, from subsection records, status judged at view time
+  section('#warn',()=>{
+    const st=D.status&&D.status.metmalaysia_warnings;
+    if(!st||!st.ok||!Array.isArray(D.warnings)){$('#warn').innerHTML='<h2>MetMalaysia warnings</h2><p class="unavail">Warning status unavailable: the MetMalaysia warnings feed did not answer in this run, or no warning records were saved. Check <a href="https://www.met.gov.my/en/forecast/warning" target="_blank" rel="noopener">met.gov.my</a>.</p>';return}
+    const W=D.warnings,now=Date.now();let h='<h2>MetMalaysia warnings</h2>';
+    const kk=W.filter(w=>w.names_kk_land);
+    h+=kk.length?'<p><b>Warnings naming Kota Kinabalu:</b></p>':`<p><b>No warning naming Kota Kinabalu land was found in the ${esc(D.warnings_retrieved)} bulletins retrieved at ${fmtDT(D.generated)} MYT.</b></p>`;
+    const kindName={marine:'Sea / shipping',rain:'Rain',cyclone:'Tropical cyclone',other:'Other'};
+    h+='<ul>';
+    W.forEach(w=>{
+      const subs=Array.isArray(w.subsections)?w.subsections:[];
+      const rel=subs.filter(s=>(s.areas||[]).some(a=>/Sabah|Kota Kinabalu|Labuan|Kudat|Sandakan|Tawau|Reef|Layang|Sulu/.test(a)));
+      if(w.kind=='cyclone'){h+=`<li><b>Tropical cyclone:</b> ${esc(w.heading)} <span class="note">issued ${fmtDT(w.issued)}</span><details><summary>Full text</summary><div class="note">${esc(w.text)}</div></details></li>`;return}
+      if(!rel.length)return;
+      rel.forEach(s=>{
+        const from=s.from?P(s.from):P(w.issued), to=s.to?P(s.to):null;
+        const exp=to&&to.getTime()<now, fut=from.getTime()>now;
+        const badge=!to?'<span class="tag">validity not parsed</span>':exp?'<span class="tag drop">expired</span>':fut?'<span class="tag sec">upcoming</span>':'<span class="tag core">in force</span>';
+        const danger=/dangerous to small (boats|crafts)/i.test(s.text)?' Dangerous to small boats.':'';
+        const ar=(s.areas||[]), sab=ar.filter(a=>/Sabah|Kota Kinabalu|Labuan|Kudat|Sandakan|Tawau|Reef|Layang|Sulu|Sulawesi/.test(a)), oth=ar.length-sab.length;
+        h+=`<li><b>${esc(kindName[w.kind]||w.kind)}:</b> ${esc(w.heading)} ${badge}<br><span class="note">Areas named: ${esc(sab.join(', ')||'–')}${oth>0?' and '+oth+' other area'+(oth>1?'s':''):''} · valid ${s.from?fmtDT(s.from):'from issue '+fmtDT(w.issued)} – ${to?fmtDT(s.to):'?'} MYT · issued ${fmtDT(w.issued)}.${esc(danger)}</span><details><summary>Subsection text</summary><div class="note">${esc(s.text)}</div></details></li>`});
+      if(!w.parsed)h+=`<li class="note">One bulletin could not be split into dated subsections; validity differs by subsection, so no in-force badge is shown for it.<details><summary>Full text</summary><div class="note">${esc(w.text)}</div></details></li>`;
+    });
+    h+='</ul><div class="note">In force / upcoming / expired is judged against the time on your device when this page last re-checked (every minute). Live radar: <a href="https://www.met.gov.my/pencerapan/radar-sabah-and-sarawak" target="_blank" rel="noopener">MetMalaysia radar, Sabah and Sarawak</a>.</div>';
+    $('#warn').innerHTML=h;
+  });
+  // ---------- storm clock
+  section('#clock',()=>{
+    const W=640,L=20,R=20,x=h=>L+(W-L-R)*Math.max(0,Math.min(24,h))/24;
+    let s=`<rect x="${L}" y="34" width="${W-L-R}" height="18" rx="9" fill="rgba(255,255,255,.08)"/>`;
+    if(bd&&bd.sunrise&&bd.sunset){const sr=+String(bd.sunrise[0]).slice(11,13)+(+String(bd.sunrise[0]).slice(14,16))/60,ss=+String(bd.sunset[0]).slice(11,13)+(+String(bd.sunset[0]).slice(14,16))/60;if(fin(sr)&&fin(ss))s+=`<rect x="${x(sr)}" y="34" width="${x(ss)-x(sr)}" height="18" rx="9" fill="rgba(255,209,102,.15)"/>`}
+    const n=nowMYT(),dayStart=Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate())-8*3600e3;
+    tsPer.map(p=>({a:(p.from.getTime()-dayStart)/3600e3,b:(p.to.getTime()-dayStart)/3600e3,p})).filter(p=>p.b>0&&p.a<24).forEach(p=>{s+=`<rect x="${x(p.a)}" y="30" width="${x(p.b)-x(p.a)}" height="26" rx="6" fill="#ffd166" opacity=".85">${RM?'':'<animate attributeName="opacity" values=".45;.95;.45" dur="2.4s" repeatCount="indefinite"/>'}</rect><text x="${x(p.a)}" y="24" style="fill:#ffd166">⛈ ${esc(perLabel(p.p))} ${fmtT(p.p.from.toISOString())}–${fmtT(p.p.to.toISOString())}</text>`});
+    s+=`<line id="nowline" x1="0" x2="0" y1="22" y2="64" stroke="#fff" stroke-width="2"/><text id="nowtxt" x="0" y="78" style="fill:#fff">now</text>`;
+    for(let h=0;h<=24;h+=6)s+=`<text x="${x(h)-8}" y="78">${pad(h%24)}h</text>`;$('#clock').innerHTML=s;
+  });
+  $('#tick').textContent=(D.obs||[]).slice(-12).reverse().map(o=>String(o.raw||'')).join('   ·   ')+(D.taf&&D.taf.raw?'   ·   '+String(D.taf.raw):'');
+  // ---------- observed 36 h
+  section('#obsnote',()=>{
+    const cut=P(D.generated).getTime()-36*3600e3;
+    const o=(D.obs||[]).filter(a=>fin(a.temp)&&P(a.t).getTime()>=cut);
+    if(o.length<4){$('#obs').innerHTML='';$('#obsnote').innerHTML='<span class="unavail">Not enough airport observations in this run.</span>';return}
+    const W=1000,H=230,L=34,R=10,T=14,B=30,t0=P(o[0].t).getTime(),t1=P(o[o.length-1].t).getTime(),x=t=>L+(W-L-R)*(P(t).getTime()-t0)/Math.max(1,t1-t0);
+    const lo=Math.min(...o.map(a=>a.temp))-1,hi=Math.max(...o.map(a=>a.temp))+1,y=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo));let s='';
+    let ep=[],c=null;o.forEach(a=>{if(String(a.wx||'').includes('TS')){const tt=P(a.t).getTime();if(c&&tt-P(c.last).getTime()<=45*60e3)c.last=a.t;else{c={first:a.t,last:a.t};ep.push(c)}}});
+    ep.forEach(e=>s+=`<rect x="${x(e.first)}" y="${T}" width="${Math.max(6,x(e.last)-x(e.first))}" height="${H-T-B}" fill="rgba(255,209,102,.18)"/><text x="${x(e.first)+4}" y="${T+12}" style="fill:#ffd166">⛈ TS reported ${fmtT(e.first)}–${fmtT(e.last)}</text>`);
+    const rt=o.filter(a=>String(a.recent||'').includes('TS')&&!String(a.wx||'').includes('TS'));
+    rt.forEach(a=>s+=`<line x1="${x(a.t)}" x2="${x(a.t)}" y1="${T}" y2="${H-B}" stroke="#ffd166" stroke-dasharray="3 3" opacity=".6"/>`);
+    o.filter(a=>/T(00|12):00/.test(String(a.t))).forEach(a=>s+=`<line x1="${x(a.t)}" x2="${x(a.t)}" y1="${T}" y2="${H-B}" stroke="rgba(255,255,255,.12)"/><text x="${x(a.t)+3}" y="${H-10}">${fmtD(a.t)} ${fmtT(a.t)}</text>`);
+    s+=`<polyline points="${o.map(a=>`${x(a.t)},${y(a.temp)}`).join(' ')}" fill="none" stroke="#ffb347" stroke-width="2.5" stroke-dasharray="3000" stroke-dashoffset="${RM?0:3000}">${anim('stroke-dashoffset',3000,0,'2.5s')}</polyline>`;
+    const mx=o.reduce((a,b)=>b.temp>a.temp?b:a);s+=`<circle cx="${x(mx.t)}" cy="${y(mx.temp)}" r="4" fill="#ffb347"/><text x="${x(mx.t)-30}" y="${y(mx.temp)-8}" style="fill:#ffb347">${mx.temp}°C</text>`;
+    const la=o[o.length-1];s+=`<circle cx="${x(la.t)}" cy="${y(la.temp)}" r="5" fill="#fff">${RM?'':'<animate attributeName="r" values="4;8;4" dur="1.6s" repeatCount="indefinite"/>'}</circle>`;
+    for(let v=Math.ceil(lo);v<=hi;v+=3)s+=`<text x="2" y="${y(v)+4}">${v}°</text>`;$('#obs').innerHTML=s;
+    $('#obsnote').textContent='Temperature measured every 30 minutes at Kota Kinabalu International Airport (METAR), last 36 hours before the data time. Shaded = active thunderstorm in the present-weather group; dashed lines = "recent thunderstorm" remark only'+(rt.length?' ('+rt.map(a=>fmtT(a.t)).join(', ')+')':'')+'. Times MYT. Rainfall amount is not reported in METAR.';
+    $('#obstbl').innerHTML='<tr><th>Time (MYT)</th><th>°C</th><th>Dew</th><th>Wind</th><th>Weather</th><th>Cloud</th></tr>'+o.slice().reverse().map(a=>`<tr><td>${fmtDT(a.t)}</td><td>${num(a.temp)}</td><td>${num(a.dewp)}</td><td>${fin(a.wdir)?a.wdir:'VRB'}/${num(a.wspd)} kt</td><td>${esc(a.wx)}${a.recent?' ('+esc(a.recent)+')':''}</td><td>${esc(a.cover||'')}</td></tr>`).join('');
+  });
+  // ---------- hourly chart from the data time forward
+  section('#hrtitle',()=>{
+    if(!bh||!Array.isArray(bh.time)){$('#hr').innerHTML='';$('#hrtitle').textContent='Next hours · hourly model data unavailable in this run';return}
+    const start=bh.time.findIndex(t=>t>=String(D.generated).slice(0,13)); const i0=Math.max(0,start), N=Math.min(48,bh.time.length-i0);
+    hourIdx=i0;
+    $('#hrtitle').textContent=`Next ${N} hours from ${fmtDT(bh.time[i0])} MYT · rain chance and temperature`;
+    const W=1000,H=260,L=40,R=40,T=14,B=30,bw=(W-L-R)/N;let s='';
+    const tmp=[];for(let i=0;i<N;i++){const v=hv('temperature_2m',i0+i);if(fin(v))tmp.push(v)}
+    if(!tmp.length)throw new Error('no temperatures');
+    const lo=Math.min(...tmp)-1,hi=Math.max(...tmp)+1,ty=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo)),py=p=>T+(H-T-B)*(1-p/100);
+    const tA=P(bh.time[i0]).getTime();
+    tsPer.forEach(p=>{const a=(p.from.getTime()-tA)/3600e3,b=(p.to.getTime()-tA)/3600e3;if(b>0&&a<N)s+=`<rect x="${L+Math.max(0,a)*bw}" y="${T}" width="${(Math.min(N,b)-Math.max(0,a))*bw}" height="${H-T-B}" fill="rgba(255,209,102,.16)"/>`});
+    for(let p=0;p<=100;p+=25)s+=`<line x1="${L}" x2="${W-R}" y1="${py(p)}" y2="${py(p)}" stroke="rgba(255,255,255,.07)"/><text x="2" y="${py(p)+4}">${p}%</text>`;
+    for(let i=0;i<N;i++){const p=hv('precipitation_probability',i0+i),x=L+i*bw,d=(i*25)+'ms';
+      if(fin(p)){const h=(H-T-B)*p/100;s+=`<rect x="${x+1}" y="${RM?H-B-h:H-B}" width="${bw-2}" height="${RM?h:0}" rx="2" fill="#4aa3ff" opacity="${.35+p/160}">${anim('height',0,h,'.9s',d)}${anim('y',H-B,H-B-h,'.9s',d)}</rect>`}
+      const tm=String(bh.time[i0+i]);if(/T(00|06|12|18):00/.test(tm))s+=`<text x="${x}" y="${H-10}">${tm.slice(11,13)}h${tm.endsWith('00:00')?' '+fmtD(tm).slice(4):''}</text>`;}
+    let pts=[];for(let i=0;i<N;i++){const v=hv('temperature_2m',i0+i);if(fin(v))pts.push(`${L+i*bw+bw/2},${ty(v)}`)}
+    s+=`<polyline points="${pts.join(' ')}" fill="none" stroke="#ffb347" stroke-width="2.5" stroke-dasharray="2000" stroke-dashoffset="${RM?0:2000}">${anim('stroke-dashoffset',2000,0,'2s')}</polyline>`;
+    for(let v=Math.ceil(lo);v<=hi;v+=2)s+=`<text x="${W-R+4}" y="${ty(v)+4}" style="fill:#ffb347">${v}°</text>`;
+    $('#hr').innerHTML=s;
+    $('#hrtbl').innerHTML='<tr><th>Time (MYT)</th><th>Rain chance %</th><th>Rain mm</th><th>°C</th><th>Feels</th><th>Wind km/h</th><th>Cloud %</th></tr>'+Array.from({length:N},(_,j)=>{const i=i0+j;return`<tr><td>${fmtDT(bh.time[i])}</td><td>${num(hv('precipitation_probability',i))}</td><td>${num(hv('precipitation',i),1)}</td><td>${num(hv('temperature_2m',i),1)}</td><td>${num(hv('apparent_temperature',i),1)}</td><td>${num(hv('wind_speed_10m',i),1)}</td><td>${num(hv('cloud_cover',i))}</td></tr>`}).join('');
+  });
+  // ---------- MetMalaysia
+  const TR=[['ribut petir menyeluruh','Widespread thunderstorms'],['ribut petir di kebanyakan tempat','Thunderstorms in most places'],['ribut petir di beberapa tempat','Thunderstorms in a few places'],['ribut petir','Thunderstorms'],['hujan menyeluruh','Widespread rain'],['hujan di kebanyakan tempat','Rain in most places'],['hujan di beberapa tempat','Rain in a few places'],['tiada hujan','No rain'],['hujan','Rain'],['berangin','Windy'],['cerah','Fair'],['mendung','Cloudy']];
+  const tr=s=>{if(!s)return'–';const l=String(s).toLowerCase().trim();for(const[a,b]of TR)if(l==a)return b;return String(s)};
+  const icon=s=>{const l=String(s||'').toLowerCase();return l.includes('ribut petir')?'⛈️':l.includes('hujan')&&!l.startsWith('tiada')?'🌧️':l.includes('tiada hujan')?'☀️':'🌤️'};
+  const recs=D.metmy&&typeof D.metmy==='object'?Object.values(D.metmy).filter(m=>m&&Array.isArray(m.days)):[];
+  const town=recs.find(m=>m.kind=='town'), dist=recs.find(m=>m.kind=='district'), mmMain=town||dist;
+  section('#days',()=>{
+    const days=Array.isArray(D.days)?D.days:[];
+    if(!days.length){$('#days').innerHTML='<p class="unavail">No daily forecast dates in this run.</p>';return}
+    $('#days').innerHTML=days.map((d,i)=>{const e=(D.ens||[]).find(x=>x.day==d)||{},m=mmMain&&mmMain.days.find(r=>r.date==d),heavy=fin(e.p10)?e.p10:null;
+      return`<div class="day" style="animation:rise .7s ${i*90}ms both"><b>${d==viewToday?'Today':esc(fmtD(d))}</b><br><span class="ic" style="animation-delay:${i*.3}s">${m?icon(m.afternoon_forecast):'·'}</span>
+      <div style="font-size:15px">${m?num(m.max_temp)+'° / '+num(m.min_temp)+'°':'<span class="unavail">no official</span>'}</div><div>${m?esc(tr(m.afternoon_forecast))+' (pm)':''}</div>
+      <div class="bar"><i data-w="${heavy??0}" style="background:${heavy>=30?'#ff6b6b':heavy>=20?'#ffd166':'#4aa3ff'}"></i></div>
+      <div>${heavy!=null?heavy+'% chance 10 mm+<br>likely '+num(e.q10,1)+'–'+num(e.q90,1)+' mm':'<span class="unavail">ensemble n/a</span>'}</div></div>`}).join('');
+    setTimeout(()=>document.querySelectorAll('.bar i').forEach(e=>e.style.width=e.dataset.w+'%'),RM?0:300);
+  });
+  section('#mmnote',()=>{
+    if(!recs.length){$('#mmt').innerHTML='';$('#mmnote').innerHTML='<span class="unavail">MetMalaysia forecast unavailable in this run.</span>';return}
+    let s='<tr><th>Date</th><th>Record</th><th>Morning</th><th>Afternoon</th><th>Night</th><th>Min / max</th></tr>';
+    const rr=[town,dist].filter(Boolean), dates=[...new Set(rr.flatMap(r=>r.days.map(x=>x.date)))].sort();
+    dates.forEach(d=>rr.forEach((r,ri)=>{const x=r.days.find(y=>y.date==d);if(!x)return;s+=`<tr>${ri==0?`<td rowspan="${rr.filter(q=>q.days.some(y=>y.date==d)).length}">${esc(fmtD(d))}</td>`:''}<td>${esc(r.kind)}</td><td title="${esc(x.morning_forecast)}">${esc(tr(x.morning_forecast))}</td><td title="${esc(x.afternoon_forecast)}">${esc(tr(x.afternoon_forecast))}</td><td title="${esc(x.night_forecast)}">${esc(tr(x.night_forecast))}</td><td>${num(x.min_temp)}° / ${num(x.max_temp)}°</td></tr>`}));
+    $('#mmt').innerHTML=s;
+    $('#mmnote').textContent='Records: '+Object.entries(D.metmy).map(([k,v])=>k+' ('+v.kind+')').join(', ')+'. The town record is used for the cards; the district covers a wider area and carries coverage wording ("a few places", "most places"). English is Sandy\'s literal translation of MetMalaysia\'s Malay (hover a cell for the original). MetMalaysia\'s own site may word the same phrase as "isolated" or "scattered"; "most places" is not a calibrated coverage figure.';
+  });
+  // ---------- ensemble
+  section('#ensnote',()=>{
+    const E=(D.ens||[]).filter(e=>fin(e.p1)&&fin(e.q10)&&fin(e.q90)); if(!E.length){$('#ens').innerHTML='';$('#ensnote').innerHTML='<span class="unavail">ECMWF ensemble unavailable in this run.</span>';return}
+    const W=1000,H=250,L=40,R=44,T=20,B=34,n=E.length,cw=(W-L-R)/n;let s='';const y=p=>T+(H-T-B)*(1-p/100);
+    for(let p=0;p<=100;p+=25)s+=`<line x1="${L}" x2="${W-R}" y1="${y(p)}" y2="${y(p)}" stroke="rgba(255,255,255,.08)"/><text x="4" y="${y(p)+4}">${p}%</text>`;
+    const qmax=Math.ceil(Math.max(...E.map(e=>e.q90),10)/5)*5,ym=v=>T+(H-T-B)*(1-v/qmax);
+    for(let v=0;v<=qmax;v+=5)s+=`<text x="${W-R+6}" y="${ym(v)+4}" style="fill:#ffd166">${v} mm</text>`;
+    E.forEach((e,i)=>{const x=L+i*cw+cw*.14,w=cw*.26,d=(i*120)+'ms';
+      [[e.p1,'#4aa3ff',0],[e.p10,'#ff6b6b',w+4]].forEach(([p,c,off])=>{const h=(H-T-B)*p/100;s+=`<rect x="${x+off}" y="${RM?H-B-h:H-B}" width="${w}" height="${RM?h:0}" rx="3" fill="${c}" opacity=".85">${anim('height',0,h,'1s',d)}${anim('y',H-B,H-B-h,'1s',d)}</rect><text x="${x+off}" y="${H-B-h-4}" style="fill:#eaf2fb">${p}%</text>`});
+      const wx=x+2*w+16;s+=`<line x1="${wx}" x2="${wx}" y1="${ym(e.q10)}" y2="${ym(e.q90)}" stroke="#ffd166" stroke-width="2"/><circle cx="${wx}" cy="${ym(e.q50)}" r="3.5" fill="#ffd166"/><text x="${wx+5}" y="${ym(e.q90)+4}" style="fill:#ffd166">${e.q90}</text><text x="${wx+5}" y="${ym(e.q10)+4}" style="fill:#ffd166">${e.q10}</text>`;
+      s+=`<text x="${x}" y="${H-12}">${e.day==viewToday?'Today':esc(fmtD(e.day))}</text>`});
+    $('#ens').innerHTML=s;
+    $('#enstbl').innerHTML='<tr><th>Date</th><th>Members</th><th>≥1 mm</th><th>≥10 mm</th><th>≥20 mm</th><th>10th pct</th><th>Median</th><th>90th pct</th><th>Median high</th></tr>'+E.map(e=>`<tr><td>${esc(fmtD(e.day))}</td><td>${num(e.n)}</td><td>${num(e.p1)}%</td><td>${num(e.p10)}%</td><td>${num(e.p20)}%</td><td>${num(e.q10,1)}</td><td>${num(e.q50,1)}</td><td>${num(e.q90,1)}</td><td>${num(e.tmax50,1)}°</td></tr>`).join('');
+    const nset=[...new Set(E.map(e=>e.n))];$('#ensnote').textContent=`Blue = chance of any rain (1 mm+). Red = chance of a heavy day (10 mm+), left axis. Yellow whisker = 10th–90th percentile of the ${nset.join('/')} members (mm, right axis), dot = median; percentile = sorted member at index round((n−1)·p). Amounts are for one grid point; storms are patchy.`;
+  });
+  // ---------- scorecard
+  section('#scorenote',()=>{
+    const sc=Object.entries(D.scores||{}).filter(([k,v])=>v&&fin(v.rmse)).sort((a,b)=>a[1].rmse-b[1].rmse);
+    if(!sc.length){$('#score').innerHTML='';$('#scorenote').innerHTML='<span class="unavail">No comparison: 24-hour-ahead forecasts or enough airport readings were not available for yesterday.</span>';$('#scoretbl').innerHTML='';return}
+    const W=1000,rowH=32,L=200,mx=3,win=Array.isArray(D.score_window)?D.score_window:[14,18];
+    let s=`<text x="${L}" y="14">hourly temperature RMSE vs airport, °C (shorter is better)</text><text x="600" y="14">bias</text><text x="670" y="14">n</text><text x="720" y="14">fcst high</text><text x="820" y="14">≥1 mm in ${pad(win[0])}–${pad(win[1])}h?</text>`;
+    sc.forEach(([k,v],i)=>{const y=26+i*rowH,w=(360)*Math.min(v.rmse,mx)/mx,c=v.rmse<1.5?'#5fe3a1':v.rmse<2.2?'#ffd166':'#ff6b6b';
+      s+=`<text x="0" y="${y+16}" style="fill:#eaf2fb">${esc(k)}</text><rect x="${L}" y="${y+4}" height="16" rx="4" width="${RM?w:0}" fill="${c}">${anim('width',0,w,'1.1s',(i*90)+'ms')}</rect><text x="${L+w+6}" y="${y+16}" style="fill:#eaf2fb">${v.rmse.toFixed(2)}</text>`;
+      s+=`<text x="600" y="${y+16}" style="fill:${Math.abs(v.bias)<1?'#5fe3a1':'#ffd166'}">${fin(v.bias)?(v.bias>0?'+':'')+v.bias.toFixed(1)+'°':'–'}</text><text x="670" y="${y+16}">${num(v.n)}</text><text x="720" y="${y+16}" style="fill:${fin(v.tmax)&&fin(D.obs_y_max)&&Math.abs(v.tmax-D.obs_y_max)<=1?'#5fe3a1':'#ff6b6b'}">${fin(v.tmax)?v.tmax.toFixed(1)+'°':'–'}</text><text x="820" y="${y+16}" style="fill:${v.window_ge1mm==null?'#9fb3c8':v.window_ge1mm?'#5fe3a1':'#ff6b6b'}">${v.window_ge1mm==null?'n/a':(v.window_ge1mm?'yes':'no')+' · '+num(v.window_mm,1)+' mm'}</text>`});
+    $('#score').setAttribute('viewBox',`0 0 ${W} ${40+sc.length*rowH}`);$('#score').innerHTML=s;
+    $('#scoretbl').innerHTML='<tr><th>Model</th><th>RMSE °C</th><th>Bias °C</th><th>Hours paired</th><th>Fcst high</th><th>≥1 mm in window</th></tr>'+sc.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v.rmse.toFixed(2)}</td><td>${fin(v.bias)?(v.bias>0?'+':'')+v.bias.toFixed(2):'–'}</td><td>${num(v.n)}</td><td>${fin(v.tmax)?v.tmax.toFixed(1)+'°':'–'}</td><td>${v.window_ge1mm==null?'n/a':(v.window_ge1mm?'yes':'no')+' · '+num(v.window_mm,1)+' mm'}</td></tr>`).join('');
+    const ep=(D.ts_episodes_yday||[]).map(e=>fmtT(e.first)+'–'+fmtT(e.last)).join(', ');
+    const ns=[...new Set(sc.map(([k,v])=>v.n))];
+    $('#scorenote').textContent=`Each model's forecast made 24 hours before each hour (Open-Meteo previous-runs "previous_day1": the value predicted one day earlier for that hour, not a single issue time) against the airport's hourly readings on ${fmtD(D.yday)} (${ns.join('/')} hours paired per model): measured high ${num(D.obs_y_max)}°C; active thunderstorm reported ${ep||'none'}. Bias = forecast minus measured. The last column sums the model's accumulations ending ${pad(win[0]+1)}:00–${pad(win[1])}:00 MYT; airport rainfall is not measured here, so it only shows whether the model predicted rain in that window. One day is a small sample; this guides the weighting and proves nothing on its own.`;
+  });
+  // ---------- model table
+  const ROLE={'ECMWF IFS':1,'NOAA GFS':1,'UK Met Office UM':1,'JMA GSM':1,'Open-Meteo blend':1};
+  section('#tbl',()=>{
+    const days=Array.isArray(D.days)?D.days:[];
+    if(!D.fc||!Object.keys(D.fc).length||!days.length){$('#tbl').innerHTML='<tr><td class="unavail">Model forecasts unavailable in this run.</td></tr>';return}
+    let s='<tr><th>Model</th><th>Role</th>'+days.map(d=>'<th>'+esc(fmtD(d).slice(0,6))+'</th>').join('')+'</tr>';
+    Object.keys(D.fc).sort((a,b)=>(ROLE[a]?0:1)-(ROLE[b]?0:1)).forEach(k=>{const r=Array.isArray(D.fc[k].rain)?D.fc[k].rain:[];s+=`<tr><td>${esc(k)}</td><td><span class="tag ${ROLE[k]?'core':'sec'}">${ROLE[k]?'core':'2nd opinion'}</span></td>`+days.map((d,i)=>{const v=r[i];return!fin(v)?'<td style="color:var(--mu)">–</td>':`<td><span class="cell" style="background:rgba(74,163,255,${Math.min(.85,v/16+.04)})">${v.toFixed(1)}</span></td>`}).join('')+'</tr>'});
+    s+='<tr><td><b>ECMWF ensemble median</b></td><td><span class="tag core">ENS</span></td>'+days.map(d=>{const e=(D.ens||[]).find(x=>x.day==d);return'<td><b>'+(e&&fin(e.q50)?e.q50:'–')+'</b></td>'}).join('')+'</tr>';
+    $('#tbl').innerHTML=s;
+  });
+  // ---------- sources
+  section('#src',()=>{
+    const st=D.status||{}; const ok=n=>st[n]?(st[n].ok?'<span style="color:var(--ok)">answered '+fmtT(st[n].at)+'</span>':'<span style="color:var(--bad)" title="'+esc(st[n].error||'')+'">failed</span>'):'<span class="unavail">not requested</span>';
+    const S=[
+    ['Official','MetMalaysia 7-day forecast (town Tn196, district Ds554)','Malaysian Meteorological Department','National weather service; forecasts each town in local terms','api.data.gov.my (open data)','https://www.met.gov.my/en/forecast/weather/town/Tn196/','metmalaysia_forecast'],
+    ['Official','MetMalaysia warnings','Malaysian Meteorological Department','The official source for rain, wind, sea and cyclone warnings in Malaysia','api.data.gov.my (open data)','https://www.met.gov.my/en/forecast/warning','metmalaysia_warnings'],
+    ['Live','KK airport observations (METAR WBKK)','MetMalaysia aeronautical office at KKIA; distributed by NOAA','Real measurements about 5 km from the city centre every 30 minutes; used to check the models','aviationweather.gov','https://aviationweather.gov/data/metar/?id=WBKK','wbkk_metar'],
+    ['Official','KK airport forecast (TAF WBKK)','MetMalaysia aeronautical forecasters (AMO Kota Kinabalu); distributed by NOAA','Forecaster-written; gives thunderstorm periods for the next 24 h','aviationweather.gov','https://aviationweather.gov/data/taf/?id=WBKK','wbkk_taf'],
+    ['Model','ECMWF ensemble (IFS ENS, 0.25°)','European Centre for Medium-Range Weather Forecasts','Turns the forecast into odds across its members','open-meteo.com ensemble API','https://www.ecmwf.int','ecmwf_ensemble'],
+    ['Model','ECMWF IFS 0.25°','ECMWF (Europe)','Global model, 9 km; core','open-meteo.com forecast API','https://www.ecmwf.int/en/forecasts','models_deterministic'],
+    ['Model','NOAA GFS','US National Weather Service (USA)','Global model, 13 km; core','open-meteo.com forecast API','https://www.emc.ncep.noaa.gov/emc/pages/numerical_forecast_systems/gfs.php','models_deterministic'],
+    ['Model','UK Met Office UM global 10 km','UK Met Office','Global model; core','open-meteo.com forecast API','https://www.metoffice.gov.uk','models_deterministic'],
+    ['Model','JMA GSM','Japan Meteorological Agency','Global model run by an Asia-Pacific service; core','open-meteo.com forecast API','https://www.jma.go.jp/jma/en/Activities/nwp.html','models_deterministic'],
+    ['Model','DWD ICON global','Deutscher Wetterdienst (Germany)','Global model, 13 km; 2nd opinion','open-meteo.com forecast API','https://www.dwd.de','models_deterministic'],
+    ['Model','Canada GEM global','Environment and Climate Change Canada','Global model, 15 km; 2nd opinion','open-meteo.com forecast API','https://weather.gc.ca','models_deterministic'],
+    ['Model','Météo-France ARPEGE world','Météo-France','Global model, about 25 km at this latitude; 4-day range; 2nd opinion','open-meteo.com forecast API','https://meteofrance.com','models_deterministic'],
+    ['Model','CMA GRAPES global','China Meteorological Administration','Global model, 15 km; 5-day range; 2nd opinion','open-meteo.com forecast API','https://www.cma.gov.cn','models_deterministic'],
+    ['Model','Open-Meteo blend ("best match")','Open-Meteo (Switzerland)','Hourly rain chance, UV, storm fuel (CAPE) and feels-like','open-meteo.com forecast API','https://open-meteo.com','openmeteo_blend'],
+    ['Model','Same nine models, 24-hour-ahead forecasts','as above','For the comparison against yesterday\'s airport readings','open-meteo.com previous-runs API','https://open-meteo.com/en/docs/previous-runs-api','models_previous_day1'],
+    ['Extra','Air quality, US AQI','Copernicus CAMS model via Open-Meteo','Haze and PM2.5 (model, not a Malaysian station reading; the official Malaysian API index is at DOE APIMS)','open-meteo.com air-quality API','https://eqms.doe.gov.my/apims/main','air_quality']];
+    const REF=[['MetMalaysia composite radar, Sabah and Sarawak','Shown above as an image; where rain is right now. Not analysed by the page.','https://www.met.gov.my/pencerapan/radar-sabah-and-sarawak'],['Himawari-9 satellite (JMA, via CIRA)','Storm clouds building over Borneo. Link only.','https://rammb-slider.cira.colostate.edu/?sat=himawari']];
+    const DROP=[['MET Norway, WorldWeatherOnline, Australian BOM, KMA (Korea), ECMWF AIFS, GraphCast','Not evaluated in this build.'],['Indonesia BMKG, Philippines PAGASA','Neighbours\' services cover their own territory.']];
+    let s='<tr><th>Type</th><th>Source</th><th>Run by</th><th>Why / role for KK</th><th>Fetched via</th><th>This run</th></tr>';
+    S.forEach(r=>s+=`<tr><td><span class="tag ${r[0]=='Model'?'sec':'core'}">${esc(r[0])}</span></td><td class="l"><a href="${esc(r[5])}" target="_blank" rel="noopener">${esc(r[1])}</a></td><td class="l">${esc(r[2])}</td><td class="l">${esc(r[3])}</td><td>${esc(r[4])}</td><td>${ok(r[6])}</td></tr>`);
+    s+='<tr><td colspan="6" class="l" style="color:var(--mu);padding-top:14px">Reference (not analysed by this page)</td></tr>';
+    REF.forEach(r=>s+=`<tr><td><span class="tag">Reference</span></td><td class="l"><a href="${esc(r[2])}" target="_blank" rel="noopener">${esc(r[0])}</a></td><td colspan="4" class="l">${esc(r[1])}</td></tr>`);
+    s+='<tr><td colspan="6" class="l" style="color:var(--mu);padding-top:14px">Considered and not used</td></tr>';
+    DROP.forEach(r=>s+=`<tr><td><span class="tag drop">Not used</span></td><td class="l">${esc(r[0])}</td><td colspan="4" class="l">${esc(r[1])}</td></tr>`);
+    $('#src').innerHTML=s;
+  });
+  $('#foot').textContent='Data refreshed automatically about 07:00 and 19:00 MYT by a scheduled job on GitHub (GitHub may delay or skip a scheduled run). This page re-checks for new data every 30 minutes while open. Raw responses for every source are archived in the repository under data/raw. Point: Kota Kinabalu International Airport ('+(D.point?D.point.lat+', '+D.point.lon:'')+').';
+  tickClock(); refreshRadar();
+}
+// ---------- per-minute lifecycle: countdown, now marker, data age, warning badges, call validity
+let lastDay=null;
+function tickClock(){
+  if(!D)return;
+  const t=Date.now(), n=nowMYT(), today=dayStr(n);
+  if(lastDay&&today!==lastDay){render();lastDay=today;return} lastDay=today;
+  const ageH=(t-P(D.generated).getTime())/3600e3;
+  $('#stale').hidden=!(ageH>18);if(ageH>18)$('#stale').textContent='This data is '+Math.round(ageH)+' hours old (fetched '+fmtDT(D.generated)+' MYT). The automatic refresh may have failed or been delayed; treat warnings and the storm clock as out of date.';
+  const nowH=n.getUTCHours()+n.getUTCMinutes()/60, x=20+600*nowH/24, nl=$('#nowline'), nt=$('#nowtxt');
+  if(nl){nl.setAttribute('x1',x);nl.setAttribute('x2',x);nt.setAttribute('x',x-12)}
+  const cd=$('#countdown'), cn=$('#countnote'); cd.classList.remove('live');
+  if(!D.taf){cd.textContent='–';cn.textContent='No airport forecast (TAF) available in this run.'}
+  else if(P(D.taf.valid_to).getTime()<t){cd.textContent='TAF expired';cn.textContent='The airport forecast in this data ran to '+fmtDT(D.taf.valid_to)+' MYT. Wait for the next refresh.'}
+  else{
+    const active=tsPer.filter(p=>p.from.getTime()<=t&&p.to.getTime()>t), up=tsPer.find(p=>p.from.getTime()>t);
+    const per=p=>`${fmtDT(p.from.toISOString())}–${fmtDT(p.to.toISOString())} MYT`;
+    const wordsFor=p=>(p.prob!=null?p.prob+'% probability of ':'')+(p.change=='TEMPO'?'temporary spells of ':p.change=='BECMG'?'a change to ':'')+(p.wx.includes('TSRA')?'thunderstorm rain':'thunderstorms');
+    if(active.length){cd.textContent=(active[0].prob!=null?'PROB'+active[0].prob+' ':'')+'TS period now';cd.classList.add('live');cn.textContent=active.map(p=>wordsFor(p)+' until '+fmtDT(p.to.toISOString())+' MYT').join('; ')+'. Check the radar above before heading out.'}
+    else if(up){const mins=Math.max(0,Math.round((up.from.getTime()-t)/60e3));cd.textContent=Math.floor(mins/60)+'h '+pad(mins%60)+'m';cn.textContent=`until the TAF period ${per(up)}: ${wordsFor(up)}. TEMPO means temporary spells within the period, not a continuous storm; showers can start earlier.`}
+    else{cd.textContent='No TS period';cn.textContent='The current TAF ('+fmtDT(D.taf.valid_from)+' – '+fmtDT(D.taf.valid_to)+' MYT) has no thunderstorm period left.'}
+  }
+  // warning badges re-judged
+  document.querySelectorAll('#warn li').forEach(()=>{}); // badges are re-rendered by the hourly re-render below
+}
+let warnStamp=0;
+setInterval(()=>{tickClock();if(Date.now()-warnStamp>10*60e3&&D){warnStamp=Date.now();render()}},60e3);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){tickClock();load(false)}});
+setInterval(()=>load(false),30*60e3);
+// ---------- radar image
+function refreshRadar(){const img=$('#radar');if(img)img.src='https://www.met.gov.my/data/radar_east.gif?t='+Math.floor(Date.now()/600e3)}
+setInterval(refreshRadar,600e3);
+// ---------- pause control: canvas loop, CSS animations and SVG SMIL together
+const pb=$('#pause');
+function setPaused(p){paused=p;document.body.classList.toggle('paused',p);document.querySelectorAll('svg').forEach(s=>{try{p?s.pauseAnimations():s.unpauseAnimations()}catch(e){}});pb.textContent=p?'Play motion':'Pause motion';if(!p)frame()}
+pb.onclick=()=>setPaused(!paused);
+// ---------- sky scene: driven by the forecast hour (live or scrubbed)
+const cv=$('#sky'),cx=cv.getContext('2d');let w=0,hh=0;const rs=()=>{w=cv.width=innerWidth;hh=cv.height=innerHeight};rs();addEventListener('resize',rs);
+let vt=null, playing=false, playStart=0, playFrom=0;   // vt: virtual time (ms) when scrubbing/playing; null = live
+const stars=[...Array(160)].map(()=>({x:Math.random(),y:Math.random()*.6,r:Math.random()*1.4+.3,tw:Math.random()*6}));
+const clouds=[...Array(14)].map((_,i)=>({x:Math.random(),y:.05+Math.random()*.35,s:.3+Math.random()*.7,v:(.00008+Math.random()*.00012),r:50+Math.random()*90}));
+const drops=[...Array(320)].map(()=>({x:Math.random(),y:Math.random(),v:.012+Math.random()*.012,l:10+Math.random()*14}));
+let flash=0,bolt=null,lastF=0;
+function lerp(a,b,t){return a+(b-a)*t}
+function mix(c1,c2,t){return c1.map((v,i)=>Math.round(lerp(v,c2[i],t)))}
+function rgb(c,a=1){return `rgba(${c[0]},${c[1]},${c[2]},${a})`}
+function condAt(tms){ // forecast conditions at a time: cloud %, rain chance, rain mm, temp, TS, sun altitude
+  const bh=D&&D.blend&&D.blend.hourly, bd=D&&D.blend&&D.blend.daily, m=myt(new Date(tms)), hod=m.getUTCHours()+m.getUTCMinutes()/60;
+  let sr=6.1,ss=17.9;if(bd&&bd.sunrise&&bd.sunset){sr=+String(bd.sunrise[0]).slice(11,13)+(+String(bd.sunrise[0]).slice(14,16))/60;ss=+String(bd.sunset[0]).slice(11,13)+(+String(bd.sunset[0]).slice(14,16))/60}
+  const dayF=hod>sr&&hod<ss?Math.sin(Math.PI*(hod-sr)/(ss-sr)):-Math.sin(Math.PI*((hod-ss+24)%24)/(24-(ss-sr)));
+  let cloud=50,pop=0,mm=0,temp=null,code=0,iso='';
+  if(bh&&Array.isArray(bh.time)){const key=dayStr(m)+'T'+pad(m.getUTCHours());let i=bh.time.findIndex(t=>String(t).slice(0,13)>=key);if(i<0)i=bh.time.length-1;iso=bh.time[i];
+    cloud=fin(bh.cloud_cover[i])?bh.cloud_cover[i]:50;pop=fin(bh.precipitation_probability[i])?bh.precipitation_probability[i]:0;mm=fin(bh.precipitation[i])?bh.precipitation[i]:0;temp=fin(bh.temperature_2m[i])?bh.temperature_2m[i]:null;code=fin(bh.weather_code[i])?bh.weather_code[i]:0}
+  const inTS=tsPer.some(p=>p.from.getTime()<=tms&&p.to.getTime()>tms);
+  const live=vt==null&&ob&&Math.abs(tms-P(ob.t).getTime())<90*60e3;
+  if(live){ // let the real observation override the model for the current hour
+    const cov={CLR:5,SKC:5,CAVOK:5,FEW:20,SCT:45,BKN:75,OVC:95}[ob.cover];if(cov!=null)cloud=cov;
+    if(/TS|RA|SH/.test(String(ob.wx||'')))pop=Math.max(pop,90);else if(ob.wx===''&&pop>60)pop=Math.min(pop,40);
+  }
+  const rain=pop>=55&&(mm>0.05||inTS||code>=51||(live&&/RA|TS/.test(String(ob.wx||''))));
+  const storm=rain&&(inTS||code>=95||(live&&/TS/.test(String(ob.wx||''))));
+  return {hod,dayF,cloud,pop,mm,temp,rain,storm,inTS,iso,sr,ss,live};
+}
+function frame(){
+  if(!D||paused)return;
   const now=Date.now();
-  h+='<ul>';
-  rel.forEach(w=>{
-    const exp=w.valid_to&&P(w.valid_to).getTime()<now, fut=w.valid_from&&P(w.valid_from).getTime()>now;
-    const when=w.valid_from&&w.valid_to?`${fmtDT(w.valid_from)} – ${fmtDT(w.valid_to)} MYT`:'no validity period given';
-    const st=exp?'<span class="tag drop">expired</span>':fut?'<span class="tag sec">upcoming</span>':w.valid_from?'<span class="tag core">in force</span>':'';
-    const kind={marine:'Sea / shipping',rain:'Rain',cyclone:'Tropical cyclone',other:'Other'}[w.kind];
-    h+=`<li><b>${esc(kind)}:</b> ${esc(w.heading)} ${st}<br><span class="note">Areas named: ${esc(w.areas.join(', ')||'–')} · valid ${when} · issued ${fmtDT(w.issued)}</span><details><summary>Full text</summary><div class="note">${esc(w.text)}</div></details></li>`});
-  h+='</ul><div class="note">Status (in force / expired) is judged against the time you opened this page. Live radar: <a href="https://www.met.gov.my/pencerapan/radar-sabah-and-sarawak" target="_blank" rel="noopener">MetMalaysia radar, Sabah and Sarawak</a>.</div>';
-  $('#warn').innerHTML=h;
-})();
-// --- storm clock
-(function(){
-  const W=640,L=20,R=20,x=h=>L+(W-L-R)*h/24; const n=nowMYT(); const nowH=n.getUTCHours()+n.getUTCMinutes()/60;
-  let s=`<rect x="${L}" y="34" width="${W-L-R}" height="18" rx="9" fill="rgba(255,255,255,.08)"/>`;
-  if(bd){const sr=+bd.sunrise[0].slice(11,13)+(+bd.sunrise[0].slice(14))/60,ss=+bd.sunset[0].slice(11,13)+(+bd.sunset[0].slice(14))/60;s+=`<rect x="${x(sr)}" y="34" width="${x(ss)-x(sr)}" height="18" rx="9" fill="rgba(255,209,102,.15)"/>`}
-  const dayStart=Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate())-8*3600e3; // MYT midnight as real instant
-  const todays=tsPer.map(p=>({a:(p.from.getTime()-dayStart)/3600e3,b:(p.to.getTime()-dayStart)/3600e3,p})).filter(p=>p.b>0&&p.a<24);
-  todays.forEach(p=>{const a=Math.max(0,p.a),b=Math.min(24,p.b);s+=`<rect x="${x(a)}" y="30" width="${x(b)-x(a)}" height="26" rx="6" fill="#ffd166" opacity=".85">${RM?'':'<animate attributeName="opacity" values=".45;.95;.45" dur="2.4s" repeatCount="indefinite"/>'}</rect><text x="${x(a)}" y="24" style="fill:#ffd166">⛈ ${esc(p.p.change||'')} TS ${fmtT(p.p.from.toISOString())}–${fmtT(p.p.to.toISOString())}</text>`});
-  s+=`<line x1="${x(nowH)}" x2="${x(nowH)}" y1="22" y2="64" stroke="#fff" stroke-width="2"/><text x="${x(nowH)-12}" y="78" style="fill:#fff">now</text>`;
-  for(let h=0;h<=24;h+=6)s+=`<text x="${x(h)-8}" y="78">${pad(h%24)}h</text>`;$('#clock').innerHTML=s;
-  const tick=()=>{const t=Date.now();const up=tsPer.find(p=>p.to.getTime()>t);
-    if(!D.taf){$('#countdown').textContent='–';$('#countnote').textContent='No airport forecast (TAF) available in this run.';return}
-    if(P(D.taf.valid_to).getTime()<t){$('#countdown').textContent='TAF expired';$('#countnote').textContent='The airport forecast in this data ran to '+fmtDT(D.taf.valid_to)+' MYT. Wait for the next refresh.';return}
-    if(!up){$('#countdown').textContent='No TS period';$('#countnote').textContent='The current TAF ('+fmtDT(D.taf.valid_from)+' – '+fmtDT(D.taf.valid_to)+') has no thunderstorm period left.';return}
-    if(up.from.getTime()>t){const left=(up.from.getTime()-t)/3600e3;$('#countdown').textContent=Math.floor(left)+'h '+pad(Math.round(left%1*60))+'m';$('#countnote').textContent=`until the TAF ${up.change||''} thunderstorm period ${fmtDT(up.from.toISOString())}–${fmtT(up.to.toISOString())} MYT. TEMPO means temporary spells within the period, not a continuous storm; showers can start earlier.`}
-    else{$('#countdown').textContent='TS period now';$('#countnote').textContent=`TAF thunderstorm period until ${fmtT(up.to.toISOString())} MYT. Check the radar before heading out.`}};
-  tick();setInterval(tick,30000);
-})();
-$('#tick').textContent=(D.obs||[]).slice(-12).reverse().map(o=>o.raw).join('   ·   ')+(D.taf?'   ·   '+D.taf.raw:'');
-// --- observed 36 h
-(function(){
-  const o=(D.obs||[]).filter(a=>a.temp!=null); if(o.length<4){$('#obs').outerHTML='<p class="unavail">Not enough airport observations in this run.</p>';return}
-  const W=1000,H=230,L=34,R=10,T=14,B=30,t0=P(o[0].t).getTime(),t1=P(o[o.length-1].t).getTime(),x=t=>L+(W-L-R)*(P(t).getTime()-t0)/(t1-t0);
-  const lo=Math.min(...o.map(a=>a.temp))-1,hi=Math.max(...o.map(a=>a.temp))+1,y=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo));let s='';
-  // active-TS episodes (present weather), split at gaps > 45 min; recent-TS remarks marked separately
-  let ep=[],c=null;o.forEach(a=>{if(a.wx.includes('TS')){const tt=P(a.t).getTime();if(c&&tt-P(c.last).getTime()<=45*60e3)c.last=a.t;else{c={first:a.t,last:a.t};ep.push(c)}}});
-  ep.forEach(e=>s+=`<rect x="${x(e.first)}" y="${T}" width="${Math.max(6,x(e.last)-x(e.first))}" height="${H-T-B}" fill="rgba(255,209,102,.18)"/><text x="${x(e.first)+4}" y="${T+12}" style="fill:#ffd166">⛈ TS reported ${fmtT(e.first)}–${fmtT(e.last)}</text>`);
-  o.filter(a=>a.recent.includes('TS')&&!a.wx.includes('TS')).forEach(a=>s+=`<line x1="${x(a.t)}" x2="${x(a.t)}" y1="${T}" y2="${H-B}" stroke="#ffd166" stroke-dasharray="3 3" opacity=".6"/>`);
-  o.filter(a=>/T(00|12):00/.test(a.t)).forEach(a=>s+=`<line x1="${x(a.t)}" x2="${x(a.t)}" y1="${T}" y2="${H-B}" stroke="rgba(255,255,255,.12)"/><text x="${x(a.t)+3}" y="${H-10}">${fmtD(a.t)} ${fmtT(a.t)}</text>`);
-  s+=`<polyline points="${o.map(a=>`${x(a.t)},${y(a.temp)}`).join(' ')}" fill="none" stroke="#ffb347" stroke-width="2.5" stroke-dasharray="3000" stroke-dashoffset="${RM?0:3000}">${anim('stroke-dashoffset',3000,0,'2.5s')}</polyline>`;
-  const mx=o.reduce((a,b)=>b.temp>a.temp?b:a);s+=`<circle cx="${x(mx.t)}" cy="${y(mx.temp)}" r="4" fill="#ffb347"/><text x="${x(mx.t)-30}" y="${y(mx.temp)-8}" style="fill:#ffb347">${mx.temp}°C</text>`;
-  const la=o[o.length-1];s+=`<circle cx="${x(la.t)}" cy="${y(la.temp)}" r="5" fill="#fff">${RM?'':'<animate attributeName="r" values="4;8;4" dur="1.6s" repeatCount="indefinite"/>'}</circle>`;
-  for(let v=Math.ceil(lo);v<=hi;v+=3)s+=`<text x="2" y="${y(v)+4}">${v}°</text>`;$('#obs').innerHTML=s;
-  const rt=(D.recent_ts_yday||[]);
-  $('#obsnote').textContent='Temperature measured every 30 minutes at Kota Kinabalu International Airport (METAR). Shaded = active thunderstorm in the present-weather group; dashed lines = "recent thunderstorm" remark only'+(rt.length?' ('+rt.join(', ')+')':'')+'. Times MYT. Rainfall amount is not reported in METAR.';
-  $('#obstbl').innerHTML='<tr><th>Time (MYT)</th><th>°C</th><th>Dew</th><th>Wind</th><th>Weather</th><th>Cloud</th></tr>'+o.slice().reverse().map(a=>`<tr><td>${fmtDT(a.t)}</td><td>${a.temp}</td><td>${a.dewp??''}</td><td>${a.wdir??'VRB'}/${a.wspd??''} kt</td><td>${esc(a.wx)}${a.recent?' ('+esc(a.recent)+')':''}</td><td>${esc(a.cover||'')}</td></tr>`).join('');
-})();
-// --- hourly chart from the data's reference time forward
-(function(){
-  if(!bh){$('#hr').outerHTML='<p class="unavail">Hourly model data unavailable in this run.</p>';return}
-  const start=bh.time.findIndex(t=>t>=D.generated.slice(0,13)); const i0=Math.max(0,start), N=Math.min(48,bh.time.length-i0);
-  $('#hrtitle').textContent=`Next ${N} hours from ${fmtDT(bh.time[i0])} MYT · rain chance and temperature`;
-  const W=1000,H=260,L=40,R=40,T=14,B=30,bw=(W-L-R)/N;let s='';
-  const pop=bh.precipitation_probability.slice(i0,i0+N),tmp=bh.temperature_2m.slice(i0,i0+N).filter(v=>v!=null);
-  const lo=Math.min(...tmp)-1,hi=Math.max(...tmp)+1,ty=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo)),py=p=>T+(H-T-B)*(1-p/100);
-  const tA=P(bh.time[i0]).getTime();
-  tsPer.forEach(p=>{const a=(p.from.getTime()-tA)/3600e3,b=(p.to.getTime()-tA)/3600e3;if(b>0&&a<N)s+=`<rect x="${L+Math.max(0,a)*bw}" y="${T}" width="${(Math.min(N,b)-Math.max(0,a))*bw}" height="${H-T-B}" fill="rgba(255,209,102,.16)"/>`});
-  for(let p=0;p<=100;p+=25)s+=`<line x1="${L}" x2="${W-R}" y1="${py(p)}" y2="${py(p)}" stroke="rgba(255,255,255,.07)"/><text x="2" y="${py(p)+4}">${p}%</text>`;
-  for(let i=0;i<N;i++){const p=pop[i]??0,h=(H-T-B)*p/100,x=L+i*bw,d=(i*25)+'ms';
-    s+=`<rect x="${x+1}" y="${RM?H-B-h:H-B}" width="${bw-2}" height="${RM?h:0}" rx="2" fill="#4aa3ff" opacity="${.35+p/160}">${anim('height',0,h,'.9s',d)}${anim('y',H-B,H-B-h,'.9s',d)}</rect>`;
-    const tm=bh.time[i0+i];if(tm.endsWith('00:00')||tm.endsWith('06:00')||tm.endsWith('12:00')||tm.endsWith('18:00'))s+=`<text x="${x}" y="${H-10}">${tm.slice(11,13)}h${tm.endsWith('00:00')?' '+fmtD(tm).slice(4):''}</text>`;}
-  s+=`<polyline points="${bh.temperature_2m.slice(i0,i0+N).map((v,i)=>v==null?null:`${L+i*bw+bw/2},${ty(v)}`).filter(Boolean).join(' ')}" fill="none" stroke="#ffb347" stroke-width="2.5" stroke-dasharray="2000" stroke-dashoffset="${RM?0:2000}">${anim('stroke-dashoffset',2000,0,'2s')}</polyline>`;
-  for(let v=Math.ceil(lo);v<=hi;v+=2)s+=`<text x="${W-R+4}" y="${ty(v)+4}" style="fill:#ffb347">${v}°</text>`;
-  $('#hr').innerHTML=s;
-  $('#hrtbl').innerHTML='<tr><th>Time (MYT)</th><th>Rain chance %</th><th>Rain mm</th><th>°C</th><th>Feels</th><th>Wind km/h</th><th>Cloud %</th></tr>'+bh.time.slice(i0,i0+N).map((t,j)=>{const i=i0+j;return`<tr><td>${fmtDT(t)}</td><td>${bh.precipitation_probability[i]??''}</td><td>${bh.precipitation[i]??''}</td><td>${bh.temperature_2m[i]??''}</td><td>${bh.apparent_temperature[i]??''}</td><td>${bh.wind_speed_10m[i]??''}</td><td>${bh.cloud_cover[i]??''}</td></tr>`}).join('');
-})();
-// --- MetMalaysia: translation convention = Sandy's literal translation, Malay kept
-const TR=[['ribut petir menyeluruh','Widespread thunderstorms'],['ribut petir di kebanyakan tempat','Thunderstorms in most places'],['ribut petir di beberapa tempat','Thunderstorms in a few places'],['ribut petir','Thunderstorms'],['hujan menyeluruh','Widespread rain'],['hujan di kebanyakan tempat','Rain in most places'],['hujan di beberapa tempat','Rain in a few places'],['tiada hujan','No rain'],['hujan','Rain'],['berangin','Windy'],['cerah','Fair'],['mendung','Cloudy']];
-const tr=s=>{if(!s)return'–';const l=s.toLowerCase().trim();for(const[a,b]of TR)if(l==a)return b;return s};
-const icon=s=>{const l=(s||'').toLowerCase();return l.includes('ribut petir')?'⛈️':l.includes('hujan')&&!l.startsWith('tiada')?'🌧️':l.includes('tiada hujan')?'☀️':'🌤️'};
-const town=D.metmy&&Object.values(D.metmy).find(m=>m.kind=='town'), dist=D.metmy&&Object.values(D.metmy).find(m=>m.kind=='district');
-const mmMain=town||dist;
-// --- 7 day cards
-(function(){
-  if(!D.days||!D.days.length){$('#days').innerHTML='<p class="unavail">No daily forecast data.</p>';return}
-  D.days.forEach((d,i)=>{const e=(D.ens||[]).find(x=>x.day==d)||{},m=mmMain&&mmMain.days.find(r=>r.date==d),heavy=e.p10;
-    const lab=d==viewToday?'Today':fmtD(d);
-    $('#days').insertAdjacentHTML('beforeend',`<div class="day" style="animation:rise .7s ${i*90}ms both"><b>${esc(lab)}</b><br><span class="ic" style="animation-delay:${i*.3}s">${m?icon(m.afternoon_forecast):'·'}</span>
-    <div style="font-size:15px">${m?m.max_temp+'° / '+m.min_temp+'°':'<span class="unavail">no official</span>'}</div><div>${m?esc(tr(m.afternoon_forecast))+' (pm)':''}</div>
-    <div class="bar"><i data-w="${heavy??0}" style="background:${heavy>=30?'#ff6b6b':heavy>=20?'#ffd166':'#4aa3ff'}"></i></div>
-    <div>${heavy!=null?heavy+'% chance 10 mm+<br>likely '+e.q10+'–'+e.q90+' mm':'<span class="unavail">ensemble n/a</span>'}</div></div>`)});
-  setTimeout(()=>document.querySelectorAll('.bar i').forEach(e=>e.style.width=e.dataset.w+'%'),RM?0:300);
-})();
-// --- MetMalaysia table (town + district)
-(function(){
-  if(!D.metmy||!Object.keys(D.metmy).length){$('#mmt').outerHTML='<p class="unavail">MetMalaysia forecast unavailable in this run.</p>';return}
-  let s='<tr><th>Date</th><th>Record</th><th>Morning</th><th>Afternoon</th><th>Night</th><th>Min / max</th></tr>';
-  const recs=[town,dist].filter(Boolean);
-  const dates=[...new Set(recs.flatMap(r=>r.days.map(x=>x.date)))].sort();
-  dates.forEach(d=>recs.forEach((r,ri)=>{const x=r.days.find(y=>y.date==d);if(!x)return;s+=`<tr>${ri==0?`<td rowspan="${recs.filter(q=>q.days.some(y=>y.date==d)).length}">${fmtD(d)}</td>`:''}<td>${esc(r.kind)}</td><td title="${esc(x.morning_forecast)}">${esc(tr(x.morning_forecast))}</td><td title="${esc(x.afternoon_forecast)}">${esc(tr(x.afternoon_forecast))}</td><td title="${esc(x.night_forecast)}">${esc(tr(x.night_forecast))}</td><td>${x.min_temp}° / ${x.max_temp}°</td></tr>`}));
-  $('#mmt').innerHTML=s;
-  const ids=Object.entries(D.metmy).map(([k,v])=>k+' ('+v.kind+')').join(', ');
-  $('#mmnote').textContent='Records: '+ids+'. The town record is used for the cards; the district covers a wider area. English is Sandy\'s literal translation of MetMalaysia\'s Malay (hover a cell for the original). MetMalaysia\'s own site may word the same phrase as "isolated" or "scattered"; "most places" is not a calibrated coverage figure.';
-})();
-// --- ensemble chart
-(function(){
-  const E=(D.ens||[]).filter(e=>e.p1!=null); if(!E.length){$('#ens').outerHTML='<p class="unavail">ECMWF ensemble unavailable in this run.</p>';return}
-  const W=1000,H=250,L=40,R=44,T=20,B=34,n=E.length,cw=(W-L-R)/n;let s='';const y=p=>T+(H-T-B)*(1-p/100);
-  for(let p=0;p<=100;p+=25)s+=`<line x1="${L}" x2="${W-R}" y1="${y(p)}" y2="${y(p)}" stroke="rgba(255,255,255,.08)"/><text x="4" y="${y(p)+4}">${p}%</text>`;
-  const qmax=Math.ceil(Math.max(...E.map(e=>e.q90),10)/5)*5,ym=v=>T+(H-T-B)*(1-v/qmax);
-  for(let v=0;v<=qmax;v+=5)s+=`<text x="${W-R+6}" y="${ym(v)+4}" style="fill:#ffd166">${v} mm</text>`;
-  E.forEach((e,i)=>{const x=L+i*cw+cw*.14,w=cw*.26,d=(i*120)+'ms';
-    [[e.p1,'#4aa3ff',0],[e.p10,'#ff6b6b',w+4]].forEach(([p,c,off])=>{const h=(H-T-B)*p/100;s+=`<rect x="${x+off}" y="${RM?H-B-h:H-B}" width="${w}" height="${RM?h:0}" rx="3" fill="${c}" opacity=".85">${anim('height',0,h,'1s',d)}${anim('y',H-B,H-B-h,'1s',d)}</rect><text x="${x+off}" y="${H-B-h-4}" style="fill:#eaf2fb">${p}%</text>`});
-    const wx=x+2*w+16;s+=`<line x1="${wx}" x2="${wx}" y1="${ym(e.q10)}" y2="${ym(e.q90)}" stroke="#ffd166" stroke-width="2"/><circle cx="${wx}" cy="${ym(e.q50)}" r="3.5" fill="#ffd166"/><text x="${wx+5}" y="${ym(e.q90)+4}" style="fill:#ffd166">${e.q90}</text><text x="${wx+5}" y="${ym(e.q10)+4}" style="fill:#ffd166">${e.q10}</text>`;
-    s+=`<text x="${x}" y="${H-12}">${e.day==viewToday?'Today':fmtD(e.day)}</text>`});
-  $('#ens').innerHTML=s;
-})();
-// --- scorecard (exploratory)
-(function(){
-  const sc=Object.entries(D.scores||{}).sort((a,b)=>a[1].rmse-b[1].rmse);
-  if(!sc.length){$('#score').outerHTML='<p class="unavail">No comparison: previous-run forecasts or enough airport readings were not available for yesterday.</p>';$('#scorenote').textContent='';return}
-  const W=1000,rowH=32,L=200,mx=3;let s=`<text x="${L}" y="14">hourly temperature RMSE vs airport, °C (shorter is better)</text><text x="640" y="14">bias</text><text x="720" y="14">fcst high</text><text x="820" y="14">≥1 mm in ${pad(D.score_window[0])}–${pad(D.score_window[1])}h?</text>`;
-  sc.forEach(([k,v],i)=>{const y=26+i*rowH,w=(400)*Math.min(v.rmse,mx)/mx,c=v.rmse<1.5?'#5fe3a1':v.rmse<2.2?'#ffd166':'#ff6b6b';
-    s+=`<text x="0" y="${y+16}" style="fill:#eaf2fb">${esc(k)}</text><rect x="${L}" y="${y+4}" height="16" rx="4" width="${RM?w:0}" fill="${c}">${anim('width',0,w,'1.1s',(i*90)+'ms')}</rect><text x="${L+w+6}" y="${y+16}" style="fill:#eaf2fb">${v.rmse.toFixed(2)}</text>`;
-    s+=`<text x="640" y="${y+16}" style="fill:${Math.abs(v.bias)<1?'#5fe3a1':'#ffd166'}">${v.bias>0?'+':''}${v.bias.toFixed(1)}°</text><text x="720" y="${y+16}" style="fill:${v.tmax!=null&&D.obs_y_max!=null&&Math.abs(v.tmax-D.obs_y_max)<=1?'#5fe3a1':'#ff6b6b'}">${v.tmax!=null?v.tmax.toFixed(1)+'°':'–'}</text><text x="820" y="${y+16}" style="fill:${v.window_ge1mm==null?'#9fb3c8':v.window_ge1mm?'#5fe3a1':'#ff6b6b'}">${v.window_ge1mm==null?'n/a':(v.window_ge1mm?'yes':'no')+' · '+v.window_mm+' mm'}</text>`});
-  $('#score').setAttribute('viewBox',`0 0 ${W} ${40+sc.length*rowH}`);$('#score').innerHTML=s;
-  $('#scoretbl').innerHTML='<tr><th>Model</th><th>RMSE °C</th><th>Bias °C</th><th>Fcst high</th><th>≥1 mm in window</th></tr>'+sc.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v.rmse.toFixed(2)}</td><td>${v.bias>0?'+':''}${v.bias.toFixed(2)}</td><td>${v.tmax!=null?v.tmax.toFixed(1)+'°':'–'}</td><td>${v.window_ge1mm==null?'n/a':(v.window_ge1mm?'yes':'no')+' · '+v.window_mm+' mm'}</td></tr>`).join('');
-  const ep=(D.ts_episodes_yday||[]).map(e=>fmtT(e.first)+'–'+fmtT(e.last)).join(', ');
-  $('#scorenote').textContent=`Forecasts issued the day before (Open-Meteo previous-runs, 1-day lead) against ${D.obs_y_hours} hourly airport readings on ${fmtD(D.yday)}: measured high ${D.obs_y_max}°C; active thunderstorm reported ${ep||'none'}. Bias = forecast minus measured. The last column sums the model's accumulations ending ${pad(D.score_window[0]+1)}:00–${pad(D.score_window[1])}:00 MYT; airport rainfall is not measured here, so it only shows whether the model predicted rain in that window. One day is a small sample; this guides the weighting and proves nothing on its own.`;
-})();
-// --- model table
-const ROLE={'ECMWF IFS':'core','NOAA GFS':'core','UK Met Office UM':'core','JMA GSM':'core','Open-Meteo blend':'core'};
-(function(){
-  if(!D.fc||!Object.keys(D.fc).length){$('#tbl').outerHTML='<p class="unavail">Model forecasts unavailable in this run.</p>';return}
-  let s='<tr><th>Model</th><th>Role</th>'+D.days.map(d=>'<th>'+fmtD(d).slice(0,6)+'</th>').join('')+'</tr>';
-  Object.keys(D.fc).sort((a,b)=>(ROLE[a]?0:1)-(ROLE[b]?0:1)).forEach(k=>{const r=D.fc[k].rain||[];s+=`<tr><td>${esc(k)}</td><td><span class="tag ${ROLE[k]?'core':'sec'}">${ROLE[k]?'core':'2nd opinion'}</span></td>`+D.days.map((d,i)=>{const v=r[i];return v==null?'<td style="color:var(--mu)">–</td>':`<td><span class="cell" style="background:rgba(74,163,255,${Math.min(.85,v/16+.04)})">${v.toFixed(1)}</span></td>`}).join('')+'</tr>'});
-  s+='<tr><td><b>ECMWF ensemble median</b></td><td><span class="tag core">ENS</span></td>'+D.days.map(d=>{const e=(D.ens||[]).find(x=>x.day==d);return'<td><b>'+(e&&e.q50!=null?e.q50:'–')+'</b></td>'}).join('')+'</tr>';
-  $('#tbl').innerHTML=s;
-})();
-// --- sources table, status from this run
-(function(){
-  const st=D.status||{}; const ok=n=>st[n]?(st[n].ok?'<span style="color:var(--ok)">answered '+fmtT(st[n].at)+'</span>':'<span style="color:var(--bad)">failed</span>'):'<span class="unavail">not requested</span>';
-  const S=[
-  ['Official','MetMalaysia 7-day forecast (town Tn196, district Ds554)','Malaysian Meteorological Department','National weather service; forecasts each town in local terms','api.data.gov.my (open data)','https://www.met.gov.my/en/forecast/weather/town/Tn196/','metmalaysia_forecast'],
-  ['Official','MetMalaysia warnings','Malaysian Meteorological Department','The official source for rain, wind, sea and cyclone warnings in Malaysia','api.data.gov.my (open data)','https://www.met.gov.my/en/forecast/warning','metmalaysia_warnings'],
-  ['Live','KK airport observations (METAR WBKK)','MetMalaysia aeronautical office at KKIA; distributed by NOAA','Real measurements about 5 km from the city centre every 30 minutes; used to check the models','aviationweather.gov','https://aviationweather.gov/data/metar/?id=WBKK','wbkk_metar'],
-  ['Official','KK airport forecast (TAF WBKK)','MetMalaysia aeronautical forecasters (AMO Kota Kinabalu); distributed by NOAA','Forecaster-written; gives thunderstorm periods for the next 24 h','aviationweather.gov','https://aviationweather.gov/data/taf/?id=WBKK','wbkk_taf'],
-  ['Model','ECMWF ensemble, 51 members','European Centre for Medium-Range Weather Forecasts','Turns the forecast into odds; the widely used global ensemble','open-meteo.com ensemble API','https://www.ecmwf.int','ecmwf_ensemble'],
-  ['Model','ECMWF IFS, NOAA GFS, UK Met Office UM, JMA GSM, DWD ICON, Canada GEM, Météo-France ARPEGE, CMA GRAPES','ECMWF, NOAA, UK Met Office, JMA, DWD, ECCC, Météo-France, CMA','Nine global models compared side by side; roles set by the running comparison','open-meteo.com forecast API','https://open-meteo.com/en/docs','models_deterministic'],
-  ['Model','Same models, forecasts issued the day before','as above','For the exploratory comparison against yesterday\'s airport readings','open-meteo.com previous-runs API','https://open-meteo.com/en/docs/previous-runs-api','models_previous_day1'],
-  ['Model','Open-Meteo blend','Open-Meteo (Switzerland)','Hourly rain chance, UV, storm fuel (CAPE) and feels-like','open-meteo.com','https://open-meteo.com','openmeteo_blend'],
-  ['Extra','Air quality, US AQI','Copernicus CAMS model via Open-Meteo','Haze and PM2.5 (model, not a Malaysian station reading; see DOE APIMS for the official Malaysian API)','open-meteo.com air-quality API','https://eqms.doe.gov.my/apims/main','air_quality']];
-  const REF=[['MetMalaysia radar, Sabah and Sarawak','Where storms are right now; best for the next 1–2 hours','https://www.met.gov.my/pencerapan/radar-sabah-and-sarawak'],['Himawari-9 satellite (JMA, via CIRA)','Storm clouds building over Borneo','https://rammb-slider.cira.colostate.edu/?sat=himawari']];
-  const DROP=[['MET Norway, WorldWeatherOnline','Not analysed in this build: both repackage global models already compared here; this is a judgment, not a verified finding.'],['KMA (Korea), ECMWF AIFS, GraphCast, Australian BOM','Requested on 7 Nov 2026 by hand and returned no data for this point; not requested in the scheduled run.'],['Indonesia BMKG, Philippines PAGASA','Neighbours\' services cover their own territory.']];
-  let s='<tr><th>Type</th><th>Source</th><th>Run by</th><th>Why it is used for KK</th><th>Fetched via</th><th>This run</th></tr>';
-  S.forEach(r=>s+=`<tr><td><span class="tag ${r[0]=='Model'?'sec':'core'}">${r[0]}</span></td><td class="l"><a href="${esc(r[5])}" target="_blank" rel="noopener">${esc(r[1])}</a></td><td class="l">${esc(r[2])}</td><td class="l">${esc(r[3])}</td><td>${esc(r[4])}</td><td>${ok(r[6])}</td></tr>`);
-  s+='<tr><td colspan="6" class="l" style="color:var(--mu);padding-top:14px">Reference links (not analysed by this page)</td></tr>';
-  REF.forEach(r=>s+=`<tr><td><span class="tag">Reference</span></td><td class="l"><a href="${esc(r[2])}" target="_blank" rel="noopener">${esc(r[0])}</a></td><td colspan="4" class="l">${esc(r[1])}</td></tr>`);
-  s+='<tr><td colspan="6" class="l" style="color:var(--mu);padding-top:14px">Considered and not used</td></tr>';
-  DROP.forEach(r=>s+=`<tr><td><span class="tag drop">Not used</span></td><td class="l">${esc(r[0])}</td><td colspan="4" class="l">${esc(r[1])}</td></tr>`);
-  $('#src').innerHTML=s;
-})();
-$('#foot').textContent='Data refreshed automatically twice a day (about 07:00 and 19:00 MYT) by a scheduled job on GitHub. Raw responses for every source are archived in the repository under data/raw. Point: Kota Kinabalu International Airport ('+D.point.lat+', '+D.point.lon+').';
-// --- animated sky (decorative), driven by the latest observation; paused under reduced motion or by the button
-(function(){
-  const cv=$('#sky'),cx=cv.getContext('2d');let w,hh;const rs=()=>{w=cv.width=innerWidth;hh=cv.height=innerHeight};rs();addEventListener('resize',rs);
-  const inten=raining?.8:Math.min(.35,((bh&&bh.precipitation_probability[Math.max(0,bh.time.findIndex(t=>t>=D.generated.slice(0,13)))])||0)/100);
-  const drops=[...Array(260)].map(()=>({x:Math.random()*w,y:Math.random()*hh,v:8+Math.random()*10,l:10+Math.random()*14}));
-  const clouds=[...Array(6)].map(()=>({x:Math.random()*w,y:40+Math.random()*hh*.35,s:.15+Math.random()*.35,r:60+Math.random()*80}));
-  const storm={x:w+300,y:hh*.18};let f=0,run=!RM;
-  const frame=()=>{f++;const g=cx.createLinearGradient(0,0,0,hh);g.addColorStop(0,raining?'#1d2c40':'#24507a');g.addColorStop(1,'#0b1624');cx.fillStyle=g;cx.fillRect(0,0,w,hh);
-    const sg=cx.createRadialGradient(w*.82,90,5,w*.82,90,170);sg.addColorStop(0,`rgba(255,220,130,${raining?.1:.6})`);sg.addColorStop(1,'rgba(255,220,130,0)');cx.fillStyle=sg;cx.fillRect(0,0,w,320);
-    clouds.forEach(c=>{if(run){c.x+=c.s;if(c.x>w+200)c.x=-200}cx.fillStyle='rgba(200,215,235,.10)';for(let k=0;k<4;k++){cx.beginPath();cx.arc(c.x+k*c.r*.6,c.y+(k%2)*14,c.r*.7,0,7);cx.fill()}});
-    if(tsPer.length){if(run){storm.x-=.25;if(storm.x<-400)storm.x=w+300}cx.fillStyle='rgba(40,50,70,.35)';for(let k=0;k<6;k++){cx.beginPath();cx.arc(storm.x+k*55,storm.y+(k%2)*22,90,0,7);cx.fill()}
-      cx.strokeStyle='rgba(160,205,255,.28)';cx.lineWidth=1;for(let k=0;k<30;k++){const dx=storm.x+(k*37%300),dy=storm.y+60+((f*6+k*53)%220);cx.beginPath();cx.moveTo(dx,dy);cx.lineTo(dx+1,dy-12);cx.stroke()}
-      if(run&&f%420<5){cx.fillStyle='rgba(255,255,255,'+(.10-(f%420)*.02)+')';cx.fillRect(storm.x-100,0,500,hh*.6)}}
-    if(inten>.25){cx.strokeStyle=`rgba(160,205,255,${.15+.3*inten})`;drops.slice(0,Math.floor(260*inten)).forEach(d=>{if(run){d.y+=d.v;d.x-=1.5;if(d.y>hh){d.y=-20;d.x=Math.random()*w}}cx.beginPath();cx.moveTo(d.x,d.y);cx.lineTo(d.x+1.5,d.y-d.l);cx.stroke()})}
-    if(run)requestAnimationFrame(frame)};
-  frame();
-  const b=$('#pause');b.hidden=false;b.textContent=run?'Pause animation':'Play animation';b.onclick=()=>{run=!run;b.textContent=run?'Pause animation':'Play animation';if(run)frame()};
-})();
+  if(playing){const el=(now-playStart)/1000;vt=playFrom+el*3600e3;if(el>=24){playing=false;vt=playFrom+24*3600e3;$('#play').textContent='▶ Replay';}$('#scrub').value=((vt-playFrom)/3600e3).toFixed(2)}
+  const t=vt==null?now:vt, c=condAt(t), rainI=c.rain?Math.min(1,.35+c.pop/100*.4+Math.min(.4,c.mm/8)):0, cl=c.cloud/100;
+  // sky
+  const dayTop=[72,160,224],dayBot=[168,213,245],duskTop=[58,74,122],duskBot=[244,162,97],nightTop=[5,11,24],nightBot=[11,22,36];
+  let top,bot;const f=c.dayF;
+  if(f>.25){top=dayTop;bot=dayBot}else if(f>-.15){const k=(f+.15)/.4;top=mix(duskTop,dayTop,k);bot=mix(duskBot,dayBot,k)}else{const k=Math.min(1,(-f-.15)/.6);top=mix(duskTop,nightTop,k);bot=mix(duskBot,nightBot,k)}
+  const dim=1-.45*cl-(c.storm?.2:0);top=top.map(v=>v*dim);bot=bot.map(v=>v*dim);
+  const g=cx.createLinearGradient(0,0,0,hh);g.addColorStop(0,rgb(top));g.addColorStop(1,rgb(bot));cx.fillStyle=g;cx.fillRect(0,0,w,hh);
+  // stars
+  if(f<0){const a=Math.min(1,-f*2)*(1-cl);cx.fillStyle='#fff';stars.forEach(s=>{cx.globalAlpha=a*(.5+.5*Math.sin(now/700+s.tw));cx.beginPath();cx.arc(s.x*w,s.y*hh,s.r,0,7);cx.fill()});cx.globalAlpha=1}
+  // sun / moon along an arc
+  const arc=(hod,a,b)=>{const p=(hod-a)/(b-a);return [w*(.1+.8*p),hh*(.55-.45*Math.sin(Math.PI*p))]};
+  if(c.hod>c.sr-.5&&c.hod<c.ss+.5){const [sx,sy]=arc(c.hod,c.sr,c.ss);const sg=cx.createRadialGradient(sx,sy,10,sx,sy,220);sg.addColorStop(0,`rgba(255,235,170,${.9*(1-cl*.7)})`);sg.addColorStop(.15,`rgba(255,210,120,${.5*(1-cl*.7)})`);sg.addColorStop(1,'rgba(255,200,100,0)');cx.fillStyle=sg;cx.fillRect(0,0,w,hh);cx.fillStyle=`rgba(255,246,200,${1-cl*.6})`;cx.beginPath();cx.arc(sx,sy,26,0,7);cx.fill()}
+  else{const nh=(c.hod-c.ss+24)%24,nl=(c.sr-c.ss+24)%24;const [mx,my]=arc(nh,0,nl);cx.fillStyle=`rgba(230,235,245,${.9*(1-cl*.7)})`;cx.beginPath();cx.arc(mx,my,18,0,7);cx.fill();cx.fillStyle=rgb(top,.9);cx.beginPath();cx.arc(mx-8,my-5,16,0,7);cx.fill()}
+  // mountain and sea silhouette (Mount Kinabalu behind the city, sea in front)
+  cx.fillStyle=rgb(mix(top,[0,0,0],.55),.9);cx.beginPath();cx.moveTo(0,hh*.78);cx.lineTo(w*.55,hh*.78);cx.lineTo(w*.66,hh*.6);cx.lineTo(w*.72,hh*.63);cx.lineTo(w*.78,hh*.56);cx.lineTo(w*.86,hh*.68);cx.lineTo(w,hh*.76);cx.lineTo(w,hh);cx.lineTo(0,hh);cx.fill();
+  const sea=cx.createLinearGradient(0,hh*.86,0,hh);sea.addColorStop(0,rgb(mix(bot,[10,40,80],.5),.9));sea.addColorStop(1,rgb(mix(bot,[0,10,30],.7)));cx.fillStyle=sea;cx.fillRect(0,hh*.86,w,hh*.14);
+  // clouds
+  const nC=Math.round(cl*clouds.length);
+  clouds.forEach((k,i)=>{if(!paused){k.x+=k.v*(1+rainI);if(k.x>1.3)k.x=-.3}if(i>=nC)return;const dark=c.storm?.55:c.rain?.4:.1;const col=mix([235,240,248],[60,70,90],dark);cx.fillStyle=rgb(col,.12+.5*k.s*(.6+.4*cl));for(let j=0;j<5;j++){cx.beginPath();cx.arc(k.x*w+j*k.r*.55,k.y*hh+(j%2)*k.r*.25,k.r*(.5+.2*(j%3))*k.s+30,0,7);cx.fill()}});
+  // rain
+  if(rainI>0){cx.strokeStyle=`rgba(190,215,245,${.2+.35*rainI})`;cx.lineWidth=1.2;drops.slice(0,Math.floor(drops.length*rainI)).forEach(d=>{if(!paused){d.y+=d.v*(1+rainI);d.x-=.0015;if(d.y>1){d.y=-.05;d.x=Math.random()*1.1}}cx.beginPath();cx.moveTo(d.x*w,d.y*hh);cx.lineTo(d.x*w+2,d.y*hh-d.l);cx.stroke()})}
+  // lightning
+  if(c.storm){if(now-lastF>2500+Math.random()*6000){lastF=now;flash=1;const x0=w*(.15+Math.random()*.7);let pts=[[x0,hh*.08]];for(let i=1;i<9;i++)pts.push([pts[i-1][0]+(Math.random()-.5)*w*.08,hh*(.08+i*.07)]);bolt=pts}
+    if(flash>0){cx.fillStyle=`rgba(255,255,255,${.25*flash})`;cx.fillRect(0,0,w,hh);if(bolt){cx.strokeStyle=`rgba(255,255,240,${flash})`;cx.lineWidth=3;cx.shadowColor='#fff';cx.shadowBlur=20;cx.beginPath();cx.moveTo(bolt[0][0],bolt[0][1]);bolt.slice(1).forEach(p=>cx.lineTo(p[0],p[1]));cx.stroke();cx.shadowBlur=0}flash-=.08;if(flash<=0)bolt=null}}
+  // HUD
+  const hud=$('#hud');
+  if(vt!=null){hud.hidden=false;hud.innerHTML=`<b>${esc(fmtDT(new Date(t).toISOString()))}</b> MYT<br>${c.storm?'⛈️ thunderstorm':c.rain?'🌧️ rain':cl>.7?'☁️ cloudy':cl>.35?'⛅ partly cloudy':c.dayF>0?'☀️ sunny':'🌙 clear'} · rain chance ${num(c.pop)}%${fin(c.temp)?' · '+num(c.temp)+'°C':''}<br><span class="note">forecast hour ${esc(String(c.iso).slice(11,16))}${c.inTS?' · TAF thunderstorm period':''}</span>`}
+  else hud.hidden=true;
+  requestAnimationFrame(frame);
+}
+$('#play').onclick=()=>{if(playing){playing=false;$('#play').textContent='▶ Resume';return}if(vt!=null&&vt-playFrom>=24*3600e3-1)vt=null;playFrom=vt==null?Math.floor(Date.now()/3600e3)*3600e3:vt;playing=true;playStart=Date.now();$('#play').textContent='❚❚ Pause play';$('#scrub').hidden=false;$('#live').hidden=false;if(paused)setPaused(false)};
+$('#scrub').oninput=e=>{playing=false;$('#play').textContent='▶ Play from here';if(!playFrom)playFrom=Math.floor(Date.now()/3600e3)*3600e3;vt=playFrom+(+e.target.value)*3600e3;$('#live').hidden=false;if(paused)setPaused(false)};
+$('#live').onclick=()=>{playing=false;vt=null;$('#live').hidden=true;$('#scrub').hidden=true;$('#scrub').value=0;$('#play').textContent='▶ Play next 24 h'};
+if(RM)pb.textContent='Play motion';
+load(true).then(()=>{if(!RM)frame();else{paused=false;frame();paused=true}});
 })();
 </script></body></html>

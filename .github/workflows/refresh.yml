@@ -28,6 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: main          # always build from the current head of main, not the historical triggering commit
           fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
@@ -49,6 +50,8 @@ jobs:
             echo "push rejected, rebasing (attempt $i)"; git pull --rebase
           done
           echo "could not push the data commit after 3 attempts"; exit 1
+      - name: Make sure the tree to deploy is the current head of main
+        run: git fetch origin main && git reset --hard origin/main
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload site

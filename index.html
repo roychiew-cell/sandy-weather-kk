@@ -81,7 +81,21 @@ const num=(v,d=0)=>fin(v)?v.toFixed(d):'–';
 const arr=(o,k)=>o&&Array.isArray(o[k])?o[k]:null;
 const RM=matchMedia('(prefers-reduced-motion: reduce)').matches; if(RM)document.body.classList.add('rm');
 let paused=RM;
-const anim=(attr,from,to,dur,begin)=>RM?'':`<animate attributeName="${attr}" from="${from}" to="${to}" dur="${dur}" begin="${begin||'0s'}" fill="freeze"/>`;
+const ST=()=>RM||paused;   // static rendering: reduced motion or manually paused
+const anim=(attr,from,to,dur,begin)=>ST()?'':`<animate attributeName="${attr}" from="${from}" to="${to}" dur="${dur}" begin="${begin||'0s'}" fill="freeze"/>`;
+const OBS=()=>D&&Array.isArray(D.obs)?D.obs:[];
+function validSnapshot(nd){ // shape check before a snapshot may replace the accepted one
+  if(!nd||typeof nd!=='object'||typeof nd.generated!=='string'||isNaN(P(nd.generated)))return false;
+  if(typeof nd.today!=='string'||typeof nd.yday!=='string')return false;
+  if(!Array.isArray(nd.obs)||!Array.isArray(nd.days)||(nd.status&&typeof nd.status!=='object'))return false;
+  if(nd.warnings!=null&&!Array.isArray(nd.warnings))return false;
+  if(nd.ens!=null&&!Array.isArray(nd.ens))return false;
+  if(nd.blend!=null&&(typeof nd.blend!=='object'||!nd.blend.hourly||!Array.isArray(nd.blend.hourly.time)))return false;
+  if(nd.taf!=null&&(typeof nd.taf!=='object'||!Array.isArray(nd.taf.periods)))return false;
+  if(nd.fc!=null&&typeof nd.fc!=='object')return false;
+  if(nd.scores!=null&&typeof nd.scores!=='object')return false;
+  return true;
+}
 const dn=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const P=s=>{s=String(s??'');if(/^\d{4}-\d\d-\d\d$/.test(s))return new Date(s+'T00:00:00+08:00');return new Date(s.length<=19&&!/[Z+]/.test(s)?s+'+08:00':s)};
 const myt=d=>new Date(d.getTime()+8*3600e3);
@@ -93,27 +107,31 @@ const dayStr=d=>d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDa
 const clear=ids=>ids.forEach(id=>{const e=$(id);if(e)e.innerHTML=''});
 const section=(id,clearIds,fn)=>{try{fn()}catch(e){console.error(id,e);clear(clearIds);const el=$(id);if(el)el.insertAdjacentHTML('afterbegin',`<p class="unavail">This section could not be drawn from the current data (${esc(e.message)}).</p>`)}};
 // ---------- state
-let D=null,C=null,tsPer=[],ob=null,raining=false,lastDay=null,seq=0,inflight=false,lastFail=null;
+let D=null,C=null,tsPer=[],ob=null,raining=false,lastDay=null,seq=0,inflight=false,lastFail=null,lastCallFail=null;
 async function load(){
   if(inflight)return;inflight=true;const my=++seq;
   try{
     const r=await fetch('data/latest.json?'+Date.now(),{cache:'no-store'}); if(!r.ok)throw new Error('HTTP '+r.status);
-    const nd=await r.json(); if(!nd||typeof nd.generated!=='string'||isNaN(P(nd.generated)))throw new Error('bad snapshot');
-    let nc=C; try{const rc=await fetch('call.json?'+Date.now(),{cache:'no-store'});if(rc.ok){const j=await rc.json();if(j&&Array.isArray(j.sections))nc=j}}catch(e){}
+    const nd=await r.json(); if(!validSnapshot(nd))throw new Error('snapshot has an unexpected shape');
+    let nc=C,callFail=null; try{const rc=await fetch('call.json?'+Date.now(),{cache:'no-store'});if(rc.ok){const j=await rc.json();if(j&&Array.isArray(j.sections))nc=j;else callFail=new Date()}else callFail=new Date()}catch(e){callFail=new Date()}
     if(my!==seq)return;                                   // superseded by a newer request
     if(D&&P(nd.generated).getTime()<P(D.generated).getTime())return;   // never roll back to older data
     const changed=!D||nd.generated!==D.generated||JSON.stringify(nc)!==JSON.stringify(C);
-    lastFail=null; if(changed){D=nd;C=nc;lastDay=dayStr(nowMYT());render()}
-    ensureLoop();
+    lastFail=null;lastCallFail=callFail;
+    if(changed){D=nd;C=nc;lastDay=dayStr(nowMYT());render();if(paused)drawFrame(false)}
+    updateStale(); if(!paused)ensureLoop();
   }catch(e){lastFail=new Date();if(!D){$('#stamp').textContent='data file could not be loaded ('+e.message+')'}else updateStale()}
   finally{inflight=false}
 }
+const hhmm=d=>pad(myt(d).getUTCHours())+':'+pad(myt(d).getUTCMinutes());
 function updateStale(){
   if(!D)return;const ageH=(Date.now()-P(D.generated).getTime())/3600e3,el=$('#stale');
   const bits=[];if(ageH>18)bits.push('This data is '+Math.round(ageH)+' hours old (fetched '+fmtDT(D.generated)+' MYT); the automatic refresh may have failed or been delayed, so treat warnings and the storm clock as out of date.');
-  if(lastFail)bits.push('The last re-check at '+pad(myt(lastFail).getUTCHours())+':'+pad(myt(lastFail).getUTCMinutes())+' MYT failed; showing the previous data.');
+  if(lastFail)bits.push('The last data re-check at '+hhmm(lastFail)+' MYT failed; showing the previous data.');
+  if(lastCallFail)bits.push('The written call could not be re-checked at '+hhmm(lastCallFail)+' MYT; showing the last one received.');
   el.hidden=!bits.length;el.textContent=bits.join(' ');
 }
+const ended=(endStr)=>{const d=P(endStr);if(isNaN(d))return null;const t=/T23:59:59/.test(String(endStr))?d.getTime()+1000:d.getTime();return Date.now()>=t};   // exclusive end; whole-day bulletins end at the next midnight
 // ---------- render everything from D and C
 function render(){
   const bh=D.blend&&D.blend.hourly, bd=D.blend&&D.blend.daily;
@@ -121,7 +139,7 @@ function render(){
   const viewToday=dayStr(nowMYT()), di=bd&&Array.isArray(bd.time)?bd.time.indexOf(viewToday):-1;
   // hero
   section('#tiles',['#tiles'],()=>{
-    ob=(D.obs||[]).filter(o=>o&&fin(o.temp)).slice(-1)[0]||null;
+    ob=OBS().filter(o=>o&&fin(o.temp)).slice(-1)[0]||null;
     const rh=(T,Td)=>Math.round(100*Math.exp(17.625*Td/(243.04+Td))/Math.exp(17.625*T/(243.04+T)));
     const dir=d=>['N','NE','E','SE','S','SW','W','NW'][Math.round(d/45)%8];
     const sky={CLR:'Clear',SKC:'Clear',CAVOK:'Clear',FEW:'Few clouds',SCT:'Partly cloudy',BKN:'Mostly cloudy',OVC:'Overcast'};
@@ -171,14 +189,14 @@ function render(){
     let s=`<rect x="${L}" y="34" width="${W-L-R}" height="18" rx="9" fill="rgba(255,255,255,.08)"/>`;
     if(bd&&di>=0&&arr(bd,'sunrise')&&arr(bd,'sunset')){const sr=+String(bd.sunrise[di]).slice(11,13)+(+String(bd.sunrise[di]).slice(14,16))/60,ss=+String(bd.sunset[di]).slice(11,13)+(+String(bd.sunset[di]).slice(14,16))/60;if(fin(sr)&&fin(ss))s+=`<rect x="${x(sr)}" y="34" width="${x(ss)-x(sr)}" height="18" rx="9" fill="rgba(255,209,102,.15)"/>`}
     const n=nowMYT(),dayStart=Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate())-8*3600e3;
-    tsPer.map(p=>({a:(p.from.getTime()-dayStart)/3600e3,b:(p.to.getTime()-dayStart)/3600e3,p})).filter(p=>p.b>0&&p.a<24).forEach(p=>{s+=`<rect x="${x(p.a)}" y="30" width="${x(p.b)-x(p.a)}" height="26" rx="6" fill="#ffd166" opacity="${p.p.prob!=null?.55:.85}">${RM?'':'<animate attributeName="opacity" values=".45;.95;.45" dur="2.4s" repeatCount="indefinite"/>'}</rect><text x="${x(p.a)}" y="24" style="fill:#ffd166">⛈ ${esc((p.p.prob!=null?'PROB'+p.p.prob+' ':'')+p.p.change+' '+p.p.wx)} ${fmtT(p.p.from.toISOString())}–${fmtT(p.p.to.toISOString())}</text>`});
+    tsPer.map(p=>({a:(p.from.getTime()-dayStart)/3600e3,b:(p.to.getTime()-dayStart)/3600e3,p})).filter(p=>p.b>0&&p.a<24).forEach(p=>{s+=`<rect x="${x(p.a)}" y="30" width="${x(p.b)-x(p.a)}" height="26" rx="6" fill="#ffd166" opacity="${p.p.prob!=null?.55:.85}">${ST()?'':'<animate attributeName="opacity" values=".45;.95;.45" dur="2.4s" repeatCount="indefinite"/>'}</rect><text x="${x(p.a)}" y="24" style="fill:#ffd166">⛈ ${esc((p.p.prob!=null?'PROB'+p.p.prob+' ':'')+p.p.change+' '+p.p.wx)} ${fmtT(p.p.from.toISOString())}–${fmtT(p.p.to.toISOString())}</text>`});
     s+=`<line id="nowline" x1="0" x2="0" y1="22" y2="64" stroke="#fff" stroke-width="2"/><text id="nowtxt" x="0" y="78" style="fill:#fff">now</text>`;
     for(let h=0;h<=24;h+=6)s+=`<text x="${x(h)-8}" y="78">${pad(h%24)}h</text>`;$('#clock').innerHTML=s;
   });
-  $('#tick').textContent=(D.obs||[]).slice(-12).reverse().map(o=>String(o&&o.raw||'')).join('   ·   ')+(D.taf&&D.taf.raw?'   ·   '+String(D.taf.raw):'');
+  $('#tick').textContent=OBS().slice(-12).reverse().map(o=>String(o&&o.raw||'')).join('   ·   ')+(D.taf&&D.taf.raw?'   ·   '+String(D.taf.raw):'');
   // observed 36 h
   section('#obsnote',['#obs','#obstbl'],()=>{
-    const cut=P(D.generated).getTime()-36*3600e3, o=(D.obs||[]).filter(a=>a&&fin(a.temp)&&P(a.t).getTime()>=cut);
+    const cut=P(D.generated).getTime()-36*3600e3, o=OBS().filter(a=>a&&fin(a.temp)&&P(a.t).getTime()>=cut);
     if(o.length<4)throw new Error('fewer than 4 airport observations');
     const W=1000,H=230,L=34,R=10,T=14,B=30,t0=P(o[0].t).getTime(),t1=P(o[o.length-1].t).getTime(),x=t=>L+(W-L-R)*(P(t).getTime()-t0)/Math.max(1,t1-t0);
     const lo=Math.min(...o.map(a=>a.temp))-1,hi=Math.max(...o.map(a=>a.temp))+1,y=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo));let s='';
@@ -187,9 +205,9 @@ function render(){
     const rt=o.filter(a=>String(a.recent||'').includes('TS')&&!String(a.wx||'').includes('TS'));
     rt.forEach(a=>s+=`<line x1="${x(a.t)}" x2="${x(a.t)}" y1="${T}" y2="${H-B}" stroke="#ffd166" stroke-dasharray="3 3" opacity=".6"/>`);
     o.filter(a=>/T(00|12):00/.test(String(a.t))).forEach(a=>s+=`<line x1="${x(a.t)}" x2="${x(a.t)}" y1="${T}" y2="${H-B}" stroke="rgba(255,255,255,.12)"/><text x="${x(a.t)+3}" y="${H-10}">${fmtD(a.t)} ${fmtT(a.t)}</text>`);
-    s+=`<polyline points="${o.map(a=>`${x(a.t)},${y(a.temp)}`).join(' ')}" fill="none" stroke="#ffb347" stroke-width="2.5" stroke-dasharray="3000" stroke-dashoffset="${RM?0:3000}">${anim('stroke-dashoffset',3000,0,'2.5s')}</polyline>`;
+    s+=`<polyline points="${o.map(a=>`${x(a.t)},${y(a.temp)}`).join(' ')}" fill="none" stroke="#ffb347" stroke-width="2.5" stroke-dasharray="3000" stroke-dashoffset="${ST()?0:3000}">${anim('stroke-dashoffset',3000,0,'2.5s')}</polyline>`;
     const mx=o.reduce((a,b)=>b.temp>a.temp?b:a);s+=`<circle cx="${x(mx.t)}" cy="${y(mx.temp)}" r="4" fill="#ffb347"/><text x="${x(mx.t)-30}" y="${y(mx.temp)-8}" style="fill:#ffb347">${mx.temp}°C</text>`;
-    const la=o[o.length-1];s+=`<circle cx="${x(la.t)}" cy="${y(la.temp)}" r="5" fill="#fff">${RM?'':'<animate attributeName="r" values="4;8;4" dur="1.6s" repeatCount="indefinite"/>'}</circle>`;
+    const la=o[o.length-1];s+=`<circle cx="${x(la.t)}" cy="${y(la.temp)}" r="5" fill="#fff">${ST()?'':'<animate attributeName="r" values="4;8;4" dur="1.6s" repeatCount="indefinite"/>'}</circle>`;
     for(let v=Math.ceil(lo);v<=hi;v+=3)s+=`<text x="2" y="${y(v)+4}">${v}°</text>`;$('#obs').innerHTML=s;
     $('#obsnote').textContent='Temperature measured every 30 minutes at Kota Kinabalu International Airport (METAR), last 36 hours before the data time. Shaded = active thunderstorm in the present-weather group; dashed lines = "recent thunderstorm" remark only'+(rt.length?' ('+rt.map(a=>fmtT(a.t)).join(', ')+')':'')+'. Times MYT. Rainfall amount is not reported in METAR.';
     $('#obstbl').innerHTML='<tr><th>Time (MYT)</th><th>°C</th><th>Dew</th><th>Wind</th><th>Weather</th><th>Cloud</th></tr>'+o.slice().reverse().map(a=>`<tr><td>${fmtDT(a.t)}</td><td>${num(a.temp)}</td><td>${num(a.dewp)}</td><td>${fin(a.wdir)?a.wdir:'VRB'}/${num(a.wspd)} kt</td><td>${esc(a.wx)}${a.recent?' ('+esc(a.recent)+')':''}</td><td>${esc(a.cover||'')}</td></tr>`).join('');
@@ -205,10 +223,10 @@ function render(){
     tsPer.forEach(p=>{const a=(p.from.getTime()-tA)/3600e3,b=(p.to.getTime()-tA)/3600e3;if(b>0&&a<N)s+=`<rect x="${L+Math.max(0,a)*bw}" y="${T}" width="${(Math.min(N,b)-Math.max(0,a))*bw}" height="${H-T-B}" fill="rgba(255,209,102,${p.prob!=null?.09:.16})"/>`});
     for(let p=0;p<=100;p+=25)s+=`<line x1="${L}" x2="${W-R}" y1="${py(p)}" y2="${py(p)}" stroke="rgba(255,255,255,.07)"/><text x="2" y="${py(p)+4}">${p}%</text>`;
     for(let i=0;i<N;i++){const p=hv('precipitation_probability',i0+i),x=L+i*bw,d=(i*25)+'ms';
-      if(fin(p)){const h=(H-T-B)*p/100;s+=`<rect x="${x+1}" y="${RM?H-B-h:H-B}" width="${bw-2}" height="${RM?h:0}" rx="2" fill="#4aa3ff" opacity="${.35+p/160}">${anim('height',0,h,'.9s',d)}${anim('y',H-B,H-B-h,'.9s',d)}</rect>`}
+      if(fin(p)){const h=(H-T-B)*p/100;s+=`<rect x="${x+1}" y="${ST()?H-B-h:H-B}" width="${bw-2}" height="${ST()?h:0}" rx="2" fill="#4aa3ff" opacity="${.35+p/160}">${anim('height',0,h,'.9s',d)}${anim('y',H-B,H-B-h,'.9s',d)}</rect>`}
       const t=String(tm[i0+i]);if(/T(00|06|12|18):00/.test(t))s+=`<text x="${x}" y="${H-10}">${t.slice(11,13)}h${t.endsWith('00:00')?' '+fmtD(t).slice(4):''}</text>`}
     const pts=[];for(let i=0;i<N;i++){const v=hv('temperature_2m',i0+i);if(fin(v))pts.push(`${L+i*bw+bw/2},${ty(v)}`)}
-    s+=`<polyline points="${pts.join(' ')}" fill="none" stroke="#ffb347" stroke-width="2.5" stroke-dasharray="2000" stroke-dashoffset="${RM?0:2000}">${anim('stroke-dashoffset',2000,0,'2s')}</polyline>`;
+    s+=`<polyline points="${pts.join(' ')}" fill="none" stroke="#ffb347" stroke-width="2.5" stroke-dasharray="2000" stroke-dashoffset="${ST()?0:2000}">${anim('stroke-dashoffset',2000,0,'2s')}</polyline>`;
     for(let v=Math.ceil(lo);v<=hi;v+=2)s+=`<text x="${W-R+4}" y="${ty(v)+4}" style="fill:#ffb347">${v}°</text>`;
     $('#hr').innerHTML=s;
     $('#hrtbl').innerHTML='<tr><th>Time (MYT)</th><th>Rain chance %</th><th>Rain mm</th><th>°C</th><th>Feels</th><th>Wind km/h</th><th>Cloud %</th></tr>'+Array.from({length:N},(_,j)=>{const i=i0+j;return`<tr><td>${fmtDT(tm[i])}</td><td>${num(hv('precipitation_probability',i))}</td><td>${num(hv('precipitation',i),1)}</td><td>${num(hv('temperature_2m',i),1)}</td><td>${num(hv('apparent_temperature',i),1)}</td><td>${num(hv('wind_speed_10m',i),1)}</td><td>${num(hv('cloud_cover',i))}</td></tr>`}).join('');
@@ -244,7 +262,7 @@ function render(){
     const qmax=Math.ceil(Math.max(...E.map(e=>e.q90),10)/5)*5,ym=v=>T+(H-T-B)*(1-v/qmax);
     for(let v=0;v<=qmax;v+=5)s+=`<text x="${W-R+6}" y="${ym(v)+4}" style="fill:#ffd166">${v} mm</text>`;
     E.forEach((e,i)=>{const x=L+i*cw+cw*.14,w=cw*.26,d=(i*120)+'ms';
-      [[e.p1,'#4aa3ff',0],[e.p10,'#ff6b6b',w+4]].forEach(([p,c,off])=>{const h=(H-T-B)*p/100;s+=`<rect x="${x+off}" y="${RM?H-B-h:H-B}" width="${w}" height="${RM?h:0}" rx="3" fill="${c}" opacity=".85">${anim('height',0,h,'1s',d)}${anim('y',H-B,H-B-h,'1s',d)}</rect><text x="${x+off}" y="${H-B-h-4}" style="fill:#eaf2fb">${num(p)}%</text>`});
+      [[e.p1,'#4aa3ff',0],[e.p10,'#ff6b6b',w+4]].forEach(([p,c,off])=>{const h=(H-T-B)*p/100;s+=`<rect x="${x+off}" y="${ST()?H-B-h:H-B}" width="${w}" height="${ST()?h:0}" rx="3" fill="${c}" opacity=".85">${anim('height',0,h,'1s',d)}${anim('y',H-B,H-B-h,'1s',d)}</rect><text x="${x+off}" y="${H-B-h-4}" style="fill:#eaf2fb">${num(p)}%</text>`});
       const wx=x+2*w+16;s+=`<line x1="${wx}" x2="${wx}" y1="${ym(e.q10)}" y2="${ym(e.q90)}" stroke="#ffd166" stroke-width="2"/><circle cx="${wx}" cy="${ym(e.q50)}" r="3.5" fill="#ffd166"/><text x="${wx+5}" y="${ym(e.q90)+4}" style="fill:#ffd166">${num(e.q90,1)}</text><text x="${wx+5}" y="${ym(e.q10)+4}" style="fill:#ffd166">${num(e.q10,1)}</text>`;
       s+=`<text x="${x}" y="${H-12}">${e.day==viewToday?'Today':esc(fmtD(e.day))}</text>`});
     $('#ens').innerHTML=s;
@@ -258,12 +276,12 @@ function render(){
     const W=1000,rowH=32,L=200,mx=3,win=Array.isArray(D.score_window)?D.score_window:[14,18];
     let s=`<text x="${L}" y="14">hourly temperature RMSE vs airport, °C (shorter is better)</text><text x="600" y="14">bias</text><text x="670" y="14">n</text><text x="720" y="14">fcst high</text><text x="820" y="14">≥1 mm in ${pad(win[0])}–${pad(win[1])}h?</text>`;
     sc.forEach(([k,v],i)=>{const y=26+i*rowH,w=(360)*Math.min(v.rmse,mx)/mx,c=v.rmse<1.5?'#5fe3a1':v.rmse<2.2?'#ffd166':'#ff6b6b';
-      s+=`<text x="0" y="${y+16}" style="fill:#eaf2fb">${esc(k)}${v.n!==nmax?' *':''}</text><rect x="${L}" y="${y+4}" height="16" rx="4" width="${RM?w:0}" fill="${c}">${anim('width',0,w,'1.1s',(i*90)+'ms')}</rect><text x="${L+w+6}" y="${y+16}" style="fill:#eaf2fb">${v.rmse.toFixed(2)}</text>`;
+      s+=`<text x="0" y="${y+16}" style="fill:#eaf2fb">${esc(k)}${v.n!==nmax?' *':''}</text><rect x="${L}" y="${y+4}" height="16" rx="4" width="${ST()?w:0}" fill="${c}">${anim('width',0,w,'1.1s',(i*90)+'ms')}</rect><text x="${L+w+6}" y="${y+16}" style="fill:#eaf2fb">${v.rmse.toFixed(2)}</text>`;
       s+=`<text x="600" y="${y+16}" style="fill:${fin(v.bias)&&Math.abs(v.bias)<1?'#5fe3a1':'#ffd166'}">${fin(v.bias)?(v.bias>0?'+':'')+v.bias.toFixed(1)+'°':'–'}</text><text x="670" y="${y+16}">${num(v.n)}</text><text x="720" y="${y+16}" style="fill:${fin(v.tmax)&&fin(D.obs_y_max)&&Math.abs(v.tmax-D.obs_y_max)<=1?'#5fe3a1':'#ff6b6b'}">${fin(v.tmax)?v.tmax.toFixed(1)+'°':'–'}</text><text x="820" y="${y+16}" style="fill:${v.window_ge1mm==null?'#9fb3c8':v.window_ge1mm?'#5fe3a1':'#ff6b6b'}">${v.window_ge1mm==null?'n/a':(v.window_ge1mm?'yes':'no')+' · '+num(v.window_mm,1)+' mm'}</text>`});
     $('#score').setAttribute('viewBox',`0 0 ${W} ${40+sc.length*rowH}`);$('#score').innerHTML=s;
     $('#scoretbl').innerHTML='<tr><th>Model</th><th>RMSE °C</th><th>Bias °C</th><th>Hours paired</th><th>Fcst high</th><th>≥1 mm in window</th></tr>'+sc.map(([k,v])=>`<tr><td>${esc(k)}${v.n!==nmax?' *':''}</td><td>${v.rmse.toFixed(2)}</td><td>${fin(v.bias)?(v.bias>0?'+':'')+v.bias.toFixed(2):'–'}</td><td>${num(v.n)}</td><td>${fin(v.tmax)?v.tmax.toFixed(1)+'°':'–'}</td><td>${v.window_ge1mm==null?'n/a':(v.window_ge1mm?'yes':'no')+' · '+num(v.window_mm,1)+' mm'}</td></tr>`).join('');
     const ep=(D.ts_episodes_yday||[]).map(e=>fmtT(e.first)+'–'+fmtT(e.last)).join(', ');
-    $('#scorenote').textContent=`Each model's forecast made 24 hours before each hour (Open-Meteo previous-runs "previous_day1": the value predicted one day earlier for that hour, not a single issue time) against the airport's hourly readings on ${fmtD(D.yday)}; models with ${nmax} paired hours are ranked by RMSE${rest.length?', models marked * have fewer paired hours and are listed unranked':''}. Measured high ${num(D.obs_y_max)}°C; active thunderstorm reported ${ep||'none'}. Bias = forecast minus measured. The last column sums the model's accumulations ending ${pad(win[0]+1)}:00–${pad(win[1])}:00 MYT (tested before rounding); airport rainfall is not measured here, so it only shows whether the model predicted rain in that window. One day is a small sample; this informs Sandy's editorial grouping of the models and no weights are computed.`;
+    $('#scorenote').textContent=`Each model's forecast made 24 hours before each hour (Open-Meteo previous-runs "previous_day1": the value predicted one day earlier for that hour, not a single issue time) against the airport's hourly readings on ${fmtD(D.yday)}, scored on the ${Array.isArray(D.score_hours)?D.score_hours.length:nmax} hours that every model and the airport share${rest.length?' (models marked * have fewer paired hours and are listed unranked)':''}. Measured high ${num(D.obs_y_max)}°C; active thunderstorm reported ${ep||'none'}. Bias = forecast minus measured. The last column sums the model's accumulations ending ${pad(win[0]+1)}:00–${pad(win[1])}:00 MYT (tested before rounding); airport rainfall is not measured here, so it only shows whether the model predicted rain in that window. One day is a small sample; this informs Sandy's editorial grouping of the models and no weights are computed.`;
   });
   // model table
   const ROLE={'ECMWF IFS':1,'NOAA GFS':1,'UK Met Office UM':1,'JMA GSM':1,'Open-Meteo blend':1};
@@ -328,7 +346,7 @@ function renderWarnings(){
       }
       subs.filter(s=>s&&(s.areas||[]).some(isLocal)).forEach(s=>{
         const from=s.from?P(s.from):P(w.issued), to=s.to?P(s.to):null;
-        const exp=to&&to.getTime()<now, fut=from.getTime()>now;
+        const exp=to&&ended(s.to), fut=from.getTime()>now;
         const badge=!to?'<span class="tag">validity not parsed</span>':exp?'<span class="tag drop">expired</span>':fut?'<span class="tag sec">upcoming</span>':'<span class="tag core">in force</span>';
         const danger=/dangerous to small (boats|crafts)/i.test(s.text)?' Dangerous to small boats.':'';
         const ar=(s.areas||[]), sab=ar.filter(isLocal), oth=ar.length-sab.length;
@@ -345,7 +363,7 @@ function updateClock(){
   if(nl){nl.setAttribute('x1',x);nl.setAttribute('x2',x);nt.setAttribute('x',x-12)}
   const cd=$('#countdown'), cn=$('#countnote'); cd.classList.remove('live');
   if(!D.taf){cd.textContent='–';cn.textContent='No airport forecast (TAF) available in this run.';return}
-  if(P(D.taf.valid_to).getTime()<t){cd.textContent='TAF expired';cn.textContent='The airport forecast in this data ran to '+fmtDT(D.taf.valid_to)+' MYT. Wait for the next refresh.';return}
+  if(ended(D.taf.valid_to)){cd.textContent='TAF expired';cn.textContent='The airport forecast in this data ran to '+fmtDT(D.taf.valid_to)+' MYT. Wait for the next refresh.';return}
   const active=tsPer.filter(p=>p.from.getTime()<=t&&p.to.getTime()>t), up=tsPer.find(p=>p.from.getTime()>t);
   const per=p=>`${fmtDT(p.from.toISOString())}–${fmtDT(p.to.toISOString())} MYT`;
   const wordsFor=p=>(p.prob!=null?p.prob+'% probability of ':'')+(p.change=='TEMPO'?'temporary spells of ':p.change=='BECMG'?'a change to ':'')+(p.wx.includes('TSRA')?'thunderstorm rain':'thunderstorms');
@@ -379,13 +397,18 @@ pb.onclick=()=>setPaused(!paused);
 let origin=0, cursorH=0, playing=false, playStart=0, playAccum=0, maxH=24;
 const vTime=()=>origin+cursorH*3600e3;
 function timelineReset(){playing=false;cursorH=0;playAccum=0;origin=0;$('#live').hidden=true;$('#scrub').hidden=true;$('#scrub').value=0;$('#play').textContent='▶ Play next 24 h';$('#hud').hidden=true}
-function timelineStart(){const tm=D&&D.blend&&arr(D.blend.hourly,'time');origin=Math.floor(Date.now()/3600e3)*3600e3;const last=tm?P(tm[tm.length-1]).getTime():origin+24*3600e3;maxH=Math.max(1,Math.min(24,Math.floor((last-origin)/3600e3)));$('#scrub').max=maxH;$('#scrub').hidden=false;$('#live').hidden=false}
+function timelineStart(){ // returns false when there is no forecast coverage ahead of now
+  const tm=D&&D.blend&&arr(D.blend.hourly,'time'); if(!tm||!tm.length)return false;
+  origin=Math.floor(Date.now()/3600e3)*3600e3; const last=P(tm[tm.length-1]).getTime(); if(isNaN(last))return false;
+  maxH=Math.min(24,Math.floor((last-origin)/3600e3)); if(!fin(maxH)||maxH<=0){maxH=0;return false}
+  $('#scrub').max=maxH;$('#scrub').hidden=false;$('#live').hidden=false;return true}
+function noPlayback(){$('#play').textContent='No forecast hours to play';$('#play').disabled=true;setTimeout(()=>{$('#play').disabled=false;$('#play').textContent='▶ Play next 24 h'},4000)}
 function advancePlayback(){if(!playing||paused)return;const el=playAccum+(Date.now()-playStart)/1000;cursorH=Math.min(maxH,el);$('#scrub').value=cursorH.toFixed(2);if(cursorH>=maxH){playing=false;$('#play').textContent='▶ Replay'}}
 $('#play').onclick=()=>{
   if(playing){playing=false;playAccum+=(Date.now()-playStart)/1000;$('#play').textContent='▶ Resume';return}
-  if(!origin||cursorH>=maxH){timelineStart();cursorH=0;playAccum=0}else{playAccum=cursorH}
+  if(!origin||cursorH>=maxH){if(!timelineStart()){timelineReset();noPlayback();return}cursorH=0;playAccum=0}else{playAccum=cursorH}
   playing=true;playStart=Date.now();$('#play').textContent='❚❚ Pause play';if(paused)setPaused(false);ensureLoop()};
-$('#scrub').oninput=e=>{if(!origin)timelineStart();playing=false;cursorH=Math.min(maxH,+e.target.value||0);playAccum=cursorH;$('#play').textContent='▶ Play from here';drawFrame(false);if(!paused)ensureLoop()};
+$('#scrub').oninput=e=>{if(!origin&&!timelineStart()){timelineReset();noPlayback();return}playing=false;cursorH=Math.min(maxH,+e.target.value||0);playAccum=cursorH;$('#play').textContent='▶ Play from here';drawFrame(false);if(!paused)ensureLoop()};
 $('#live').onclick=()=>{timelineReset();drawFrame(false);if(!paused)ensureLoop()};
 // ---------- sky scene
 const cv=$('#sky'),cx=cv.getContext('2d');let w=0,hh=0;const rs=()=>{w=cv.width=innerWidth;hh=cv.height=innerHeight;drawFrame(false)};rs();addEventListener('resize',rs);
@@ -395,24 +418,23 @@ const drops=[...Array(320)].map(()=>({x:Math.random(),y:Math.random(),v:.012+Mat
 let flash=0,bolt=null,lastF=0,rafId=null;
 const lerp=(a,b,t)=>a+(b-a)*t, mix=(c1,c2,t)=>c1.map((v,i)=>Math.round(lerp(v,c2[i],t))), rgb=(c,a=1)=>`rgba(${c[0]},${c[1]},${c[2]},${a})`;
 function solar(dateStr){const bd=D&&D.blend&&D.blend.daily;let sr=6.1,ss=17.9;if(bd&&Array.isArray(bd.time)){const i=bd.time.indexOf(dateStr);if(i>=0&&arr(bd,'sunrise')&&arr(bd,'sunset')){const a=+String(bd.sunrise[i]).slice(11,13)+(+String(bd.sunrise[i]).slice(14,16))/60,b=+String(bd.sunset[i]).slice(11,13)+(+String(bd.sunset[i]).slice(14,16))/60;if(fin(a)&&fin(b)){sr=a;ss=b}}}return{sr,ss}}
-function condAt(tms,live){ // forecast conditions at a time; null when outside the hourly coverage
+function condAt(tms,live){ // conditions at a time. Each field is null when unknown; `rain`/`storm` are null when they cannot be determined
   const bh=D&&D.blend&&D.blend.hourly, tm=arr(bh,'time'), m=myt(new Date(tms)), hod=m.getUTCHours()+m.getUTCMinutes()/60, {sr,ss}=solar(dayStr(m));
   const dayF=hod>sr&&hod<ss?Math.sin(Math.PI*(hod-sr)/(ss-sr)):-Math.sin(Math.PI*((hod-ss+24)%24)/(24-(ss-sr)));
-  const base={hod,dayF,sr,ss,live,cloud:null,pop:null,mm:null,temp:null,code:null,iso:null,rain:false,storm:false,stormProb:null,inTS:false,covered:false};
-  if(!tm||!tm.length)return base;
-  const key=dayStr(m)+'T'+pad(m.getUTCHours()), i=tm.findIndex(t=>String(t).slice(0,13)===key);
-  if(i<0)return base;
-  const g=k=>{const a=arr(bh,k);return a&&fin(a[i])?a[i]:null};
-  const c={...base,covered:true,iso:tm[i],cloud:g('cloud_cover'),pop:g('precipitation_probability'),mm:g('precipitation'),temp:g('temperature_2m'),code:g('weather_code')};
-  const ts=tsPer.find(p=>p.from.getTime()<=tms&&p.to.getTime()>tms); c.inTS=!!ts; c.stormProb=ts?(ts.prob!=null?ts.prob:(ts.change=='TEMPO'?60:100)):null;
-  if(live&&ob){ // the real observation decides what is happening now; model values stay as forecast context
+  const c={hod,dayF,sr,ss,live,cloud:null,pop:null,mm:null,temp:null,code:null,iso:null,rain:null,storm:null,stormProb:null,inTS:false,covered:false,basis:''};
+  const ts=tsPer.find(p=>p.from.getTime()<=tms&&p.to.getTime()>tms); c.inTS=!!ts; const tsProb=ts?(ts.prob!=null?ts.prob:(ts.change=='TEMPO'?60:100)):null;
+  if(tm&&tm.length){const key=dayStr(m)+'T'+pad(m.getUTCHours()), i=tm.findIndex(t=>String(t).slice(0,13)===key);
+    if(i>=0){const g=k=>{const a=arr(bh,k);return a&&fin(a[i])?a[i]:null};c.covered=true;c.iso=tm[i];c.cloud=g('cloud_cover');c.pop=g('precipitation_probability');c.mm=g('precipitation');c.temp=g('temperature_2m');c.code=g('weather_code')}}
+  if(live&&ob){ // the real observation decides what is happening now, whether or not the model covers this hour; model values stay as context
     const cov={CLR:5,SKC:5,CAVOK:5,FEW:20,SCT:45,BKN:75,OVC:95}[ob.cover];if(cov!=null)c.cloud=cov;
     if(fin(ob.temp))c.temp=ob.temp;
-    const wx=String(ob.wx||'');c.rain=/TS|RA|SH|DZ/.test(wx);c.storm=/TS/.test(wx);c.stormProb=c.storm?100:null;
+    const wx=String(ob.wx||'');c.rain=/TS|RA|SH|DZ/.test(wx);c.storm=/TS/.test(wx);c.stormProb=c.storm?100:null;c.basis='airport observation';
   }else{
-    c.rain=(c.pop??0)>=55&&((c.mm??0)>0.05||c.inTS||(c.code??0)>=51);
-    c.storm=c.rain&&(c.inTS||(c.code??0)>=95);
-    if(c.storm&&c.stormProb==null)c.stormProb=(c.code??0)>=95?100:60;
+    const known=c.pop!=null||c.mm!=null||c.code!=null||c.inTS;
+    if(!known){c.rain=null;c.storm=null;c.basis='no data'}
+    else if(c.pop!=null){c.rain=c.pop>=55&&((c.mm??0)>0.05||c.inTS||(c.code??0)>=51);c.storm=c.rain&&(c.inTS||(c.code??0)>=95);c.basis='model'}
+    else{c.rain=(c.mm??0)>0.05||(c.code??0)>=51||c.inTS;c.storm=c.rain&&(c.inTS||(c.code??0)>=95);c.basis='model without probability'}
+    if(c.storm)c.stormProb=tsProb!=null?tsProb:((c.code??0)>=95?100:60);
   }
   return c;
 }
@@ -421,7 +443,7 @@ function drawFrame(advance){
   const now=Date.now();
   if(advance)advancePlayback();
   const liveMode=!origin, t=liveMode?now:vTime(), c=condAt(t,liveMode&&ob&&Math.abs(now-P(ob.t).getTime())<90*60e3);
-  const cl=(c.cloud??50)/100, rainI=c.rain?Math.min(1,.35+(c.pop??70)/100*.4+Math.min(.4,(c.mm??0)/8)):0, sp=(c.stormProb??0)/100;
+  const cl=(c.cloud??50)/100, rainI=c.rain?Math.min(1,.35+(c.pop??70)/100*.4+Math.min(.4,(c.mm??0)/8)):0, sp=(c.stormProb??0)/100;   // unknown cloud draws as half cover; the HUD says "cloud unknown"
   const dayTop=[72,160,224],dayBot=[168,213,245],duskTop=[58,74,122],duskBot=[244,162,97],nightTop=[5,11,24],nightBot=[11,22,36];
   let top,bot;const f=c.dayF;
   if(f>.25){top=dayTop;bot=dayBot}else if(f>-.15){const k=(f+.15)/.4;top=mix(duskTop,dayTop,k);bot=mix(duskBot,dayBot,k)}else{const k=Math.min(1,(-f-.15)/.6);top=mix(duskTop,nightTop,k);bot=mix(duskBot,nightBot,k)}
@@ -440,7 +462,9 @@ function drawFrame(advance){
     if(flash>0){cx.fillStyle=`rgba(255,255,255,${.25*flash*sp})`;cx.fillRect(0,0,w,hh);if(bolt){cx.strokeStyle=`rgba(255,255,240,${flash})`;cx.lineWidth=3;cx.shadowColor='#fff';cx.shadowBlur=20;cx.beginPath();cx.moveTo(bolt[0][0],bolt[0][1]);bolt.slice(1).forEach(p=>cx.lineTo(p[0],p[1]));cx.stroke();cx.shadowBlur=0}if(advance){flash-=.08;if(flash<=0)bolt=null}}}
   const hud=$('#hud');
   if(!liveMode){hud.hidden=false;const ts=tsPer.find(p=>p.from.getTime()<=t&&p.to.getTime()>t);
-    hud.innerHTML=`<b>${esc(fmtDT(new Date(t).toISOString()))}</b> MYT<br>`+(c.covered?`${c.storm?'⛈️ thunderstorm'+(c.stormProb!=null&&c.stormProb<100?' possible':''):c.rain?'🌧️ rain':cl>.7?'☁️ cloudy':cl>.35?'⛅ partly cloudy':c.dayF>0?'☀️ sunny':'🌙 clear'} · rain chance ${num(c.pop)}%${fin(c.temp)?' · '+num(c.temp)+'°C':''}<br><span class="note">forecast hour ${esc(String(c.iso).slice(11,16))}${ts?' · TAF '+esc((ts.prob!=null?'PROB'+ts.prob+' ':'')+ts.change+' '+ts.wx):''}</span>`:`<span class="unavail">no forecast data for this hour</span>`)}
+    const skyWord=c.cloud==null?'cloud unknown':cl>.7?'☁️ cloudy':cl>.35?'⛅ partly cloudy':c.dayF>0?'☀️ sunny':'🌙 clear';
+    const wxWord=c.rain==null?'conditions cannot be determined':c.storm?'⛈️ thunderstorm'+(c.stormProb!=null&&c.stormProb<100?' possible':''):c.rain?'🌧️ rain'+(c.basis=='model without probability'?' (no probability given)':''):skyWord;
+    hud.innerHTML=`<b>${esc(fmtDT(new Date(t).toISOString()))}</b> MYT<br>${wxWord} · rain chance ${c.pop!=null?num(c.pop)+'%':'–'}${fin(c.temp)?' · '+num(c.temp)+'°C':''}<br><span class="note">${c.covered?'forecast hour '+esc(String(c.iso).slice(11,16)):'no model data for this hour'}${ts?' · TAF '+esc((ts.prob!=null?'PROB'+ts.prob+' ':'')+ts.change+' '+ts.wx):''}</span>`}
   else hud.hidden=true;
 }
 function loop(){rafId=null;if(paused||!D)return;drawFrame(true);rafId=requestAnimationFrame(loop)}

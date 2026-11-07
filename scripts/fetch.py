@@ -105,26 +105,34 @@ for o in obs:
             cur = {"first": o["t"], "last": o["t"]}; ts_episodes.append(cur)
 recent_ts = [o["t"][11:16] for o in obs if o["t"].startswith(yday) and "TS" in o["recent"] and "TS" not in o["wx"]]
 
-# ---------------------------------------------------------------- derive: scorecard (forecasts issued the day before yesterday's weather)
+# ---------------------------------------------------------------- derive: scorecard (forecasts issued 24 h before each hour, scored on the hours ALL models and the airport share)
 scores = {}
+score_hours = []
 if prev and obs_y and len(obs_y) >= 18:
     h = prev["hourly"]
+    series = {}
     for key, name in MODELS.items():
         T = {t[11:13]: v for t, v in zip(h["time"], h.get(f"temperature_2m_previous_day1_{key}", [])) if t.startswith(yday)}
         P = {t[11:13]: v for t, v in zip(h["time"], h.get(f"precipitation_previous_day1_{key}", [])) if t.startswith(yday)}
-        pairs = [(T[k], obs_y[k]) for k in obs_y if T.get(k) is not None]
-        if len(pairs) < 18:
-            continue
-        rmse = math.sqrt(sum((a - b) ** 2 for a, b in pairs) / len(pairs))
-        bias = sum(a - b for a, b in pairs) / len(pairs)
-        tvals = [v for v in T.values() if v is not None]
-        ends = [f"{k:02d}" for k in range(STORM_WINDOW[0] + 1, STORM_WINDOW[1] + 1)]   # accumulations ending 15..18
-        pv = [P.get(k) for k in ends]
-        storm_raw = None if any(v is None for v in pv) else sum(pv)
-        scores[name] = {"n": len(pairs), "rmse": round(rmse, 2), "bias": round(bias, 2),
-                        "tmax": round(max(tvals), 1) if tvals else None,
-                        "window_mm": None if storm_raw is None else round(storm_raw, 1),
-                        "window_ge1mm": None if storm_raw is None else storm_raw >= 1.0}
+        if sum(v is not None for v in T.values()) >= 18:
+            series[name] = (T, P)
+    common = set(obs_y)
+    for T, P in series.values():
+        common &= {k for k, v in T.items() if v is not None}
+    score_hours = sorted(common)
+    if len(score_hours) >= 18:
+        for name, (T, P) in series.items():
+            pairs = [(T[k], obs_y[k]) for k in score_hours]
+            rmse = math.sqrt(sum((a - b) ** 2 for a, b in pairs) / len(pairs))
+            bias = sum(a - b for a, b in pairs) / len(pairs)
+            tvals = [v for v in T.values() if v is not None]
+            ends = [f"{k:02d}" for k in range(STORM_WINDOW[0] + 1, STORM_WINDOW[1] + 1)]   # accumulations ending 15..18
+            pv = [P.get(k) for k in ends]
+            storm_raw = None if any(v is None for v in pv) else sum(pv)
+            scores[name] = {"n": len(pairs), "rmse": round(rmse, 2), "bias": round(bias, 2),
+                            "tmax": round(max(tvals), 1) if tvals else None,
+                            "window_mm": None if storm_raw is None else round(storm_raw, 1),
+                            "window_ge1mm": None if storm_raw is None else storm_raw >= 1.0}
 
 # ---------------------------------------------------------------- derive: forecasts per model, ensemble
 days = sorted({*(blend["daily"]["time"] if blend else []), *(det["daily"]["time"] if det else []), *(ens["daily"]["time"] if ens else []), *(r["date"] for r in (metmy or []) if r.get("date", "") >= today)})
@@ -257,7 +265,7 @@ out = {
     "status": status, "obs": obs, "obs_y_max": max(obs_y.values()) if obs_y else None, "obs_y_hours": len(obs_y),
     "ts_episodes_yday": ts_episodes, "recent_ts_yday": recent_ts,
     "taf": taf_out, "metmy": metmy_out, "warnings": uniq, "warnings_retrieved": len(warn or []),
-    "ens": ens_days, "scores": scores, "score_window": list(STORM_WINDOW), "fc": fc, "days": days,
+    "ens": ens_days, "scores": scores, "score_hours": score_hours, "score_window": list(STORM_WINDOW), "fc": fc, "days": days,
     "blend": {"daily": blend["daily"], "hourly": {k: v[:72] for k, v in blend["hourly"].items()}, "units": blend.get("hourly_units")} if blend else None,
     "aq": {"current": aq.get("current"), "units": aq.get("current_units"), "time_myt": (aq.get("current") or {}).get("time")} if aq else None,
 }

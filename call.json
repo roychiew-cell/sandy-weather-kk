@@ -1,6 +1,7 @@
 {
   "written_at": "2026-11-07T09:05+08:00",
   "based_on_data_at": "2026-11-07T08:40+08:00",
+  "based_on_snapshot": "git commit 7b668dc (data: refresh 2026-11-07 00:40 UTC), data/latest.json",
   "valid_for": "2026-11-07",
   "today_high": "32–33°C",
   "radar_checked": "08:10 MYT MetMalaysia composite radar (COMP_SS), looked at by Sandy: echoes offshore west of Kudat and over northern Sarawak; no echoes near Kota Kinabalu in that image.",

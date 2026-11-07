@@ -87,13 +87,16 @@ const OBS=()=>D&&Array.isArray(D.obs)?D.obs:[];
 function validSnapshot(nd){ // shape check before a snapshot may replace the accepted one
   if(!nd||typeof nd!=='object'||typeof nd.generated!=='string'||isNaN(P(nd.generated)))return false;
   if(typeof nd.today!=='string'||typeof nd.yday!=='string')return false;
-  if(!Array.isArray(nd.obs)||!Array.isArray(nd.days)||(nd.status&&typeof nd.status!=='object'))return false;
+  const isRecord=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
+  if(!Array.isArray(nd.obs)||!Array.isArray(nd.days)||!isRecord(nd.status))return false;
   if(nd.warnings!=null&&!Array.isArray(nd.warnings))return false;
   if(nd.ens!=null&&!Array.isArray(nd.ens))return false;
-  if(nd.blend!=null&&(typeof nd.blend!=='object'||!nd.blend.hourly||!Array.isArray(nd.blend.hourly.time)))return false;
-  if(nd.taf!=null&&(typeof nd.taf!=='object'||!Array.isArray(nd.taf.periods)))return false;
-  if(nd.fc!=null&&typeof nd.fc!=='object')return false;
-  if(nd.scores!=null&&typeof nd.scores!=='object')return false;
+  if(nd.blend!=null&&(!isRecord(nd.blend)||!isRecord(nd.blend.hourly)||!Array.isArray(nd.blend.hourly.time)||(nd.blend.daily!=null&&!isRecord(nd.blend.daily))))return false;
+  if(nd.taf!=null&&(!isRecord(nd.taf)||!Array.isArray(nd.taf.periods)))return false;
+  if(nd.fc!=null&&!isRecord(nd.fc))return false;
+  if(nd.scores!=null&&!isRecord(nd.scores))return false;
+  if(nd.metmy!=null&&!isRecord(nd.metmy))return false;
+  if(nd.aq!=null&&!isRecord(nd.aq))return false;
   return true;
 }
 const dn=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -118,7 +121,7 @@ async function load(){
     if(D&&P(nd.generated).getTime()<P(D.generated).getTime())return;   // never roll back to older data
     const changed=!D||nd.generated!==D.generated||JSON.stringify(nc)!==JSON.stringify(C);
     lastFail=null;lastCallFail=callFail;
-    if(changed){D=nd;C=nc;lastDay=dayStr(nowMYT());render();if(paused)drawFrame(false)}
+    if(changed){D=nd;C=nc;lastDay=dayStr(nowMYT());render();if(origin&&!timelineStart()){timelineReset()}if(paused)drawFrame(false)}
     updateStale(); if(!paused)ensureLoop();
   }catch(e){lastFail=new Date();if(!D){$('#stamp').textContent='data file could not be loaded ('+e.message+')'}else updateStale()}
   finally{inflight=false}
@@ -382,7 +385,8 @@ setInterval(minute,60e3);
 setInterval(()=>load(),30*60e3);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){minute();load()}});
 // ---------- radar image
-function refreshRadar(){const img=$('#radar');if(!img)return;img.onerror=()=>{$('#radarnote').textContent='The radar image could not be loaded from MetMalaysia just now; open the link to view it on their site.'};img.src='https://www.met.gov.my/data/radar_east.gif?t='+Math.floor(Date.now()/600e3)}
+const RADAR_NOTE='Live image from MetMalaysia (time stamp printed top right, MYT); reloaded every 10 minutes while the page is open. Reference only, not analysed by the page. Kota Kinabalu is on the west coast of the northern land mass.';
+function refreshRadar(){const img=$('#radar');if(!img)return;img.onload=()=>{$('#radarnote').textContent=RADAR_NOTE};img.onerror=()=>{$('#radarnote').textContent='The radar image could not be loaded from MetMalaysia just now; open the link to view it on their site.'};img.src='https://www.met.gov.my/data/radar_east.gif?t='+Math.floor(Date.now()/600e3)}
 setInterval(refreshRadar,600e3);
 // ---------- pause control: one flag for canvas loop, CSS animations, SVG SMIL and playback time
 const pb=$('#pause');
@@ -399,8 +403,11 @@ const vTime=()=>origin+cursorH*3600e3;
 function timelineReset(){playing=false;cursorH=0;playAccum=0;origin=0;$('#live').hidden=true;$('#scrub').hidden=true;$('#scrub').value=0;$('#play').textContent='▶ Play next 24 h';$('#hud').hidden=true}
 function timelineStart(){ // returns false when there is no forecast coverage ahead of now
   const tm=D&&D.blend&&arr(D.blend.hourly,'time'); if(!tm||!tm.length)return false;
-  origin=Math.floor(Date.now()/3600e3)*3600e3; const last=P(tm[tm.length-1]).getTime(); if(isNaN(last))return false;
-  maxH=Math.min(24,Math.floor((last-origin)/3600e3)); if(!fin(maxH)||maxH<=0){maxH=0;return false}
+  origin=Math.floor(Date.now()/3600e3)*3600e3;
+  const have=new Set(tm.map(t=>{const d=P(t).getTime();return isNaN(d)?null:d}).filter(v=>v!=null));
+  if(!have.has(origin))return false;                       // the current hour itself must be covered
+  let h=0; while(h<24&&have.has(origin+(h+1)*3600e3))h++;  // walk forward until the first gap
+  maxH=h; if(maxH<=0)return false;
   $('#scrub').max=maxH;$('#scrub').hidden=false;$('#live').hidden=false;return true}
 function noPlayback(){$('#play').textContent='No forecast hours to play';$('#play').disabled=true;setTimeout(()=>{$('#play').disabled=false;$('#play').textContent='▶ Play next 24 h'},4000)}
 function advancePlayback(){if(!playing||paused)return;const el=playAccum+(Date.now()-playStart)/1000;cursorH=Math.min(maxH,el);$('#scrub').value=cursorH.toFixed(2);if(cursorH>=maxH){playing=false;$('#play').textContent='▶ Replay'}}

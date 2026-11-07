@@ -120,13 +120,14 @@ if prev and obs_y and len(obs_y) >= 18:
         tvals = [v for v in T.values() if v is not None]
         ends = [f"{k:02d}" for k in range(STORM_WINDOW[0] + 1, STORM_WINDOW[1] + 1)]   # accumulations ending 15..18
         pv = [P.get(k) for k in ends]
-        storm = None if any(v is None for v in pv) else round(sum(pv), 1)
+        storm_raw = None if any(v is None for v in pv) else sum(pv)
         scores[name] = {"n": len(pairs), "rmse": round(rmse, 2), "bias": round(bias, 2),
                         "tmax": round(max(tvals), 1) if tvals else None,
-                        "window_mm": storm, "window_ge1mm": None if storm is None else storm >= 1.0}
+                        "window_mm": None if storm_raw is None else round(storm_raw, 1),
+                        "window_ge1mm": None if storm_raw is None else storm_raw >= 1.0}
 
 # ---------------------------------------------------------------- derive: forecasts per model, ensemble
-days = sorted({*(blend["daily"]["time"] if blend else []), *(det["daily"]["time"] if det else []), *(ens["daily"]["time"] if ens else [])})
+days = sorted({*(blend["daily"]["time"] if blend else []), *(det["daily"]["time"] if det else []), *(ens["daily"]["time"] if ens else []), *(r["date"] for r in (metmy or []) if r.get("date", "") >= today)})
 fc = {}
 if det:
     dd = det["daily"]
@@ -188,11 +189,20 @@ def subsections(text):
     """Split a MetMalaysia composite bulletin into numbered subsections with their own validity."""
     parts = re.split(r"(?=(?:\b[IVX]+\)|\b\d\))\s)", text)
     out = []
+    scope = None
     for p in parts:
         p = p.strip()
+        ms = re.search(r"SECTION\s+[A-Z]\s*:\s*([A-Z][A-Z \[\]0-9]+?)\s*$", p)   # a header at the END of a piece belongs to the NEXT subsection
         if len(p) < 30 or not re.match(r"(?:[IVX]+|\d)\)", p):
+            if ms:
+                scope = ms.group(1).title()
             continue
-        sub = {"text": p, "areas": [a for a in PLACES if a in p], "from": None, "to": None}
+        this_scope = scope
+        if ms:
+            scope = ms.group(1).title()
+        mt = re.match(r"(?:[IVX]+|\d)\)\s*([A-Z][A-Z \-/()]{6,}?)(?=\s+[A-Z][a-z]|\s*$)", p)
+        title = mt.group(1).strip().title() if mt else ("Continuous rain" if "ontinuous rain" in p else None)
+        sub = {"text": p, "areas": [a for a in PLACES if a in p], "from": None, "to": None, "title": title, "scope": this_scope}
         m = re.search(r"within the period of\s+(.+?)\s+until\s+(.+?)(?:\.|$)", p)
         if m:
             d1, d2 = parse_date(m.group(1)), parse_date(m.group(2))

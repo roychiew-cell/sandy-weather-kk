@@ -7,7 +7,7 @@ on:
     - cron: "0 11 * * *"
   push:
     branches: [main]
-    paths: ["index.html", "call.json", "README.md"]
+    paths: ["index.html", "call.json", "README.md", "data/**", "scripts/**", ".github/workflows/**"]
   workflow_dispatch:
 
 permissions:
@@ -27,22 +27,28 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: Fetch all sources (skipped on a plain page push)
         if: github.event_name != 'push'
         run: python3 -I scripts/fetch.py
-      - name: Commit updated data
+      - name: Commit updated data (rebase and retry if the branch moved)
         if: github.event_name != 'push'
         run: |
+          set -e
           git config user.name "sandy-refresh"
           git config user.email "sandy-refresh@users.noreply.github.com"
           git add data
-          if git diff --cached --quiet; then echo "no change"; else
-            git commit -m "data: refresh $(date -u +'%Y-%m-%d %H:%M UTC')"
-            git push
-          fi
+          if git diff --cached --quiet; then echo "no change"; exit 0; fi
+          git commit -m "data: refresh $(date -u +'%Y-%m-%d %H:%M UTC')"
+          for i in 1 2 3; do
+            if git push; then exit 0; fi
+            echo "push rejected, rebasing (attempt $i)"; git pull --rebase
+          done
+          echo "could not push the data commit after 3 attempts"; exit 1
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload site

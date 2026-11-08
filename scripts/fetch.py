@@ -194,6 +194,14 @@ def parse_time(s):
 
 
 DIVISION_STATES = {"Sabah", "Sarawak"}
+DIVISIONS = {"Sabah": {"West Coast": ["Kota Kinabalu", "Penampang", "Papar", "Tuaran", "Kota Belud", "Ranau", "Putatan"],
+                       "Interior": ["Beaufort", "Kuala Penyu", "Sipitang", "Tenom", "Keningau", "Tambunan", "Nabawan"],
+                       "Kudat": ["Kudat", "Kota Marudu", "Pitas"], "Sandakan": ["Sandakan", "Beluran", "Kinabatangan", "Tongod", "Telupid"],
+                       "Tawau": ["Tawau", "Lahad Datu", "Semporna", "Kunak", "Kalabakan"]},
+             "Sarawak": {"Kuching": ["Kuching", "Bau", "Lundu"], "Samarahan": ["Samarahan", "Asajaya", "Simunjan"], "Serian": ["Serian", "Tebedu"],
+                         "Sri Aman": ["Sri Aman", "Lubok Antu"], "Betong": ["Betong", "Saratok", "Pusa", "Kabong"], "Sarikei": ["Sarikei", "Meradong", "Julau", "Pakan"],
+                         "Sibu": ["Sibu", "Kanowit", "Selangau"], "Mukah": ["Mukah", "Dalat", "Daro", "Matu", "Tanjung Manis"], "Kapit": ["Kapit", "Song", "Belaga", "Bukit Mabong"],
+                         "Bintulu": ["Bintulu", "Tatau", "Sebauh"], "Miri": ["Miri", "Marudi", "Subis", "Beluru", "Telang Usan"], "Limbang": ["Limbang", "Lawas"]}}
 STATE_ALIAS = {"Penang": ["Penang", "Pulau Pinang"], "Negeri Sembilan": ["Negeri Sembilan", "N. Sembilan"], "Melaka": ["Melaka", "Malacca"],
                "Labuan": ["Labuan", "W.P. Labuan", "WP Labuan"], "Kuala Lumpur": ["Kuala Lumpur", "W.P. Kuala Lumpur", "WP Kuala Lumpur"],
                "Putrajaya": ["Putrajaya", "W.P. Putrajaya", "WP Putrajaya"]}  # how MetMalaysia bulletins spell the states
@@ -224,10 +232,8 @@ def area_coverage(text, state, division=None, district=None, ctx=""):
         return q_re.sub(" ", t)
 
     in_text, in_ctx = bool(s_re.search(plain(text))), bool(s_re.search(plain(ctx_text)))
-    if not in_text and q_re.search(text):
-        return None
-    if not in_text and not in_ctx:
-        return False
+    if not in_text and not in_ctx:  # a qualified region anywhere and no plain state: unresolved, not excluded
+        return None if (q_re.search(text) or q_re.search(ctx_text)) else False
 
     def in_list(lst, name):
         return bool(lst and name and _name_re(name).search(lst))
@@ -273,6 +279,10 @@ def area_coverage(text, state, division=None, district=None, ctx=""):
             parsed.append((mm.group(1).strip(), mm.group(2)))
     if not parsed:
         return None
+    if not m:  # heading-only body: exclude only when a geographic list was actually recognised
+        known = (list(DIVISIONS[state].keys()) + [d for v in DIVISIONS[state].values() for d in v]) if state in DIVISIONS else []
+        if not any(any(same(k, p[0]) for k in known) or (district and same(p[0], district)) or (division and same(p[0], division)) for p in parsed):
+            return None
     if state in DIVISION_STATES:
         dv = next((p for p in parsed if division and same(p[0], division)), None)
         if dv:
@@ -342,6 +352,7 @@ for w in warn or []:
     if not subs and tx and kind != "cyclone":
         # an unnumbered single-warning bulletin: one subsection carrying the bulletin's own structured validity
         subs = [{"text": tx, "areas": [a for a in PLACES if a in tx], "from": w.get("valid_from"), "to": w.get("valid_to"),
+                 "from_inherited": True, "to_inherited": True,  # copied from the bulletin, not read from the text
                  "title": head.title(), "scope": None, "sea": "waters" in tx.lower(), "covers_kk": covers_kk(tx, head)}]
     warnings.append({"issued": w["warning_issue"]["issued"], "heading": head, "kind": kind,
                      "valid_from": w.get("valid_from"), "valid_to": w.get("valid_to"), "text": tx,

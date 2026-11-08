@@ -542,21 +542,24 @@ const DIVISIONS={'Sabah':{'West Coast':['Kota Kinabalu','Penampang','Papar','Tua
 const divisionOf=(state,district)=>{const d=DIVISIONS[state];if(!d||!district)return null;return Object.keys(d).find(k=>d[k].some(x=>district.toLowerCase().includes(x.toLowerCase())))||null};
 const stateWord=s=>String(s||'').replace(/^(WP|Wilayah Persekutuan|W\.P\.)\s+/i,'').replace(/Pulau Pinang/i,'Penang').replace(/^Federal Territory of\s+/i,'').trim();
 const nameRe=n=>new RegExp('(^|[^A-Za-z])'+reEsc(n)+'(?=$|[^A-Za-z])','i');   // whole-name match: "Papar" never matches "Paparan"
+const STATE_ALIAS={'Penang':['Penang','Pulau Pinang'],'Negeri Sembilan':['Negeri Sembilan','N. Sembilan'],'Melaka':['Melaka','Malacca'],'Labuan':['Labuan','W.P. Labuan','WP Labuan'],'Kuala Lumpur':['Kuala Lumpur','W.P. Kuala Lumpur','WP Kuala Lumpur'],'Putrajaya':['Putrajaya','W.P. Putrajaya','WP Putrajaya']};   // how MetMalaysia bulletins spell the states
 const effFrom=(w,s)=>s.from?{t:P(s.from),src:''}:w.valid_from&&!isNaN(P(w.valid_from))?{t:P(w.valid_from),src:' (bulletin validity)'}:{t:P(w.issued),src:' (from issue; start not stated)'};
 const km=(a,b,c,d)=>{const R=6371,r=Math.PI/180,x=(c-a)*r,y=(d-b)*r,h=Math.sin(x/2)**2+Math.cos(a*r)*Math.cos(c*r)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
 const reEsc=s=>String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 function areaCoverage(text,ar,ctx){ // does a warning subsection cover an area {state, division, district}? true / false / null (cannot tell)
   // reads "State: item, item (district, district) and item" after the state's name; Sabah and Sarawak items are divisions, elsewhere districts;
   // an item with a bracket list covers only the districts listed; a state named with no list covers the whole state; whole names only, never substrings
-  if(!ar||!ar.state)return null;const S=ar.state,whole=text+' '+(ctx||'');if(!nameRe(S).test(whole))return false;
-  const m=new RegExp('(?:^|[^A-Za-z])'+reEsc(S)+'\\s*:\\s*([^]*)','i').exec(text);
-  if(!m)return nameRe(S).test(text)?true:null;                                     // state named without a list: whole state (only when the text itself names it)
+  if(!ar||!ar.state)return null;const S=ar.state,alt='(?:'+(STATE_ALIAS[S]||[S]).map(reEsc).join('|')+')',sRe=new RegExp('(^|[^A-Za-z])'+alt+'(?=$|[^A-Za-z])','i'),whole=text+' '+(ctx||'');if(!sRe.test(whole))return false;
+  const same=(a,b)=>a&&b&&nameRe(a).test(b)&&nameRe(b).test(a),inList=(list,name)=>!!(list&&name&&nameRe(name).test(list));
+  const m=new RegExp('(?:^|[^A-Za-z])'+alt+'\\s*:\\s*([^]*)','i').exec(text);
+  if(!m){const ml=new RegExp('(?:^|[^A-Za-z])'+alt+'\\s*\\(([^)]*)\\)','i').exec(text);if(ml)return ar.district?inList(ml[1],ar.district):null;   // "State (district, district)": only those districts
+    return sRe.test(text)?true:null}                                                 // state named without any list: whole state (only when the text itself names it)
   let seg=m[1].split(/(?:^|\s)(?:[A-Z][A-Za-z.' ]*:)/)[0].split(/\.\s|\s(?:within|until|from|is|are|expected|valid|issued|will|may)\b/i)[0];
   const items=[];let depth=0,cur='';for(let i=0;i<seg.length;i++){const ch=seg[i];if(ch==='(')depth++;else if(ch===')')depth--;   // split on "," and " and " outside brackets only
     const isAnd=depth===0&&seg.substr(i,3).toLowerCase()==='and'&&(i===0||/\s/.test(seg[i-1]))&&(i+3>=seg.length||/\s/.test(seg[i+3]));
-    if(depth===0&&(ch===','||isAnd)){items.push(cur);cur='';if(isAnd)i+=2}else cur+=ch}items.push(cur);
+    if(depth===0&&(ch===','||ch==='•'||ch===';'||isAnd)){items.push(cur);cur='';if(isAnd)i+=2}else cur+=ch}items.push(cur);   // MetMalaysia also separates items with "•"
   const parsed=[];items.forEach(x=>{const mm=/^\s*([^()]+?)\s*(?:\(([^)]*)\))?\s*\.?\s*$/.exec(x);if(mm&&mm[1].trim())parsed.push({name:mm[1].trim(),list:mm[2]!=null?mm[2]:null})});
-  if(!parsed.length)return null;const same=(a,b)=>a&&b&&nameRe(a).test(b)&&nameRe(b).test(a),inList=(list,name)=>!!(list&&name&&nameRe(name).test(list));
+  if(!parsed.length)return null;
   if(DIVISIONS[S]){const dv=ar.division?parsed.find(p=>same(p.name,ar.division)):null;
     if(dv)return dv.list==null?true:(ar.district?inList(dv.list,ar.district):null);
     if(ar.district&&parsed.some(p=>same(p.name,ar.district)||inList(p.list,ar.district)))return true;

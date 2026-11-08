@@ -194,10 +194,17 @@ def parse_time(s):
 
 
 DIVISION_STATES = {"Sabah", "Sarawak"}
+STATE_ALIAS = {"Penang": ["Penang", "Pulau Pinang"], "Negeri Sembilan": ["Negeri Sembilan", "N. Sembilan"], "Melaka": ["Melaka", "Malacca"],
+               "Labuan": ["Labuan", "W.P. Labuan", "WP Labuan"], "Kuala Lumpur": ["Kuala Lumpur", "W.P. Kuala Lumpur", "WP Kuala Lumpur"],
+               "Putrajaya": ["Putrajaya", "W.P. Putrajaya", "WP Putrajaya"]}  # how MetMalaysia bulletins spell the states
 
 
 def _name_re(n):
     return re.compile(r"(^|[^A-Za-z])" + re.escape(n) + r"(?=$|[^A-Za-z])", re.I)
+
+
+def _alt(state):
+    return "(?:" + "|".join(re.escape(x) for x in STATE_ALIAS.get(state, [state])) + ")"
 
 
 def area_coverage(text, state, division=None, district=None, ctx=""):
@@ -207,12 +214,20 @@ def area_coverage(text, state, division=None, district=None, ctx=""):
     state; whole names only, never substrings."""
     if not state:
         return None
+    alt = _alt(state)
+    s_re = re.compile(r"(^|[^A-Za-z])" + alt + r"(?=$|[^A-Za-z])", re.I)
     whole = text + " " + (ctx or "")
-    if not _name_re(state).search(whole):
+    if not s_re.search(whole):
         return False
-    m = re.search(r"(?:^|[^A-Za-z])" + re.escape(state) + r"\s*:\s*(.*)", text, re.S | re.I)
+    def in_list(lst, name):
+        return bool(lst and name and _name_re(name).search(lst))
+
+    m = re.search(r"(?:^|[^A-Za-z])" + alt + r"\s*:\s*(.*)", text, re.S | re.I)
     if not m:
-        return True if _name_re(state).search(text) else None
+        ml = re.search(r"(?:^|[^A-Za-z])" + alt + r"\s*\(([^)]*)\)", text, re.I)
+        if ml:  # "State (district, district)": only those districts
+            return in_list(ml.group(1), district) if district else None
+        return True if s_re.search(text) else None
     seg = re.split(r"(?:^|\s)(?:[A-Z][A-Za-z.' ]*:)", m.group(1))[0]
     seg = re.split(r"\.\s|\s(?:within|until|from|is|are|expected|valid|issued|will|may)\b", seg, flags=re.I)[0]
     items, depth, cur, i = [], 0, "", 0
@@ -224,7 +239,7 @@ def area_coverage(text, state, division=None, district=None, ctx=""):
             depth -= 1
         is_and = (depth == 0 and seg[i:i + 3].lower() == "and" and (i == 0 or seg[i - 1].isspace())
                   and (i + 3 >= len(seg) or seg[i + 3].isspace()))
-        if depth == 0 and (ch == "," or is_and):
+        if depth == 0 and (ch in ",•;" or is_and):  # MetMalaysia also separates items with "•"
             items.append(cur)
             cur = ""
             if is_and:
@@ -243,9 +258,6 @@ def area_coverage(text, state, division=None, district=None, ctx=""):
 
     def same(a, b):
         return bool(a and b and _name_re(a).search(b) and _name_re(b).search(a))
-
-    def in_list(lst, name):
-        return bool(lst and name and _name_re(name).search(lst))
 
     if state in DIVISION_STATES:
         dv = next((p for p in parsed if division and same(p[0], division)), None)

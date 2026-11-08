@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sandy · Kota Kinabalu weather</title>
-<meta name="description" content="Sandy's live weather dashboard for Kota Kinabalu: MetMalaysia, KK airport readings, ECMWF ensemble and model comparison, refreshed twice a day.">
+<meta name="description" content="Sandy's live weather dashboard for Kota Kinabalu: MetMalaysia, KK airport readings, ECMWF ensemble and model comparison, refreshed hourly.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap">
 <style>
 :root{--bg:#0b1624;--card:rgba(10,20,36,.55);--bd:rgba(255,255,255,.13);--tx:#2b2b4a;--mu:#a9bdd2;--ac:#5cc8ff;--wet:#4aa3ff;--hot:#ffb347;--ok:#1f9d5a;--bad:#ff6b6b;--warn:#e0a200}
@@ -152,7 +152,7 @@ async function load(){
     if(D&&P(nd.generated).getTime()<P(D.generated).getTime())return;   // never roll back to older data
     const changed=!D||nd.generated!==D.generated||JSON.stringify(nc)!==JSON.stringify(C);
     lastFail=null;lastCallFail=callFail;
-    if(changed){D=nd;C=nc;lastDay=dayStr(nowMYT());render();if(origin&&!timelineStart()){timelineReset()}if(paused)drawFrame(false)}
+    if(changed){D=nd;C=nc;lastDay=dayStr(nowMYT());render();timelineRevalidate();if(paused)drawFrame(false)}
     updateStale(); if(!paused)ensureLoop();
   }catch(e){lastFail=new Date();if(!D){$('#stamp').textContent='data file could not be loaded ('+e.message+')'}else updateStale()}
   finally{inflight=false}
@@ -160,7 +160,7 @@ async function load(){
 const hhmm=d=>pad(myt(d).getUTCHours())+':'+pad(myt(d).getUTCMinutes());
 function updateStale(){
   if(!D)return;const ageH=(Date.now()-P(D.generated).getTime())/3600e3,el=$('#stale');
-  const bits=[];if(ageH>18)bits.push('This data is '+Math.round(ageH)+' hours old (fetched '+fmtDT(D.generated)+' MYT); the automatic refresh may have failed or been delayed, so treat warnings and the storm clock as out of date.');
+  const bits=[];if(ageH>3)bits.push('This data is '+(ageH<48?Math.round(ageH)+' hours':Math.round(ageH/24)+' days')+' old (fetched '+fmtDT(D.generated)+' MYT). Updates are expected every hour, so at least '+Math.max(1,Math.floor(ageH)-1)+' hourly refresh'+(Math.floor(ageH)-1>1?'es have':' has')+' been missed; treat warnings and the storm clock as out of date.');
   if(lastFail)bits.push('The last data re-check at '+hhmm(lastFail)+' MYT failed; showing the previous data.');
   if(lastCallFail)bits.push('The written call could not be re-checked at '+hhmm(lastCallFail)+' MYT; showing the last one received.');
   el.hidden=!bits.length;el.textContent=bits.join(' ');
@@ -274,12 +274,13 @@ function render(){
   section('#days',['#days'],()=>{
     const days=Array.isArray(D.days)?D.days.filter(d=>d>=viewToday):[]; if(!days.length)throw new Error('no forecast dates from today');
     const wcIcon=c=>!fin(c)?'·':c<=1?'☀️':c==2?'⛅':c==3?'☁️':c<=48?'🌫️':c<=67?'🌧️':c<=82?'🌦️':'⛈️';
-    $('#days').innerHTML=days.map((d,i)=>{const e=(D.ens||[]).find(x=>x&&x.day==d)||{},m=mmMain&&mmMain.days.find(r=>r&&r.date==d),dd=dist&&dist.days.find(r=>r&&r.date==d),heavy=fin(e.p10)?e.p10:null;
+    const icon2=s=>s?icon(s):'·';
+    $('#days').innerHTML=days.map((d,i)=>{const e=(D.ens||[]).find(x=>x&&x.day==d)||{},td=town&&town.days.find(r=>r&&r.date==d),dd=dist&&dist.days.find(r=>r&&r.date==d),m=td||dd,src=td?'town':dd?'district':'model',heavy=fin(e.p10)?e.p10:null;
       const bi=bd&&Array.isArray(bd.time)?bd.time.indexOf(d):-1, bmax=bi>=0&&arr(bd,'temperature_2m_max')?bd.temperature_2m_max[bi]:null, bmin=bi>=0&&arr(bd,'temperature_2m_min')?bd.temperature_2m_min[bi]:null, bcode=bi>=0&&arr(bd,'weather_code')?bd.weather_code[bi]:null;
-      const parts=m?[['am',m.morning_forecast],['pm',m.afternoon_forecast],['night',m.night_forecast]]:null;
-      return`<div class="day" style="animation:rise .7s ${i*90}ms both"><b>${d==viewToday?'Today':esc(fmtD(d))}</b>
-      <div style="display:flex;justify-content:space-around;margin:6px 0 2px">${parts?parts.map(([k,v],j)=>`<span title="${esc(k)}: ${esc(tr(v))}${dd?' · district: '+esc(tr(dd[k=='am'?'morning_forecast':k=='pm'?'afternoon_forecast':'night_forecast'])):''}"><span class="ic" style="font-size:22px;animation-delay:${(i*3+j)*.2}s">${icon(v)}</span><br><span class="note">${k}</span></span>`).join(''):`<span class="ic" style="font-size:26px">${wcIcon(bcode)}</span>`}</div>
-      <div style="font-size:15px">${m?num(m.max_temp)+'° / '+num(m.min_temp)+'°':fin(bmax)&&fin(bmin)?num(bmax)+'° / '+num(bmin)+'° <span class="note">(model)</span>':'<span class="unavail">no data</span>'}</div><div>${m?esc(tr(m.afternoon_forecast))+' (pm)':''}</div>
+      const parts=m?[['am',m.morning_forecast],['pm',m.afternoon_forecast],['night',m.night_forecast]]:null, cmp=td&&dd?dd:null;
+      return`<div class="day" style="animation:rise .7s ${i*90}ms both"><b>${d==viewToday?'Today':esc(fmtD(d))}</b>${src!=='town'?' <span class="tag">'+esc(src)+'</span>':''}
+      <div style="display:flex;justify-content:space-around;margin:6px 0 2px">${parts?parts.map(([k,v],j)=>`<span title="${esc(k)}: ${esc(v?tr(v):'not given')}${cmp?' · district: '+esc(tr(cmp[k=='am'?'morning_forecast':k=='pm'?'afternoon_forecast':'night_forecast'])):''}"><span class="ic" style="font-size:22px;animation-delay:${(i*3+j)*.2}s">${icon2(v)}</span><br><span class="note">${k}</span></span>`).join(''):`<span class="ic" style="font-size:26px">${wcIcon(bcode)}</span>`}</div>
+      <div style="font-size:15px">${m&&fin(m.max_temp)&&fin(m.min_temp)?num(m.max_temp)+'° / '+num(m.min_temp)+'°':fin(bmax)&&fin(bmin)?num(bmax)+'° / '+num(bmin)+'° <span class="note">(model)</span>':'<span class="unavail">no data</span>'}</div><div>${m&&m.afternoon_forecast?esc(tr(m.afternoon_forecast))+' (pm)':''}</div>
       <div class="bar"><i data-w="${heavy??0}" style="background:${heavy>=30?'#ff6b6b':heavy>=20?'#e0a200':'#4aa3ff'}"></i></div>
       <div>${heavy!=null?heavy+'% chance 10 mm+<br>likely '+num(e.q10,1)+'–'+num(e.q90,1)+' mm':'<span class="unavail">ensemble n/a</span>'}</div></div>`}).join('');
     setTimeout(()=>document.querySelectorAll('.bar i').forEach(e=>e.style.width=e.dataset.w+'%'),RM||paused?0:300);
@@ -369,10 +370,23 @@ function renderWarnings(){
     const st=D.status&&D.status.metmalaysia_warnings;
     if(!st||!st.ok||!Array.isArray(D.warnings)){$('#warn').innerHTML='<h2>MetMalaysia warnings</h2><p class="unavail">Warning status unavailable: the MetMalaysia warnings feed did not answer in this run, or no warning records were saved. Check <a href="https://www.met.gov.my/en/forecast/warning" target="_blank" rel="noopener">met.gov.my</a>.</p>';return}
     const W=D.warnings,now=Date.now();let h='<h2>MetMalaysia warnings</h2>';
-    const kk=W.filter(w=>w&&w.names_kk_land);
-    h+=kk.length?'<p><b>Warnings naming Kota Kinabalu:</b></p>':`<p><b>No warning naming Kota Kinabalu land was found in the ${esc(D.warnings_retrieved)} bulletins retrieved at ${fmtDT(D.generated)} MYT.</b></p>`;
-    const kindName={marine:'Sea / shipping',rain:'Rain',cyclone:'Tropical cyclone',other:'Other'};const isLocal=a=>/Sabah|Kota Kinabalu|Labuan|Kudat|Sandakan|Tawau|Reef|Layang|Sulu|Sulawesi/.test(a);
-    h+='<ul>';
+    const kindName={marine:'Sea / shipping',rain:'Rain',thunder:'Thunderstorms',cyclone:'Tropical cyclone',other:'Other'};const isLocal=a=>/Sabah|West Coast|Kota Kinabalu|Labuan|Kudat|Sandakan|Tawau|Reef|Layang|Sulu|Sulawesi/.test(a);
+    const subsOf=w=>Array.isArray(w.subsections)?w.subsections:[];
+    const kkSubs=[];W.forEach(w=>{if(w)subsOf(w).forEach(s=>{if(s&&s.covers_kk&&!s.sea)kkSubs.push({w,s})})});
+    const undetermined=W.filter(w=>w&&w.kind!=='cyclone'&&(!w.parsed||!subsOf(w).length));
+    if(kkSubs.length){
+      h+='<p><b>⚠️ Warning covering Kota Kinabalu:</b></p><ul>';
+      kkSubs.forEach(({w,s})=>{const from=s.from?P(s.from):P(w.issued),to=s.to?P(s.to):null;const exp=to&&ended(s.to),fut=from.getTime()>now;
+        const badge=!to?'<span class="tag">validity not parsed</span>':exp?'<span class="tag drop">expired</span>':fut?'<span class="tag sec">upcoming</span>':'<span class="tag core">in force</span>';
+        const via=/Kota Kinabalu/.test(s.text)?'names Kota Kinabalu':"via Sabah's West Coast division";
+        h+=`<li><b>${esc(s.title||w.heading)}</b> ${badge}<br><span class="note">${esc(via)} · issued ${fmtDT(w.issued)} · valid ${s.from?fmtDT(s.from):'from issue'} – ${to?fmtDT(s.to):'?'} MYT</span><details><summary>Full text</summary><div class="note">${esc(s.text)}</div></details></li>`});
+      h+='</ul>';
+    }else if(undetermined.length){
+      h+=`<p><b>No warning naming Kota Kinabalu or Sabah's West Coast was found in the ${esc(D.warnings_retrieved)} bulletins retrieved at ${fmtDT(D.generated)} MYT, but ${undetermined.length} bulletin${undetermined.length>1?'s':''} could not be read for local applicability (listed below): treat the local status as undetermined.</b></p>`;
+    }else{
+      h+=`<p><b>No warning covering Kota Kinabalu land (by name or via Sabah's West Coast) in the ${esc(D.warnings_retrieved)} bulletins retrieved at ${fmtDT(D.generated)} MYT.</b></p>`;
+    }
+    h+='<p class="note">Other bulletins for Sabah and nearby waters:</p><ul>';
     W.forEach(w=>{
       if(!w)return;
       const subs=Array.isArray(w.subsections)?w.subsections:[];
@@ -382,7 +396,7 @@ function renderWarnings(){
         h+=`<li><b>${esc(kindName[w.kind]||w.kind)}:</b> ${esc(w.heading)} <span class="tag">applicability / validity not determined</span><br><span class="note">This bulletin could not be split into dated subsections${named.length?'; it names '+esc(named.join(', ')):''}. Issued ${fmtDT(w.issued)}${w.valid_to?'; bulletin validity to '+fmtDT(w.valid_to)+' MYT':''}.</span><details><summary>Full text</summary><div class="note">${esc(w.text)}</div></details></li>`;
         if(!subs.length)return;
       }
-      subs.filter(s=>s&&(s.areas||[]).some(isLocal)).forEach(s=>{
+      subs.filter(s=>s&&(s.areas||[]).some(isLocal)&&!(s.covers_kk&&!s.sea)).forEach(s=>{
         const from=s.from?P(s.from):P(w.issued), to=s.to?P(s.to):null;
         const exp=to&&ended(s.to), fut=from.getTime()>now;
         const badge=!to?'<span class="tag">validity not parsed</span>':exp?'<span class="tag drop">expired</span>':fut?'<span class="tag sec">upcoming</span>':'<span class="tag core">in force</span>';
@@ -439,14 +453,19 @@ const vTime=()=>origin+cursorH*3600e3;
 const playBtn=()=>playSpan>24?$('#play7'):$('#play');
 const labels=()=>{$('#play').textContent='▶ Play 24 h';$('#play7').textContent='▶ Play 7 days'};
 function timelineReset(){playing=false;cursorH=0;playAccum=0;origin=0;$('#live').hidden=true;$('#scrub').hidden=true;$('#scrub').value=0;labels();$('#hud').hidden=true}
-function timelineStart(){ // returns false when there is no forecast coverage ahead of now
-  const tm=D&&D.blend&&arr(D.blend.hourly,'time'); if(!tm||!tm.length)return false;
-  origin=Math.floor(Date.now()/3600e3)*3600e3;
+function coverageFrom(org){ // contiguous hourly coverage from an explicit origin, in hours (0 = origin itself not covered)
+  const tm=D&&D.blend&&arr(D.blend.hourly,'time'); if(!tm||!tm.length)return 0;
   const have=new Set(tm.map(t=>{const d=P(t).getTime();return isNaN(d)?null:d}).filter(v=>v!=null));
-  if(!have.has(origin))return false;                       // the current hour itself must be covered
-  let h=0; while(h<playSpan&&have.has(origin+(h+1)*3600e3))h++;  // walk forward until the first gap, up to the chosen span
-  maxH=h; if(maxH<=0)return false;
-  $('#scrub').max=maxH;$('#scrub').step=playSpan>24?1:.25;$('#scrub').hidden=false;$('#live').hidden=false;return true}
+  if(!have.has(org))return 0;
+  let h=0; while(h<playSpan&&have.has(org+(h+1)*3600e3))h++;  // walk forward until the first gap, up to the chosen span
+  return h}
+function timelineStart(){ // establishes a NEW origin at the current hour; false when nothing can be played
+  const org=Math.floor(Date.now()/3600e3)*3600e3, h=coverageFrom(org); if(h<=0)return false;
+  origin=org;maxH=h;$('#scrub').max=maxH;$('#scrub').step=playSpan>24?1:.25;$('#scrub').hidden=false;$('#live').hidden=false;return true}
+function timelineRevalidate(){ // after new data: keep the origin and the selected forecast time where still covered
+  if(!origin)return;const h=coverageFrom(origin);if(h<=0){timelineReset();return}
+  maxH=h;$('#scrub').max=maxH;if(cursorH>maxH){cursorH=maxH;playing=false;labels();playBtn().textContent='▶ Replay'}
+  playAccum=cursorH/playSpeed;playStart=Date.now();$('#scrub').value=cursorH.toFixed(2)}
 function noPlayback(){const b=playBtn();b.textContent='No forecast hours to play';b.disabled=true;setTimeout(()=>{b.disabled=false;labels()},4000)}
 function advancePlayback(){if(!playing||paused)return;const el=playAccum+(Date.now()-playStart)/1000;cursorH=Math.min(maxH,el*playSpeed);$('#scrub').value=cursorH.toFixed(2);if(cursorH>=maxH){playing=false;labels();playBtn().textContent='▶ Replay'}}
 function startPlay(span){

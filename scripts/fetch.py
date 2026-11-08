@@ -175,7 +175,7 @@ metmy_out = {k: {"kind": {"Ds": "district", "Tn": "town", "St": "state"}.get(k[:
 warnings = []
 import re
 MONTHS = {m: i + 1 for i, m in enumerate(["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"])}
-PLACES = ["Kota Kinabalu", "Western Sabah", "Eastern Sabah", "Labuan", "Kudat", "Sandakan", "Tawau", "Lahad Datu", "Interior", "Penampang", "Papar", "Tuaran", "Beaufort", "Kota Belud", "Ranau", "Layang-Layang", "Sulu", "Sulawesi", "Reef North", "Reef South", "Condore", "Sabah", "Sarawak", "Kelantan", "Terengganu", "Pahang", "Johor", "Selangor", "Perak", "Penang", "Kedah", "Perlis", "Melaka", "N. Sembilan", "Samui", "Tioman", "Phuket", "Straits Of Melaka"]
+PLACES = ["Kota Kinabalu", "West Coast", "Western Sabah", "Eastern Sabah", "Labuan", "Kudat", "Sandakan", "Tawau", "Lahad Datu", "Interior", "Penampang", "Papar", "Tuaran", "Beaufort", "Kota Belud", "Ranau", "Layang-Layang", "Sulu", "Sulawesi", "Reef North", "Reef South", "Condore", "Sabah", "Sarawak", "Kelantan", "Terengganu", "Pahang", "Johor", "Selangor", "Perak", "Penang", "Kedah", "Perlis", "Melaka", "N. Sembilan", "Samui", "Tioman", "Phuket", "Straits Of Melaka"]
 
 
 def parse_date(s):
@@ -191,6 +191,18 @@ def parse_time(s):
         return None
     h = int(m.group(1)) % 12 + (12 if m.group(3).upper() == "PM" else 0)
     return f"{h:02d}:{m.group(2)}"
+
+
+def covers_kk(text):
+    """Kota Kinabalu is covered when named, or when Sabah's West Coast division is listed without a restriction that leaves KK out."""
+    if "Kota Kinabalu" in text:
+        return True
+    if "Sabah" in text:
+        m = re.search(r"West Coast\s*(\(([^)]*)\))?", text)
+        if m:
+            inner = m.group(2)
+            return (inner is None) or ("Kota Kinabalu" in inner)
+    return False
 
 
 def subsections(text):
@@ -222,6 +234,12 @@ def subsections(text):
                 d, tm = parse_date(m.group(2)), parse_time(m.group(1))
                 if d and tm:
                     sub["to"] = d + "T" + tm + ":00"
+            else:
+                m = re.search(r"until\s+([A-Za-z]+,\s*\d{1,2}\s+[A-Z][a-z]+\s+\d{4})", p)
+                if m and parse_date(m.group(1)):
+                    sub["to"] = parse_date(m.group(1)) + "T23:59:59"
+        sub["sea"] = "waters" in p.lower()
+        sub["covers_kk"] = covers_kk(p)
         out.append(sub)
     return out
 
@@ -232,12 +250,18 @@ for w in warn or []:
     kind = ("cyclone" if "cyclone" in (head + tx).lower() and "warning" not in head.lower()
             else "marine" if "SEAS" in head.upper() or "WIND" in head.upper()
             else "rain" if "RAIN" in head.upper() else "other")
+    if "THUNDERSTORM" in head.upper() and kind == "other":
+        kind = "thunder"
     subs = subsections(tx)
+    if not subs and tx and kind != "cyclone":
+        # an unnumbered single-warning bulletin: one subsection carrying the bulletin's own structured validity
+        subs = [{"text": tx, "areas": [a for a in PLACES if a in tx], "from": w.get("valid_from"), "to": w.get("valid_to"),
+                 "title": head.title(), "scope": None, "sea": "waters" in tx.lower(), "covers_kk": covers_kk(tx)}]
     warnings.append({"issued": w["warning_issue"]["issued"], "heading": head, "kind": kind,
                      "valid_from": w.get("valid_from"), "valid_to": w.get("valid_to"), "text": tx,
                      "areas": [a for a in PLACES if a in tx], "subsections": subs,
                      "parsed": all(s["to"] for s in subs) and bool(subs),
-                     "names_kk_land": any("Kota Kinabalu" in s["text"] for s in subs) if subs else "Kota Kinabalu" in tx})
+                     "names_kk_land": any(s["covers_kk"] and not s["sea"] for s in subs)})
 seen, uniq = set(), []
 for w in warnings:
     k = (w["heading"], w["text"][:400])

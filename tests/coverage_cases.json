@@ -164,8 +164,8 @@
    "text": "Sabah: West Coast (Paparan) and Kudat.",
    "area": "PPR",
    "ctx": "",
-   "expect": false,
-   "note": "whole names: Papar is not Paparan"
+   "expect": null,
+   "note": "unknown name (not Papar): undetermined, never a substring match"
   },
   {
    "text": "Heavy rain over Sabah and Sarawak until Tuesday.",
@@ -189,14 +189,14 @@
    "note": ""
   },
   {
-   "text": "… • N. Sembilan (Jelebu) • Melaka …",
+   "text": "Perak (Bagan Datuk) • N. Sembilan (Jelebu) • Melaka (Alor Gajah) until 5:00 PM.",
    "area": "NS",
    "ctx": "",
    "expect": false,
    "note": ""
   },
   {
-   "text": "… • N. Sembilan (Jelebu, Seremban) • Melaka …",
+   "text": "Perak (Bagan Datuk) • N. Sembilan (Jelebu, Seremban) • Melaka (Alor Gajah) until 5:00 PM.",
    "area": "NS",
    "ctx": "",
    "expect": true,
@@ -383,6 +383,181 @@
    "ctx": "THUNDERSTORM WARNING",
    "expect": false,
    "note": "both items understood: excluded"
+  },
+  {
+   "text": "Thunderstorms over Sabah: Kudat, West Coast and Sarawak: Miri until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": true,
+   "note": "R22-H1 preceding division kept"
+  },
+  {
+   "text": "Thunderstorms over Sabah: Kudat, Sandakan and Sarawak: Miri until 6:00 PM; Monday, 9 November 2026.",
+   "area": "SDK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": true,
+   "note": "R22-H1"
+  },
+  {
+   "text": "Thunderstorms over Sabah: Kudat; Sabah: West Coast until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": true,
+   "note": "R22-H1 repeated state entry"
+  },
+  {
+   "text": "Thunderstorms over Sabah: Kudat may extend to West Coast until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R22-H1 prose in the clause"
+  },
+  {
+   "text": "Thunderstorms over Sabah (Tuaran), Sabah (Kota Kinabalu) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": true,
+   "note": "R22-H2"
+  },
+  {
+   "text": "Thunderstorms over Sabah (Tuaran) and other affected areas until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R22-H2"
+  },
+  {
+   "text": "Thunderstorms over Sabah (Kudat until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R22-H2 unclosed"
+  },
+  {
+   "text": "Thunderstorms over Sabah (Kudat)) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R22-H2 extra bracket"
+  },
+  {
+   "text": "Thunderstorms over Sabah: West Coast ((Kota Kinabalu) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R22-H2 nested opener"
+  },
+  {
+   "text": "Thunderstorms over Sabah: West Coast (Tuaran and Other Affected Areas) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R22-H3 capitalised prose"
+  },
+  {
+   "text": "Thunderstorms over Johor: Tangkak and Other Affected Areas until 6:00 PM; Monday, 9 November 2026.",
+   "area": "JB",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R22-H3"
+  },
+  {
+   "text": "Thunderstorms over Sabah: West Coast () until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R22-H3 empty list"
+  },
+  {
+   "text": "Thunderstorms over Sabah: West Coast (excluding Kota Kinabalu) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R22-M1 negation"
+  },
+  {
+   "text": "Thunderstorms over Sabah: West Coast (possibly Kota Kinabalu) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R22-M1 qualifier"
+  },
+  {
+   "text": "Thunderstorms over Sabah: Sandakan (Kota Kinabalu) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R22-M1 contradictory division/district"
+  },
+  {
+   "text": "Thunderstorms over Sabah: West Coast (Sandakan) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R22-M1 contradictory"
+  },
+  {
+   "text": "Thunderstorms over Sabah: Sandakan (Kota Kinabalu), West Coast until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": true,
+   "note": "R22-M1 independent positive"
+  },
+  {
+   "text": "Thunderstorms over Timur Sabah until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R22-M2 Malay qualifier"
+  },
+  {
+   "text": "Thunderstorms over Sabah: Kudat dan Kota Kinabalu until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": true,
+   "note": "Malay conjunction"
+  },
+  {
+   "text": "Thunderstorms over Sabah: West Coast (tuaran AND papar) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": false,
+   "note": "case-insensitive conjunction"
+  },
+  {
+   "text": "Thunderstorms over Sabah: wEsT cOaSt (tUaRaN and pApAr) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": false,
+   "note": "mixed case"
+  },
+  {
+   "text": "Thunderstorms over Sabah: West Coast (Tuaran (including Tamparuli)) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "nested brackets unsupported"
+  },
+  {
+   "text": "Thunderstorms over Sabah: Kudat and nearby areas until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "prose"
+  },
+  {
+   "text": "Thunderstorms over Sabah: West Coast until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": true,
+   "note": "plain"
+  },
+  {
+   "text": "Sabah: West Coast (Tuaran and Papar) until 5:00 PM.",
+   "area": "PPR",
+   "ctx": "",
+   "expect": true,
+   "note": "Papar listed"
   }
  ]
 }

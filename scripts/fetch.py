@@ -197,10 +197,10 @@ DIVISION_STATES = {"Sabah", "Sarawak"}
 OTHER_STATES = ["Perlis", "Kedah", "Penang", "Pulau Pinang", "Perak", "Kelantan", "Terengganu", "Pahang", "Selangor", "Kuala Lumpur", "Putrajaya",
                 "Negeri Sembilan", "N. Sembilan", "Melaka", "Malacca", "Johor", "Sarawak", "Sabah", "Labuan"]
 DIVISIONS = {"Sabah": {"West Coast": ["Kota Kinabalu", "Penampang", "Papar", "Tuaran", "Kota Belud", "Ranau", "Putatan"],
-                       "Interior": ["Beaufort", "Kuala Penyu", "Sipitang", "Tenom", "Keningau", "Tambunan", "Nabawan"],
+                       "Interior": ["Beaufort", "Kuala Penyu", "Sipitang", "Tenom", "Keningau", "Tambunan", "Nabawan", "Pensiangan", "Sook"],
                        "Kudat": ["Kudat", "Kota Marudu", "Pitas"], "Sandakan": ["Sandakan", "Beluran", "Kinabatangan", "Tongod", "Telupid", "Paitan", "Labuk & Sugut"],
                        "Tawau": ["Tawau", "Lahad Datu", "Semporna", "Kunak", "Kalabakan"]},
-             "Sarawak": {"Kuching": ["Kuching", "Bau", "Lundu"], "Samarahan": ["Samarahan", "Asajaya", "Simunjan"], "Serian": ["Serian", "Tebedu"],
+             "Sarawak": {"Kuching": ["Kuching", "Bau", "Lundu"], "Samarahan": ["Samarahan", "Asajaya", "Simunjan", "Sebuyau", "Gedong"], "Serian": ["Serian", "Tebedu"],
                          "Sri Aman": ["Sri Aman", "Lubok Antu"], "Betong": ["Betong", "Saratok", "Pusa", "Kabong"], "Sarikei": ["Sarikei", "Meradong", "Julau", "Pakan"],
                          "Sibu": ["Sibu", "Kanowit", "Selangau"], "Mukah": ["Mukah", "Dalat", "Daro", "Matu", "Tanjung Manis"], "Kapit": ["Kapit", "Song", "Belaga", "Bukit Mabong"],
                          "Bintulu": ["Bintulu", "Tatau", "Sebauh"], "Miri": ["Miri", "Marudi", "Subis", "Beluru", "Telang Usan"], "Limbang": ["Limbang", "Lawas"]}}
@@ -217,119 +217,182 @@ def _alt(state):
     return "(?:" + "|".join(re.escape(x) for x in STATE_ALIAS.get(state, [state])) + ")"
 
 
+KNOWN_NAMES = ["alor gajah", "alor star", "ampang", "asajaya", "ayer hitam", "ayer itam", "ayer keroh", "bachok", "bagan datuk", "bagan serai", "bahau", "balik pulau", "baling", "bandar al-muktafi billah shah", "bandar baharu", "bandar baru salak tinggi", "bandar baru seri manjung", "bandar permaisuri", "bandar tun abdul razak", "bandar tun abdul razak, jengka", "bandar utama", "bandaraya melaka", "bangi", "bangsar", "banting", "barat daya", "bario", "batang padang", "batu berendam", "batu caves", "batu gajah", "batu kawan", "batu pahat", "bau", "bayan baru", "bayan lepas", "beaufort", "belaga", "beluran", "beluru", "bentong", "bera", "besut", "betong", "bintulu", "brinchang", "bukit bintang", "bukit mabong", "bukit mertajam", "bukit tengah", "butterworth", "cheras", "cukai", "cyberjaya", "dalat", "damansara", "daro", "dungun", "durian tunggal", "gedong", "gelugor", "gemas", "georgetown", "gerik", "gombak", "gombak (taman perwira )", "gopeng", "gua musang", "gurun", "hilir perak", "hulu langat", "hulu perak", "hulu selangor", "hulu terengganu", "ipoh", "iskandar puteri", "jalan duta", "jasin", "jawi", "jelebu", "jeli", "jempol", "jengka", "jerantut", "jerteh", "jertih", "jitra", "johor bahru", "julau", "juru", "kabong", "kajang", "kalabakan", "kampar", "kampong raja", "kangar", "kanowit", "kapit", "kelana jaya", "kemaman", "keningau", "kepala batas", "kepong", "kerian", "kertih", "kinabatangan", "kinta", "klang", "kluang", "kota belud", "kota bharu", "kota kinabalu", "kota marudu", "kota setar", "kota tinggi", "kuah", "kuala berang", "kuala kangsar", "kuala kedah", "kuala klawang", "kuala krai", "kuala kubu bharu", "kuala langat", "kuala lipis", "kuala lumpur", "kuala muda", "kuala nerang", "kuala nerus", "kuala penyu", "kuala pilah", "kuala rompin", "kuala selangor", "kuala terengganu", "kuantan", "kubang kerian", "kubang pasu", "kuching", "kudat", "kulai", "kulim", "kunak", "labis", "labuan", "labuk & sugut", "lahad datu", "langkawi", "larut", "larut, matang dan selama", "lawas", "lenggong", "limbang", "lingga", "lipis", "lojing", "lubok antu", "lundu", "machang", "manjung", "maran", "marang", "marudi", "masjid tanah", "matang dan selama", "matu", "melaka tengah", "membakut", "mentakab", "meradong", "merlimau", "mersing", "meru", "miri", "muadzam shah", "muallim", "muar", "mukah", "nabawan", "nibong tebal", "nilai", "padang terap", "pagoh", "paitan", "paka", "pakan", "pantu", "papar", "parit buntar", "pasir gudang", "pasir mas", "pasir puteh", "pekan", "pekan nenas", "pelabuhan klang", "penampang", "penawar", "pendang", "pensiangan", "perai", "perak tengah", "perlis", "petaling", "petaling jaya", "pitas", "pokok sena", "pontian", "port dickson", "puchong", "pusa", "putatan", "putrajaya", "ranau", "rantau panjang", "raub", "rawang", "rembau", "rompin", "sabak", "sabak bernam", "samarahan", "sandakan", "saratok", "sarikei", "sebauh", "seberang perai selatan", "seberang perai tengah", "seberang perai utara", "sebuyau", "segamat", "selama", "selangau", "selayang", "semenyih", "semporna", "senai", "sentul", "sepang", "serdang", "seremban", "serendah", "seri iskandar", "seri kembangan", "serian", "setapak", "setiu", "shah alam", "sibu", "siburan", "sik", "simpang renggam", "simunjan", "sipitang", "sitiawan", "skudai", "slim river", "song", "sook", "sri aman", "sri gombak", "subang jaya", "subis", "sungai ara", "sungai besar", "sungai besi", "sungai dua", "sungai dua - sungai nibong", "sungai nibong", "sungai petani", "sungai siput", "sungai udang", "taiping", "tambunan", "tampin", "tanah merah", "tanah rata", "tanah rata - brinchang", "tanah tinggi cameron", "tangga batu", "tangkak", "tanjong karang", "tanjong malim", "tanjung bungah", "tanjung manis", "tanjung tokong", "tapah", "tatau", "tawau", "tebedu", "telang usan", "telok panglima garang", "teluk intan", "telupid", "temerloh", "tenom", "timur laut", "tongod", "triang", "tuaran", "tumpat", "ulu kelang", "ulu tiram", "yan", "yong peng"]  # VOCAB (generated by scripts/build_vocab.py)
+KNOWN_ALL = set(KNOWN_NAMES)
+for _d in DIVISIONS.values():
+    for _k, _v in _d.items():
+        KNOWN_ALL.add(_k.lower())
+        KNOWN_ALL.update(x.lower() for x in _v)
+STATE_KEYS = {"perlis", "kedah", "penang", "perak", "kelantan", "terengganu", "pahang", "selangor", "kuala lumpur", "putrajaya",
+              "negeri sembilan", "melaka", "johor", "sarawak", "sabah", "labuan"}
+_PFX = re.compile(r"^\s*((?:W\.?P\.?\s+|Wilayah Persekutuan\s+)?(?:" + "|".join(re.escape(x) for x in OTHER_STATES) + r"))\s*:\s*(.*)$", re.I | re.S)
+
+
+def _norm(s):
+    s = re.sub(r"\s+", " ", (s or "").replace("\x01", ".")).strip()
+    return re.sub(r"\.$", "", s).strip().lower()
+
+
+def _state_key(n):
+    x = re.sub(r"^(?:w\.?p\.?|wilayah persekutuan)\s+", "", _norm(n))
+    x = {"pulau pinang": "penang", "n. sembilan": "negeri sembilan", "malacca": "melaka"}.get(x, x)
+    return x if x in STATE_KEYS else None
+
+
+def _extract_clause(text):
+    """The text after "over [the states of]" up to the temporal terminator, and the tail that was set aside."""
+    t = re.sub(r"\b(W\.P|N)\.", "\\1\x01", text)
+    t = re.sub(r"^\s*(?:[IVX]+|\d+)\)\s*", "", t)
+    mo = re.search(r"\bover\s+(?:the\s+(?:areas?|states?|districts?|divisions?)\s+of\s+)?", t, re.I)
+    c = t[mo.end():] if mo else t
+    term = re.compile(r"(?:\s(?:until|within the period)\b|\.(?:\s|$))")
+    depth = 0
+    for i, ch in enumerate(c):
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+        if depth == 0 and term.match(c, i):
+            return c[:i], c[i:]
+    return c, ""
+
+
+def _split_clause(c):
+    """Entries at bracket depth 0, split on , ; • newline and the words and / dan."""
+    out, depth, cur, bal, i = [], 0, "", True, 0
+    while i < len(c):
+        ch = c[i]
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth < 0:
+                bal, depth = False, 0
+        if depth == 0:
+            if ch in ",;•\n":
+                out.append(cur)
+                cur = ""
+                i += 1
+                continue
+            m = re.match(r"\s(?:and|dan)\s", c[i:], re.I)
+            if m:
+                out.append(cur)
+                cur = ""
+                i += len(m.group(0))
+                continue
+        cur += ch
+        i += 1
+    out.append(cur)
+    if depth != 0:
+        bal = False
+    return [x.replace("\x01", ".").strip() for x in out if x.replace("\x01", ".").strip()], bal
+
+
 def area_coverage(text, state, division=None, district=None, ctx=""):
     """Same reading as areaCoverage() in index.html: True / False / None (cannot tell).
-    Reads "State: item, item (district, district) and item" after the state's name (or, when only the heading/scope names the
-    state, the whole body as that state's list); in Sabah and Sarawak the items are divisions, elsewhere districts; an item with a
-    bracket list covers only the districts listed; a state named in the text with no list covers the whole state; a qualified
-    region ("Eastern Sabah") cannot be resolved; whole names only, never substrings."""
+    A closed reading of a warning's area clause: a definite answer needs the whole clause tokenised into entries that are state names,
+    known divisions or known place names (KNOWN_NAMES) with at most one bracket list; anything else is None."""
     if not state:
         return None
+    sk = _state_key(state)
     alt = _alt(state)
     s_re = re.compile(r"(^|[^A-Za-z])" + alt + r"(?=$|[^A-Za-z])", re.I)
     q_re = re.compile(r"\b(?:Eastern|Western|Northern|Southern|Central|Coastal|Interior|Upper|Lower)\s+" + alt + r"(?=$|[^A-Za-z])", re.I)
     ctx_text = ctx or ""
 
-    def plain(t):  # "Eastern Sabah" is a region the page cannot resolve, never the whole state
+    def plain(t):
         return q_re.sub(" ", t)
 
     in_text, in_ctx = bool(s_re.search(plain(text))), bool(s_re.search(plain(ctx_text)))
-    if not in_text and not in_ctx:  # a qualified region anywhere and no plain state: unresolved, not excluded
+    if not in_text and not in_ctx:  # the state is not named: not covered (a qualified region such as "Eastern Sabah" is unresolved)
         return None if (q_re.search(text) or q_re.search(ctx_text)) else False
-
-    def in_list(lst, name):
-        return bool(lst and name and _name_re(name).search(lst))
-
-    def same(x, y):
-        return bool(x and y and _name_re(x).search(y) and _name_re(y).search(x))
-
-    known = (list(DIVISIONS[state].keys()) + [d for v in DIVISIONS[state].values() for d in v]) if state in DIVISIONS else []
-
-    def placey(n):  # a place name is Title Case; prose ("other affected areas") is not
-        return bool(re.match(r"^(?:[A-Z][A-Za-z.'&-]*\s*)+$", (n or "").strip()))
-
-    def other_state(n):  # a bullet list continues into the next state's entry: understood, and never a match
-        x = re.sub(r"^(?:W\.?P\.?|Wilayah Persekutuan)\s+", "", (n or "").strip(), flags=re.I).strip().lower()
-        return x in {s.lower() for s in OTHER_STATES} and x not in {a.lower() for a in STATE_ALIAS.get(state, [state])}
-
-    def recog(n):  # an item the parser understands
-        if other_state(n):
-            return True
-        if known:
-            return any(same(k, n) for k in known) or bool(district and same(n, district)) or bool(division and same(n, division))
-        return placey(n)
-
-    def list_ok(lst):  # every bracketed name understood
-        if lst is None:
-            return True
-        parts = [x.strip() for x in re.split(r",|\band\b|•|;", lst) if x.strip()]
-        return all((known and any(same(k, x) for k in known)) or placey(x) for x in parts)
-
-    m = re.search(r"(?:^|[^A-Za-z])" + alt + r"\s*:\s*(.*)", text, re.S | re.I) if in_text else None
-    if in_text and not m:
-        ml = re.search(r"(?:^|[^A-Za-z])" + alt + r"\s*\(([^)]*)\)", text, re.I)
-        if ml:  # "State (district, district)": only those districts, and only when every name is understood
-            if not district:
-                return None
-            if in_list(ml.group(1), district):
-                return True
-            return False if list_ok(ml.group(1)) else None
-        return True  # state named in the text without any list: whole state
-    if m:
-        seg = m.group(1)
-    else:  # heading-only state: the body's list (after "over …") is that state's list
-        mo = re.search(r"\bover\s+(?:the\s+(?:areas?|states?|districts?|divisions?)\s+of\s+)?(.*)", text, re.S | re.I)
-        seg = mo.group(1) if mo else re.sub(r"^\s*(?:[IVX]+|\d+)\)\s*", "", text)
-    seg = re.sub(r"\b(W\.P|N)\.", "\\1\x01", seg)  # "W.P." and "N." are abbreviations, not sentence ends
-    seg = re.split(r"(?:^|\s)(?:[A-Z][A-Za-z.' ]*:)", seg)[0]
-    seg = re.split(r"\.\s|\s(?:within|until|from|is|are|expected|valid|issued|will|may)\b", seg, flags=re.I)[0].replace("\x01", ".")
-    items, depth, cur, i = [], 0, "", 0
-    while i < len(seg):  # split on ",", "•", ";" and " and " outside brackets only
-        ch = seg[i]
-        if ch == "(":
-            depth += 1
-        elif ch == ")":
-            depth -= 1
-        is_and = (depth == 0 and seg[i:i + 3].lower() == "and" and (i == 0 or seg[i - 1].isspace())
-                  and (i + 3 >= len(seg) or seg[i + 3].isspace()))
-        if depth == 0 and (ch in ",•;" or is_and):
-            items.append(cur)
-            cur = ""
-            if is_and:
-                i += 2
-        else:
-            cur += ch
-        i += 1
-    items.append(cur)
-    complete = depth == 0  # an item that does not parse, or unbalanced brackets, means the list is not fully read
-    parsed = []
-    for x in items:
-        if not x.strip():
-            continue
-        mm = re.match(r"^\s*([^()]+?)\s*(?:\(([^)]*)\))?\s*\.?\s*$", x)
-        if mm and mm.group(1).strip():
-            parsed.append((mm.group(1).strip(), mm.group(2)))
-        else:
-            complete = False
-    if not parsed:
+    clause, tail = _extract_clause(text)
+    entries, balanced = _split_clause(clause)
+    if not balanced or not entries:
         return None
-    def hit(p):  # a division item with a bracket list is restricted to that list even when the division and district share a name (Sandakan, Kuching)
-        restricted_division = state in DIVISIONS and bool(division) and same(p[0], division) and p[1] is not None
-        return bool(district and ((same(p[0], district) and not restricted_division) or in_list(p[1], district)))
+    divs = DIVISIONS.get(state)
+    dkey = {k.lower(): k for k in divs} if divs else {}
+    dist = _norm(district) if district else None
+    adiv = _norm(division) if division else None
 
-    def understood():  # a negative needs the whole list read and understood
-        return complete and all(recog(p[0]) and list_ok(p[1]) for p in parsed)
+    def district_divs(n):
+        return {_norm(dv) for dv, ds in (divs or {}).items() if any(_norm(d) == n for d in ds)}
 
-    if state in DIVISION_STATES:
-        dvs = [p for p in parsed if division and same(p[0], division)]
-        if any(hit(p) for p in parsed) or any(p[1] is None for p in dvs):
-            return True  # every definite positive first
-        if not division or (dvs and not district):
+    def eval_list(lst, parent_div):
+        items = [x.strip() for x in re.split(r"\s*(?:,|;|•)\s*|\s+(?:and|dan)\s+", lst, flags=re.I)]
+        if not items or any(not x for x in items):
             return None
-        return False if understood() else None
-    if any(hit(p) for p in parsed):
-        return True
-    return False if (district and understood()) else None
+        ns = [_norm(x) for x in items]
+        for n in ns:
+            if n not in KNOWN_ALL:
+                return None
+            if parent_div and divs:
+                dd = district_divs(n)
+                if dd and parent_div not in dd:
+                    return None  # empty, unknown or cross-division names: unresolved
+        return ns
+
+    cur = sk if in_ctx else None
+    pos = unres = False
+    for raw in entries:
+        prefix, rest = None, raw
+        pm = _PFX.match(raw)
+        if pm:
+            prefix, rest = pm.group(1), pm.group(2)
+        mm = re.match(r"^\s*([^()]*?)\s*(?:\(([^()]*)\))?\s*$", rest, re.S)
+        name = mm.group(1).strip() if mm else ""
+        lst = mm.group(2) if mm and mm.group(2) is not None else None
+        if prefix:
+            cur = _state_key(prefix)
+        if not mm or (not name and not prefix) or (not name and lst is not None):
+            if cur == sk or cur is None:
+                unres = True  # an entry that does not parse belongs to the state in effect
+            continue
+        if not name:
+            continue  # "Sabah:" on its own only sets the state
+        nk = _state_key(name)
+        if nk:
+            cur = nk
+            if nk != sk:
+                continue
+            if lst is None:  # a state entry: whole state, or only the districts in its list
+                pos = True
+                continue
+            ns = eval_list(lst, None)
+            if ns is None:
+                unres = True
+                continue
+            if dist and dist in ns:
+                pos = True
+            if adiv and divs and adiv in ns:
+                pos = True
+            continue
+        if cur is None:
+            unres = True  # cannot say which state this item belongs to
+            continue
+        if cur != sk:
+            continue
+        n = _norm(name)
+        if divs and n in dkey:  # a Sabah/Sarawak division, optionally restricted to a list of its districts
+            if lst is None:
+                if adiv and n == adiv:
+                    pos = True
+                continue
+            ns = eval_list(lst, n)
+            if ns is None:
+                unres = True
+                continue
+            if dist and dist in ns and (not adiv or adiv == n):
+                pos = True
+            continue
+        if n in KNOWN_ALL and lst is None:  # a district item
+            if dist and n == dist:
+                pos = True
+            continue
+        unres = True  # unknown wording, qualifiers, a bracket list on a district: cannot tell
+    if s_re.search(plain(tail)):
+        unres = True  # the state is named after the clause ended
+    return True if pos else (None if unres else False)
 
 
 def covers_kk(text, ctx=""):

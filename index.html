@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sandy · Kota Kinabalu weather</title>
-<meta name="description" content="Sandy's live weather dashboard for Kota Kinabalu: airport readings, MetMalaysia forecast and warnings, radar, ECMWF ensemble and model comparison. Live sources checked every minute; archive and model comparison hourly.">
+<meta name="description" content="Sandy's live weather dashboard for Kota Kinabalu: airport readings, MetMalaysia forecast and warnings, radar, ECMWF ensemble and model comparison. Live feeds checked every 1–10 minutes; archive and model comparison hourly.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 :root{--bg:#0a1220;--card:rgba(16,26,44,.72);--bd:rgba(148,163,184,.18);--tx:#e6edf7;--mu:#9aa8bd;--ac:#38bdf8;--wet:#60a5fa;--hot:#fbbf24;--ok:#34d399;--bad:#f87171;--warn:#f59e0b}
@@ -163,9 +163,9 @@ function parseMetar(raw){return (raw||[]).filter(m=>fin(m.obsTime)).sort((a,b)=>
 function parseTaf(raw){const t=(raw||[])[0];if(!t||!fin(t.validTimeFrom)||!fin(t.validTimeTo))return null;const per=(t.fcsts||[]).map(f=>({from:isoMYT(new Date(f.timeFrom*1000)),to:isoMYT(new Date(f.timeTo*1000)),change:f.fcstChange||null,prob:fin(f.probability)?f.probability:null,wx:f.wxString||'',wdir:f.wdir,wspd:f.wspd,visib:f.visib,clouds:(f.clouds||[]).map(c=>(c.cover||'')+(c.type?'/'+c.type:''))}));
   const issued=fin(t.issueTime)?isoMYT(new Date(t.issueTime>1e11?t.issueTime:t.issueTime*1000)):t.issueTime;return{raw:t.rawTAF,issued,valid_from:isoMYT(new Date(t.validTimeFrom*1000)),valid_to:isoMYT(new Date(t.validTimeTo*1000)),periods:per}}
 // =============================== state: archive A (hourly job), live sources L, the rendered merge D with provenance sel
-let A=null,C=null,D=null,tsPer=[],ob=null,lastDay=null,archSeq=0,archInflight=false,archDue=0,archCheckedAt=0,lastFail=null,lastCallFail=null,lastStatus='';
+let A=null,C=null,D=null,tsPer=[],ob=null,lastDay=null,archSeq=0,archInflight=false,archDue=0,archCheckedAt=0,lastFail=null,lastCallFail=null,archErr=null,archCtl=null,archLead=false;
 const SRC={current:{name:'Model now',every:60e3,max:3*60e3,fast:true},metar:{name:'Airport',every:60e3,max:3*60e3,fast:true},warn:{name:'Warnings',every:60e3,max:3*60e3,fast:true},taf:{name:'TAF',every:10*60e3,max:15*60e3},metmy:{name:'MetMalaysia',every:10*60e3,max:15*60e3},radar:{name:'Radar',every:5*60e3,max:12*60e3}};
-const L={};Object.keys(SRC).forEach(k=>L[k]={value:null,okAt:0,tryAt:0,err:null,inflight:false,seq:0,due:0,fails:0,fp:null,ctl:null,dataAt:null});
+const L={};Object.keys(SRC).forEach(k=>L[k]={value:null,okAt:0,resAt:0,failAt:0,tryAt:0,err:null,inflight:false,seq:0,due:0,fails:0,fp:null,ctl:null,dataAt:null,olderAt:0});   // okAt = version of the data shown; resAt = version of the latest completed result (success or failure); tryAt = start of the pending attempt
 let frames=[];const sel={};
 const stateOf=k=>{const s=L[k];if(s.inflight&&!s.okAt)return'checking';if(!s.okAt)return s.err?'failed':'waiting';if(s.err)return'failed';if(Date.now()-s.okAt>SRC[k].max)return'stale';return'live'};
 const liveLabel=k=>{const s=L[k],st=stateOf(k);return st==='live'?'live, read '+ago(s.okAt):st==='stale'?'live read '+ago(s.okAt)+' (older than expected)':st==='failed'?(s.okAt?'last successful live read '+hhmm(new Date(s.okAt))+'; latest check failed':'live read failed'):st==='checking'?'checking…':'waiting for first live read'};
@@ -206,41 +206,45 @@ async function fetchBody(url,ms,kind,ctl){ // the deadline covers headers AND th
 const fetchJSON=(url,ms,ctl)=>fetchBody(url,ms,'json',ctl);
 const withTimeout=(p,ms,what)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error(what||'timeout')),ms))]);
 // =============================== archive (hourly GitHub job), re-read every 15 min
-async function loadArchive(force,lead){ // every tab loads the archive once at start; afterwards only the polling tab re-reads it and shares the result
-  if(archInflight)return;if(!force&&(Date.now()<archDue||!lead))return;archInflight=true;const my=++archSeq;
-  try{const nd=await fetchJSON('data/latest.json?'+Date.now(),20000);if(!validSnapshot(nd))throw new Error('snapshot has an unexpected shape');
-    let nc=C,callFail=null;try{const j=await fetchJSON('call.json?'+Date.now(),15000);if(j&&Array.isArray(j.sections))nc=j;else callFail=new Date()}catch(e){callFail=new Date()}
-    if(my!==archSeq)return;archCheckedAt=Date.now();archDue=Date.now()+15*60e3;lastFail=null;lastCallFail=callFail;
-    if(lead&&CH){try{CH.postMessage({type:'arch',tab:TAB,nd,nc,at:archCheckedAt})}catch(e){}}
+async function loadArchive(force,lead){ // every tab loads the archive once at start; afterwards only the polling tab re-reads it (fenced by leadership generation) and shares the result or the failure
+  if(archInflight)return;if(!force&&(Date.now()<archDue||!lead))return;archInflight=true;archLead=!!lead;const my=++archSeq,myGen=gen,ctl=new AbortController();archCtl=ctl;
+  try{const nd=await fetchJSON('data/latest.json?'+Date.now(),20000,ctl);if(!validSnapshot(nd))throw new Error('snapshot has an unexpected shape');
+    let nc=C,callFail=null;try{const j=await fetchJSON('call.json?'+Date.now(),15000,ctl);if(j&&Array.isArray(j.sections))nc=j;else callFail=new Date()}catch(e){if(e.message==='superseded')throw e;callFail=new Date()}
+    if(my!==archSeq)return;archInflight=false;archCtl=null;archCheckedAt=Date.now();archDue=Date.now()+15*60e3;lastFail=null;archErr=null;lastCallFail=callFail;
+    if(lead&&leader&&myGen===gen)post({type:'arch',nd,nc,at:archCheckedAt,callFail:callFail?+callFail:null});
     applyArchive(nd,nc);
-  }catch(e){if(my!==archSeq)return;lastFail=new Date();archDue=Date.now()+5*60e3;if(!A){$('#stamp').textContent='archive could not be loaded ('+e.message+')'}else updateStale();renderStatus()}
-  finally{if(my===archSeq)archInflight=false}}
+  }catch(e){if(my!==archSeq)return;archInflight=false;archCtl=null;if(e.message==='superseded')return;lastFail=new Date();archErr=e.message||'failed';archDue=Date.now()+5*60e3;
+    if(lead&&leader&&myGen===gen)post({type:'archfail',err:archErr,at:+lastFail,due:archDue});
+    if(!A)$('#stamp').textContent='archive could not be loaded ('+archErr+')';else updateStale();renderStatus()}}
 function applyArchive(nd,nc){if(A&&P(nd.generated).getTime()<P(A.generated).getTime()){updateStale();renderStatus();return}   // never roll the archive back
   const first=!A,changed=first||nd.generated!==A.generated||JSON.stringify(nc)!==JSON.stringify(C);
   if(changed){A=nd;C=nc;lastDay=dayStr(nowMYT());compose();render();if(first)renderRadar();timelineRevalidate();if(paused)drawFrame(false)}
   updateStale();renderStatus();if(!paused)ensureLoop()}
 // =============================== live sources: one guarded scheduler per source; one visible tab per browser polls, results shared across tabs
 const TAB=Math.random().toString(36).slice(2);let CH=null;try{CH=('BroadcastChannel' in window)?new BroadcastChannel('sandy-live'):null}catch(e){CH=null}
-const storageOK=()=>{try{localStorage.setItem('sandy-t','1');localStorage.removeItem('sandy-t');return true}catch(e){return false}};
-// coordination: Web Locks (atomic) where available, else a localStorage lease (5 s), else none (each tab checks on its own, and says so); without a channel there is nothing to share, so none
-const coord=!CH?'none':(navigator.locks&&navigator.locks.request)?'locks':storageOK()?'storage':'none';
+// coordination: one polling tab per browser, chosen with the Web Locks API (atomic); where Web Locks or BroadcastChannel is missing there is no safe way to share, so every tab checks on its own and says so
+const coord=(CH&&navigator.locks&&navigator.locks.request)?'locks':'none';
 let leader=false,gen=0,acquiring=false,lockRelease=null;
 function becomeLeader(){if(!leader){leader=true;gen++}}
-function dropLeader(){if(!leader)return;leader=false;gen++;Object.keys(SRC).forEach(k=>abortAttempt(k));if(lockRelease){const r=lockRelease;lockRelease=null;r()}if(coord==='storage'){try{const v=JSON.parse(localStorage.getItem('sandy-leader')||'null');if(v&&v.id===TAB)localStorage.removeItem('sandy-leader')}catch(e){}}}
+function dropLeader(){if(!leader)return;leader=false;gen++;Object.keys(SRC).forEach(k=>abortAttempt(k));
+  if(archLead&&archInflight&&archCtl){archCtl.superseded=true;try{archCtl.abort()}catch(e){}archCtl=null;archSeq++;archInflight=false}   // a periodic archive re-read dies with the role; a tab's own first load does not
+  if(lockRelease){const r=lockRelease;lockRelease=null;r()}}
 function claimLeader(){if(leader||document.hidden)return Promise.resolve(leader);
-  if(coord==='locks'){if(acquiring)return Promise.resolve(false);acquiring=true;return new Promise(done=>{navigator.locks.request('sandy-leader',{ifAvailable:true},lock=>{acquiring=false;if(!lock||document.hidden){done(false);return}becomeLeader();done(true);return new Promise(res=>{lockRelease=res})}).catch(()=>{acquiring=false;done(false)})})}
-  if(coord==='storage'){try{const v=JSON.parse(localStorage.getItem('sandy-leader')||'null'),now=Date.now();if(!v||now-v.t>5000||v.id===TAB){localStorage.setItem('sandy-leader',JSON.stringify({id:TAB,t:now}));becomeLeader()}}catch(e){}return Promise.resolve(leader)}
-  becomeLeader();return Promise.resolve(true)}
-function renewLease(){if(leader&&coord==='storage'){try{localStorage.setItem('sandy-leader',JSON.stringify({id:TAB,t:Date.now()}))}catch(e){}}}
+  if(coord!=='locks'){becomeLeader();return Promise.resolve(true)}
+  if(acquiring)return Promise.resolve(false);acquiring=true;
+  return new Promise(done=>{navigator.locks.request('sandy-leader',{ifAvailable:true},lock=>{acquiring=false;if(!lock||document.hidden){done(false);return}becomeLeader();done(true);return new Promise(res=>{lockRelease=res})}).catch(()=>{acquiring=false;done(false)})})}
 addEventListener('pagehide',dropLeader);
 const post=m=>{if(CH){try{CH.postMessage({...m,tab:TAB})}catch(e){}}};
-function sendSnap(){const sources={};Object.keys(SRC).forEach(k=>{const s=L[k],f=k==='radar'&&frames.length?frames[frames.length-1]:null;sources[k]={value:k==='radar'?(f?{buf:f.buf,hash:f.hash}:null):s.value,okAt:s.okAt,due:s.due,err:s.err,fails:s.fails,tryAt:s.tryAt}});post({type:'snap',sources})}
+function sendSnap(){const sources={};Object.keys(SRC).forEach(k=>{const s=L[k],f=k==='radar'&&frames.length?frames[frames.length-1]:null;sources[k]={value:k==='radar'?(f?{buf:f.buf,hash:f.hash,at:f.at}:null):s.value,okAt:s.okAt,due:s.due,err:s.err,fails:s.fails,failAt:s.failAt}});
+  post({type:'snap',sources,arch:{checkedAt:archCheckedAt,due:archDue,err:archErr,failAt:lastFail?+lastFail:null,callFail:lastCallFail?+lastCallFail:null}})}
 if(CH)CH.onmessage=ev=>{const m=ev.data;if(!m||m.tab===TAB)return;
   if(m.type==='src'&&L[m.k])commit(m.k,m.value,m.okAt,false,m.due);
-  else if(m.type==='fail'&&L[m.k])applyFail(m.k,m.err,m.due,m.fails,m.tryAt,false);
+  else if(m.type==='fail'&&L[m.k])applyFail(m.k,m.err,m.due,m.fails,m.failAt,false);
   else if(m.type==='hello'){if(leader)sendSnap()}
-  else if(m.type==='snap')Object.keys(m.sources||{}).forEach(k=>{const r=m.sources[k];if(!L[k]||!r)return;if(r.value!=null&&r.okAt)commit(k,r.value,r.okAt,false,r.due);if(r.err)applyFail(k,r.err,r.due,r.fails,r.tryAt,false)});
-  else if(m.type==='arch'&&validSnapshot(m.nd)){archCheckedAt=m.at||Date.now();archDue=archCheckedAt+15*60e3;lastFail=null;applyArchive(m.nd,m.nc)}};
+  else if(m.type==='snap'){Object.keys(m.sources||{}).forEach(k=>{const r=m.sources[k];if(!L[k]||!r)return;if(r.value!=null&&r.okAt)commit(k,r.value,r.okAt,false,r.due);if(r.err&&r.failAt)applyFail(k,r.err,r.due,r.fails,r.failAt,false)});
+    const a=m.arch;if(a&&a.checkedAt>archCheckedAt){archCheckedAt=a.checkedAt;if(a.due)archDue=a.due;lastFail=a.failAt?new Date(a.failAt):null;archErr=a.err||null;lastCallFail=a.callFail?new Date(a.callFail):null;updateStale();renderStatus()}}
+  else if(m.type==='arch'&&validSnapshot(m.nd)){archCheckedAt=m.at||Date.now();archDue=archCheckedAt+15*60e3;lastFail=null;archErr=null;lastCallFail=m.callFail?new Date(m.callFail):null;applyArchive(m.nd,m.nc)}
+  else if(m.type==='archfail'){lastFail=new Date(m.at||Date.now());archErr=m.err||'failed';archDue=m.due||(Date.now()+5*60e3);updateStale();renderStatus()}};
 const READERS={
   current:async(ctl)=>{const j=await fetchJSON(OM_CURRENT,15000,ctl);const c=j&&j.current;if(!c||!fin(c.temperature_2m)||typeof c.time!=='string'||isNaN(P(c.time)))throw new Error('invalid payload');return c},
   metar:async(ctl)=>{const o=parseMetar(await fetchJSON(RELAY+'/metar?hours=36',15000,ctl));if(!o.length)throw new Error('empty');return o},
@@ -254,33 +258,35 @@ const dataTime=(k,v)=>{try{if(k==='metar')return P(v[v.length-1].t).getTime();if
 function abortAttempt(k){const s=L[k];if(!s.inflight)return;if(s.ctl){s.ctl.superseded=true;try{s.ctl.abort()}catch(e){}}s.seq++;s.inflight=false;s.ctl=null}
 async function poll(k,force){const s=L[k],cfg=SRC[k];if(s.inflight||!leader||document.hidden)return;if(!force&&Date.now()<s.due)return;   // visibility and ownership always gate; force only skips the deadline
   const ctl=new AbortController();s.inflight=true;s.ctl=ctl;s.tryAt=Date.now();const my=++s.seq,myGen=gen,startAt=s.tryAt;renderStatus();
-  try{const v=await READERS[k](ctl);if(my!==s.seq)return;s.inflight=false;s.ctl=null;commit(k,v,startAt,leader&&myGen===gen,Date.now()+cfg.every+Math.random()*3000)}   // version = attempt start, so a late finish cannot look newer
+  try{const v=await READERS[k](ctl);if(my!==s.seq)return;s.inflight=false;s.ctl=null;const due=Date.now()+cfg.every+Math.random()*3000,r=commit(k,v,startAt,leader&&myGen===gen,due);if(r!=='accepted')s.due=Math.max(s.due,due)}   // version = attempt start; a duplicate or older answer still waits a full interval
   catch(e){if(my!==s.seq)return;s.inflight=false;s.ctl=null;if(e.message==='superseded')return;const fails=s.fails+1,due=Date.now()+Math.max(cfg.every,e.retryAfter||0,Math.min(30*60e3,cfg.every*Math.pow(2,Math.min(10,fails-1))));applyFail(k,e.message||'failed',due,fails,startAt,leader&&myGen===gen)}
   finally{renderStatus()}}
-function applyFail(k,err,due,fails,tryAt,broadcast){const s=L[k];if(tryAt<s.okAt)return;      // a failure older than the latest success is history
-  s.err=err;s.fails=fails;s.due=Math.max(s.due,due);s.tryAt=Math.max(s.tryAt,tryAt);if(broadcast)post({type:'fail',k,err,due:s.due,fails,tryAt});afterChange(k)}
-function commit(k,v,okAt,broadcast,due){const s=L[k];if(s.okAt&&okAt<=s.okAt)return;          // older or same version: no-op (a tie keeps what is shown)
-  const dt=dataTime(k,v);if(dt!=null&&s.dataAt!=null&&dt<s.dataAt)return;                      // never replace newer source data with older
-  if(s.inflight&&okAt>s.tryAt)abortAttempt(k);                                                // a newer shared read supersedes this tab's pending attempt
-  const fp=k==='radar'?v.hash:JSON.stringify(v),changed=fp!==s.fp||!!s.err;s.fp=fp;if(dt!=null)s.dataAt=dt;
-  if(k==='radar'){if(v&&v.buf&&v.hash)addFrame(v)}else s.value=v;
-  s.okAt=okAt;s.err=null;s.fails=0;if(fin(due))s.due=due;
-  if(broadcast)post({type:'src',k,value:k==='radar'?{buf:v.buf,hash:v.hash}:v,okAt,due:s.due});
-  if(A)compose();if(changed)afterChange(k);else{refreshLabels();renderStatus()}}             // same content: provenance and labels still move
+function applyFail(k,err,due,fails,failAt,broadcast){const s=L[k];if(!(failAt>s.resAt)||!(failAt>s.okAt))return;   // only a result newer than every completed result counts; an equal version never undoes a success
+  s.resAt=failAt;s.failAt=failAt;s.err=err;s.fails=fails;s.due=Math.max(s.due,due);if(broadcast)post({type:'fail',k,err,due:s.due,fails,failAt});afterChange(k)}
+const selKey=k=>k==='radar'?'radar:'+(frames.length?frames[frames.length-1].hash:''):sel[k]==='archive'?'arch:'+(A?A.generated:''):'live:'+L[k].fp;   // what the page is showing for this source
+function commit(k,v,okAt,broadcast,due){const s=L[k];if(!(okAt>s.okAt))return'duplicate';                       // older or same data version: keep what is shown
+  const dt=dataTime(k,v);if(dt!=null&&s.dataAt!=null&&dt<s.dataAt){s.olderAt=Date.now();return'older'}          // never replace newer source data with older; say so
+  if(s.inflight&&okAt>s.tryAt)abortAttempt(k);                                                                  // a newer shared read supersedes this tab's pending attempt
+  const before=selKey(k),wasErr=!!s.err;s.fp=k==='radar'?v.hash:JSON.stringify(v);if(dt!=null)s.dataAt=dt;s.olderAt=0;
+  const at=k==='radar'?(v.at||Date.now()):null;if(k==='radar'){if(v&&v.buf&&v.hash)addFrame({buf:v.buf,hash:v.hash,at})}else s.value=v;
+  s.okAt=okAt;const newer=okAt>s.resAt;if(newer){s.resAt=okAt;s.err=null;s.fails=0;s.failAt=0;if(fin(due))s.due=due}   // a success older than the latest failure keeps that failure and its deadline
+  if(broadcast)post({type:'src',k,value:k==='radar'?{buf:v.buf,hash:v.hash,at}:v,okAt,due:s.due});
+  if(A)compose();const changed=before!==selKey(k)||(newer&&wasErr);if(changed)afterChange(k);else{refreshLabels();renderStatus()}return'accepted'}   // redraw when what is shown changed (content or live/archive selection)
 function afterChange(k){if(k==='radar'){if(L.radar.err)radarAsOf();else renderRadar()}if(!A){renderStatus();return}compose();if(k!=='radar'){if(SRC[k].fast)renderLive();else render()}renderSources();renderStatus();if(paused)drawFrame(false)}
-function addFrame(v){if(frames.length&&frames[frames.length-1].hash===v.hash)return;const url=URL.createObjectURL(new Blob([v.buf],{type:'image/png'}));frames.push({url,hash:v.hash,at:Date.now(),buf:v.buf});while(frames.length>18)URL.revokeObjectURL(frames.shift().url)}
-function tick(){if(document.hidden){dropLeader();return}claimLeader();renewLease();if(!leader)return;Object.keys(SRC).forEach(k=>poll(k,false));loadArchive(false,true)}
+function addFrame(v){if(frames.length&&frames[frames.length-1].hash===v.hash)return;const url=URL.createObjectURL(new Blob([v.buf],{type:'image/png'}));frames.push({url,hash:v.hash,at:v.at||Date.now(),buf:v.buf});while(frames.length>18)URL.revokeObjectURL(frames.shift().url)}
+function tick(){if(document.hidden){dropLeader();return}claimLeader();if(!leader)return;Object.keys(SRC).forEach(k=>poll(k,false));loadArchive(false,true)}
 let pillEls=null;const lastState={};
 function announce(t){const el=$('#srstate');if(el)el.textContent=t}
 function renderStatus(){
   const words={live:'OK',stale:'stale',failed:'failed',waiting:'waiting',checking:'checking'},st$=$('#status');
   if(!pillEls){st$.innerHTML=Object.keys(SRC).map(k=>`<span class="pill" data-k="${k}"><i></i>${esc(SRC[k].name)} <b></b></span>`).join('')+'<span class="pill" data-k="archive"><i></i>Archive <b></b></span>';pillEls={};st$.querySelectorAll('.pill').forEach(p=>pillEls[p.dataset.k]=p)}
-  const errs=[];const setPill=(k,st,txt,err,name)=>{const p=pillEls[k],cls='pill '+st;if(p.className!==cls)p.className=cls;const b=p.querySelector('b');if(b.textContent!==txt)b.textContent=txt;const al=name+': '+txt+(err?' ('+err+')':'');if(p.getAttribute('aria-label')!==al)p.setAttribute('aria-label',al);if(err)errs.push(name+': '+err);
-    if(lastState[k]&&lastState[k]!==st&&(st==='failed'||lastState[k]==='failed'))announce(name+(st==='failed'?' check failed':' check OK again'));lastState[k]=st};
-  Object.keys(SRC).forEach(k=>{const s=L[k],st=stateOf(k);const txt=st==='failed'?(s.okAt?'failed · last OK '+hhmm(new Date(s.okAt)):'failed'):st==='checking'?'checking…':st==='waiting'?'waiting':words[st]+' · '+ago(s.okAt);setPill(k,st,txt,s.err,SRC[k].name)});
-  const aAge=A?Date.now()-P(A.generated).getTime():0,aSt=!A?'waiting':archInflight&&!archCheckedAt?'checking':lastFail?'failed':aAge>3*3600e3?'stale':'live';
-  const aTxt=!A?'waiting':aSt==='checking'?'checking…':aSt==='failed'?'recheck failed · run of '+hhmm(P(A.generated)):(aSt==='stale'?'stale · ':'OK · ')+'run of '+hhmm(P(A.generated))+(archCheckedAt?', checked '+ago(archCheckedAt):'');setPill('archive',aSt,aTxt,null,'Archive');
-  const ed=$('#errs'),et=errs.join(' · ');ed.hidden=!errs.length;const ev=ed.querySelector('div');if(ev.textContent!==et)ev.textContent=et;
+  const errs=[],ann=[];const setPill=(k,st,txt,err,name)=>{const p=pillEls[k],cls='pill '+st;if(p.className!==cls)p.className=cls;const b=p.querySelector('b');if(b.textContent!==txt)b.textContent=txt;const al=name+': '+txt+(err?' ('+err+')':'');if(p.getAttribute('aria-label')!==al)p.setAttribute('aria-label',al);if(err)errs.push(name+': '+err);
+    if(lastState[k]&&lastState[k]!==st&&(st==='failed'||lastState[k]==='failed'))ann.push(name+(st==='failed'?' check failed':' check OK again'));lastState[k]=st};
+  Object.keys(SRC).forEach(k=>{const s=L[k],st=stateOf(k);const txt=st==='failed'?(s.okAt?'failed · last OK '+hhmm(new Date(s.okAt)):'failed'):st==='checking'?'checking…':st==='waiting'?'waiting':words[st]+' · '+ago(s.okAt);setPill(k,st,txt,s.err,SRC[k].name);
+    if(s.olderAt&&Date.now()-s.olderAt<2*SRC[k].every)errs.push(SRC[k].name+': the feed answered with older data than shown at '+hhmm(new Date(s.olderAt))+'; kept the newer')});
+  const aAge=A?Date.now()-P(A.generated).getTime():0,aSt=!A?(lastFail?'failed':archInflight?'checking':'waiting'):archInflight&&!archCheckedAt?'checking':lastFail?'failed':aAge>3*3600e3?'stale':'live';
+  const aTxt=!A?(aSt==='failed'?'load failed':aSt==='checking'?'checking…':'waiting'):aSt==='checking'?'checking…':aSt==='failed'?'recheck failed · run of '+hhmm(P(A.generated)):(aSt==='stale'?'stale · ':'OK · ')+'run of '+hhmm(P(A.generated))+(archCheckedAt?', checked '+ago(archCheckedAt):'');setPill('archive',aSt,aTxt,lastFail?archErr:null,'Archive');
+  const ed=$('#errs'),et=errs.join(' · ');ed.hidden=!errs.length;const ev=ed.querySelector('div');if(ev.textContent!==et)ev.textContent=et;if(ann.length)announce(ann.join('. ')+'.');
   const fastKeys=Object.keys(SRC).filter(k=>SRC[k].fast),anyIn=fastKeys.some(k=>L[k].inflight),nextDue=Math.min(...fastKeys.map(k=>L[k].due||Date.now()));
   const left=Math.max(0,Math.round((nextDue-Date.now())/1000));$('#nextchk').textContent=document.hidden?'paused (tab hidden)':!leader?'another tab is checking':anyIn?'checking…':(coord==='none'?'this tab checks on its own · ':'')+'next check '+left+' s';$('#ring').style.setProperty('--p',(100*(1-Math.min(60,left)/60))+'%');
 }
@@ -299,7 +305,7 @@ function render(){
   // hourly chart (archive blend)
   section('#hrtitle',['#hr','#hrtbl'],()=>{const tm=arr(bh,'time');if(!tm)throw new Error('hourly model data unavailable');
     const start=tm.findIndex(t=>t>=String(D.generated).slice(0,13)),i0=Math.max(0,start),N=Math.min(48,tm.length-i0);if(N<2)throw new Error('no forecast hours');
-    const mv=an('hr',D.generated+'|'+i0+'|'+N);
+    const mv=an('hr',JSON.stringify([tm[i0],N,(arr(bh,'temperature_2m')||[]).slice(i0,i0+N),(arr(bh,'precipitation_probability')||[]).slice(i0,i0+N+1)]));   // the drawn values, not the run time
     $('#hrtitle').innerHTML=`Next ${N} hours from ${esc(fmtDT(tm[i0]))} MYT · rain chance and temperature<span class="asof">archive, blend run of ${esc(fmtT(D.generated))}</span>`;
     const W=1000,H=260,Lx=40,R=40,T=14,B=30,bw=(W-Lx-R)/N;let s='';
     const tmp=[];for(let i=0;i<N;i++){const v=hv('temperature_2m',i0+i);if(fin(v))tmp.push(v)}if(!tmp.length)throw new Error('no temperatures');
@@ -317,7 +323,7 @@ function render(){
   // 7-day
   const recs=D.metmy&&typeof D.metmy==='object'?Object.values(D.metmy).filter(m=>m&&Array.isArray(m.days)):[];const town=recs.find(m=>m.kind=='town'),dist=recs.find(m=>m.kind=='district');
   section('#days',['#days'],()=>{const days=Array.isArray(D.days)?D.days.filter(d=>d>=viewToday):[];if(!days.length)throw new Error('no forecast dates from today');
-    const mv=an('days',D.generated+'|'+viewToday+'|'+sel.metmy+'|'+L.metmy.fp);$('#daysasof').textContent=daysLabel();
+    const mv=an('days',JSON.stringify([days,D.ens,town&&town.days,dist&&dist.days,bd&&bd.time,bd&&bd.temperature_2m_max,bd&&bd.temperature_2m_min,bd&&bd.weather_code]));$('#daysasof').textContent=daysLabel();
     const icon2=s=>{const r=wordRow(s);return r?r[2]:'·'},known=s=>!!wordRow(s);
     $('#days').innerHTML=days.map((d,i)=>{const e=(D.ens||[]).find(x=>x&&x.day==d)||{},td=town&&town.days.find(r=>r&&r.date==d),dd=dist&&dist.days.find(r=>r&&r.date==d),m=td||dd,src=td?'town':dd?'district':'model',heavy=fin(e.p10)?e.p10:null;
       const bi=bd&&Array.isArray(bd.time)?bd.time.indexOf(d):-1,bmax=bi>=0&&arr(bd,'temperature_2m_max')?bd.temperature_2m_max[bi]:null,bmin=bi>=0&&arr(bd,'temperature_2m_min')?bd.temperature_2m_min[bi]:null,bcode=bi>=0&&arr(bd,'weather_code')?bd.weather_code[bi]:null;
@@ -335,7 +341,7 @@ function render(){
     $('#mmt').innerHTML=s;const el=$('#mmasof');el.textContent=label('metmy');el.className='asof '+asofClass('metmy');
     $('#mmnote').textContent='Records: '+Object.entries(D.metmy).map(([k,v])=>k+' ('+v.kind+')').join(', ')+'. The 7-day cards use, for each date, the town record, else the district record, else the model, and are tagged when it is not the town; each temperature falls back the same way. English is Sandy\'s literal translation of MetMalaysia\'s Malay (hover a cell for the original); "most places" is not a calibrated coverage figure.'});
   section('#ensnote',['#ens','#enstbl'],()=>{const E=(D.ens||[]).filter(e=>e&&fin(e.n)&&fin(e.p1)&&fin(e.p10)&&fin(e.p20)&&fin(e.q10)&&fin(e.q50)&&fin(e.q90));if(!E.length)throw new Error('ECMWF ensemble unavailable');
-    const mv=an('ens',D.generated);
+    const mv=an('ens',JSON.stringify(E));
     const W=1000,H=250,Lx=40,R=44,T=20,B=34,n=E.length,cw=(W-Lx-R)/n;let s='';const y=p=>T+(H-T-B)*(1-p/100);
     for(let p=0;p<=100;p+=25)s+=`<line x1="${Lx}" x2="${W-R}" y1="${y(p)}" y2="${y(p)}" stroke="rgba(148,163,184,.15)"/><text x="4" y="${y(p)+4}">${p}%</text>`;
     const qmax=Math.ceil(Math.max(...E.map(e=>e.q90),10)/5)*5,ym=v=>T+(H-T-B)*(1-v/qmax);for(let v=0;v<=qmax;v+=5)s+=`<text x="${W-R+6}" y="${ym(v)+4}" style="fill:#fbbf24">${v} mm</text>`;
@@ -344,7 +350,7 @@ function render(){
     $('#ens').innerHTML=s;$('#enstbl').innerHTML='<tr><th>Date</th><th>Members</th><th>≥1 mm</th><th>≥10 mm</th><th>≥20 mm</th><th>10th pct</th><th>Median</th><th>90th pct</th><th>Median high</th></tr>'+E.map(e=>`<tr><td>${esc(fmtD(e.day))}</td><td>${num(e.n)}</td><td>${num(e.p1)}%</td><td>${num(e.p10)}%</td><td>${num(e.p20)}%</td><td>${num(e.q10,1)}</td><td>${num(e.q50,1)}</td><td>${num(e.q90,1)}</td><td>${num(e.tmax50,1)}°</td></tr>`).join('');
     const nset=[...new Set(E.map(e=>e.n))];$('#ensnote').textContent=`Blue = chance of any rain (1 mm+). Red = chance of a heavy day (10 mm+), left axis. Whisker = 10th–90th percentile of the ${nset.join('/')} members (mm, right axis), dot = median; percentile = sorted member at index round((n−1)·p). Amounts are for one grid point; storms are patchy. Archive, ensemble run of ${fmtT(D.generated)}.`});
   section('#scorenote',['#score','#scoretbl'],()=>{const all=Object.entries(D.scores||{}).filter(([k,v])=>v&&fin(v.rmse)&&fin(v.n));if(!all.length)throw new Error('no comparison: 24-hour-ahead forecasts or enough airport readings were not available for yesterday');
-    const mv=an('score',A.generated);
+    const mv=an('score',JSON.stringify([all,A.yday,A.obs_y_max]));
     const nmax=Math.max(...all.map(([k,v])=>v.n)),ranked=all.filter(([k,v])=>v.n===nmax).sort((a,b)=>a[1].rmse-b[1].rmse),rest=all.filter(([k,v])=>v.n!==nmax),sc=ranked.concat(rest);
     const W=1000,rowH=30,Lx=200,mx=3,win=Array.isArray(D.score_window)?D.score_window:[14,18];let s=`<text x="${Lx}" y="14">hourly temperature RMSE vs airport, °C (shorter is better)</text><text x="600" y="14">bias</text><text x="670" y="14">n</text><text x="720" y="14">fcst high</text><text x="820" y="14">≥1 mm in ${pad(win[0])}–${pad(win[1])}h?</text>`;
     sc.forEach(([k,v],i)=>{const y=26+i*rowH,w=(360)*Math.min(v.rmse,mx)/mx,c=v.rmse<1.5?'#34d399':v.rmse<2.2?'#fbbf24':'#f87171';
@@ -360,7 +366,7 @@ function render(){
     Object.keys(D.fc).sort((a,b)=>(ROLE[a]?0:1)-(ROLE[b]?0:1)).forEach(k=>{const r=arr(D.fc[k],'rain')||[];s+=`<tr><td>${esc(k)}</td><td><span class="tag ${ROLE[k]?'core':'sec'}">${ROLE[k]?'core':'2nd opinion'}</span></td>`+days.map((d,i)=>{const v=r[i];return!fin(v)?'<td style="color:var(--mu)">–</td>':`<td><span class="cell" style="background:rgba(96,165,250,${Math.min(.85,v/16+.04)})">${v.toFixed(1)}</span></td>`}).join('')+'</tr>'});
     s+='<tr><td><b>ECMWF ensemble median</b></td><td><span class="tag core">ENS</span></td>'+days.map(d=>{const e=(D.ens||[]).find(x=>x&&x.day==d);return'<td><b>'+(e&&fin(e.q50)?e.q50.toFixed(1):'–')+'</b></td>'}).join('')+'</tr>';$('#tbl').innerHTML=s});
   renderSources();
-  $('#foot').textContent='This page re-checks its live feeds itself: airport observations, model "now" and MetMalaysia warnings every 60 s; airport TAF and MetMalaysia forecast every 10 min; radar every 5 min; the hourly archive every 15 min. Checking a feed is not the same as the feed issuing new information: the airport reports every 30 min (plus specials), the models update hourly, MetMalaysia a few times a day, the radar every 10 min. So a new airport report or warning shows here within about a minute of being published, a new TAF or forecast within about 10 minutes, a new radar image within about 5 minutes, plus any network delay or the longer wait after a failed check. One visible tab per browser does the checking and shares the results with other open tabs'+(coord==='none'?' (not available in this browser, so this tab checks on its own)':'')+'; a hidden tab pauses and catches up on return. The hourly GitHub job keeps the archive (raw responses under data/raw), the 7-day models, the ensemble and the daily comparison. Times MYT. Point: Kota Kinabalu International Airport ('+(A.point?esc(A.point.lat+', '+A.point.lon):'')+').';
+  $('#foot').textContent='This page re-checks its live feeds itself: airport observations, model "now" and MetMalaysia warnings every 60 s; airport TAF and MetMalaysia forecast every 10 min; radar every 5 min; the hourly archive every 15 min. Checking a feed is not the same as the feed issuing new information: the airport reports every 30 min (plus specials), the models update hourly, MetMalaysia a few times a day, the radar every 10 min. So a new airport report or warning shows here within about a minute of being published, a new TAF or forecast within about 10 minutes, a new radar image within about 5 minutes, plus any network delay or the longer wait after a failed check. One visible tab per browser does the checking and shares the results with other open tabs'+(coord==='none'?' (this browser cannot coordinate tabs, so this tab checks on its own)':'')+'; a hidden tab pauses and catches up on return. The hourly GitHub job keeps the archive (raw responses under data/raw), the 7-day models, the ensemble and the daily comparison. Times MYT. Point: Kota Kinabalu International Airport ('+(A.point?esc(A.point.lat+', '+A.point.lon):'')+').';
   updateClock();updateStale();
 }
 function renderLive(){
@@ -419,20 +425,20 @@ function renderParts(){
     const PARTS=[['Morning',6,12,'morning_forecast'],['Afternoon',12,18,'afternoon_forecast'],['Evening & night',18,30,'night_forecast']];
     const n=nowMYT(),nowMs=Date.now(),h=n.getUTCHours()+n.getUTCMinutes()/60,dayMs=Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate())-8*3600e3;let idx=h<6?2:h<12?0:h<18?1:2,dayOff=h<6?-1:0;
     const out=[];for(let k=0;k<3;k++){const p=PARTS[idx];out.push({part:p,start:dayMs+dayOff*864e5+p[1]*3600e3,end:dayMs+dayOff*864e5+p[2]*3600e3,date:dayStr(myt(new Date(dayMs+dayOff*864e5)))});idx++;if(idx>2){idx=0;dayOff++}}
-    const mv=an('parts',JSON.stringify([out.map(o=>o.date+o.part[0]),D.generated,sel.metmy,L.metmy.fp,sel.taf,L.taf.fp]));   // content only, never retrieval times
     const tm=arr(bh,'time')||[],tms=tm.map(t=>P(t).getTime());
-    $('#parts').innerHTML=out.map((o,i)=>{const [label2,h0,h1,field]=o.part,td=town0&&town0.days.find(r=>r&&r.date==o.date),dd=dist0&&dist0.days.find(r=>r&&r.date==o.date),rec=td||dd,src=td?'town':dd?'district':null;
+    const html=out.map((o,i)=>{const [label2,h0,h1,field]=o.part,td=town0&&town0.days.find(r=>r&&r.date==o.date),dd=dist0&&dist0.days.find(r=>r&&r.date==o.date),rec=td||dd,src=td?'town':dd?'district':null;
       const row=rec?wordRow(rec[field]):null,wording=rec?(row?row[1]:rec[field]?'unrecognised wording: '+rec[field]:null):null;
       const inst=[],prec=[];tms.forEach((ms,j)=>{if(ms>=o.start&&ms<o.end)inst.push(j);if(ms>o.start&&ms<=o.end)prec.push(j)});const gi=k=>inst.map(j=>hv(k,j)).filter(fin),gp=k=>prec.map(j=>hv(k,j)).filter(fin);
       const pop=gp('precipitation_probability'),mm=gp('precipitation'),tp=gi('temperature_2m'),cape=gi('cape'),code=gi('weather_code');const expected=(h1-h0),cov=[['rain chance',pop.length],['rain amount',mm.length],['temperature',tp.length]].filter(([k,c])=>c<expected),partial=cov.length&&(pop.length||mm.length||tp.length);
       const ts=tsPer.filter(p=>p.from.getTime()<o.end&&p.to.getTime()>o.start).map(p=>({p,a:Math.max(p.from.getTime(),o.start),b:Math.min(p.to.getTime(),o.end)}));
       let ic=rec?(row?row[2]:'·'):(code.length?codeIcon(Math.max(...code)):'·');if(ic==='☀️'&&h0>=18)ic='🌙';
       const when=o.date==dayStr(n)?'Today':o.date==dayStr(new Date(n.getTime()+864e5))?'Tomorrow':o.date==dayStr(new Date(n.getTime()-864e5))?'Yesterday':fmtD(o.date);const prog=nowMs>o.start&&nowMs<o.end?' <span class="note" style="display:inline;margin:0">(in progress · whole-period figures)</span>':'';
-      return`<div class="day"${mv?` style="animation:rise .6s ${i*70}ms both"`:''}><b>${esc(when)} · ${esc(label2)}</b>${prog}<br><span class="ic" style="font-size:30px">${ic}</span><div style="font-size:15px;font-weight:600">${wording?esc(wording):'<span class="unavail">no official wording</span>'}</div>
+      return`<div class="day"><b>${esc(when)} · ${esc(label2)}</b>${prog}<br><span class="ic" style="font-size:30px">${ic}</span><div style="font-size:15px;font-weight:600">${wording?esc(wording):'<span class="unavail">no official wording</span>'}</div>
       <div class="note" style="margin-top:2px">${src?'MetMalaysia '+esc(src):(code.length?'model icon':'–')}${td&&dd&&dd[field]&&wordRow(dd[field])&&wordRow(dd[field])[1]!==wording?' · district: '+esc(wordRow(dd[field])[1]):''}</div>
       <div style="margin-top:6px">${pop.length?'rain chance up to <b>'+Math.max(...pop)+'%</b>'+(pop.length<expected?' (partial)':''):(mm.length||tp.length?'<span class="unavail">rain probability unavailable</span>':'<span class="unavail">no model hours</span>')}${mm.length?' · ~'+mm.reduce((a,b)=>a+b,0).toFixed(1)+' mm'+(mm.length<expected?' (partial)':''):''}</div>
       <div>${tp.length?Math.round(Math.min(...tp))+'–'+Math.round(Math.max(...tp))+'°C':''}${cape.length&&Math.max(...cape)>2500?' · storm fuel high':''}</div>${partial?`<div class="note">model coverage: ${cov.map(([k,c])=>k+' '+c+'/'+expected+' h').join(', ')}</div>`:''}
       ${ts.length?'<div class="note">TAF: '+ts.map(x=>esc((x.p.prob!=null?'PROB'+x.p.prob+' ':'')+x.p.change+' '+x.p.wx)+' '+fmtT(new Date(x.a).toISOString())+'–'+fmtT(new Date(x.b).toISOString())+(nowMs>=x.b?' (ended)':'')).join('; ')+'</div>':''}</div>`}).join('');
+    const mv=an('parts',html);if(mv||$('#parts').innerHTML!==html){$('#parts').innerHTML=html;if(mv)[...$('#parts').children].forEach((c,i)=>c.style.animation='rise .6s '+(i*70)+'ms both')}   // animate only when the cards' content changed
     $('#partsasof').textContent=partsLabel();
     $('#partsnote').textContent='Morning 06:00–12:00, afternoon 12:00–18:00, evening and night 18:00–06:00, MYT, rolling from the part of the day you are in now (re-checked every minute). Wording: MetMalaysia town forecast for that date, else district. Rain chance and amount: Open-Meteo blend values for the hours ending inside the part (each value describes the preceding hour); temperatures and storm fuel: samples inside the part. TAF: the airport forecast\'s thunderstorm periods, cut to the part.'});
 }
@@ -442,18 +448,19 @@ function renderWarnings(){
   section('#warn',[],()=>{const st=D.status&&D.status.metmalaysia_warnings;
     if(!st||!st.ok||!Array.isArray(D.warnings)){lastWarnHTML='';$('#warn').innerHTML='<h2>MetMalaysia warnings</h2><p class="unavail">Warning status unavailable: the MetMalaysia warnings feed did not answer. Check <a href="https://www.met.gov.my/en/forecast/warning" target="_blank" rel="noopener">met.gov.my</a>.</p>';return}
     const W=D.warnings,now=Date.now(),wst=stateOf('warn');let h='<h2>MetMalaysia warnings<span class="asof" id="warnasof"></span></h2>';
+    const seen=new Map(),uk=b=>{const n=(seen.get(b)||0)+1;seen.set(b,n);return n>1?b+'#'+n:b},skey=(w,s)=>uk([w.heading,w.issued||'',s.scope||'',s.title||'',s.from||'',s.to||'',(s.areas||[]).join(',')].join('|')),wkey=w=>uk([w.heading,w.issued||''].join('|'));   // unique keys for open-state and focus restoration
     const qualifier=sel.warn==='live'&&wst==='failed'?' (as of the last successful read at '+hhmm(new Date(L.warn.okAt))+'; the latest check failed)':sel.warn==='archive'?' (archive of '+fmtT(A.generated)+')':'';
     const kindName={marine:'Sea / shipping',rain:'Rain',thunder:'Thunderstorms',cyclone:'Tropical cyclone',other:'Other'},isLocal=a=>/Sabah|West Coast|Kota Kinabalu|Labuan|Kudat|Sandakan|Tawau|Reef|Layang|Sulu|Sulawesi/.test(a),subsOf=w=>Array.isArray(w.subsections)?w.subsections:[];
     const kkSubs=[];W.forEach(w=>{if(w)subsOf(w).forEach(s=>{if(s&&s.covers_kk&&!s.sea)kkSubs.push({w,s})})});const undetermined=W.filter(w=>w&&w.kind!=='cyclone'&&(!w.parsed||!subsOf(w).length));
     if(kkSubs.length){h+='<div class="alert"><b>Warning covering Kota Kinabalu</b>'+esc(qualifier)+'<ul style="margin:6px 0 0">';kkSubs.forEach(({w,s})=>{const from=s.from?P(s.from):P(w.issued),to=s.to?P(s.to):null,exp=to&&ended(s.to),fut=from.getTime()>now;const badge=!to?'<span class="tag">validity not parsed</span>':exp?'<span class="tag drop">expired</span>':fut?'<span class="tag sec">upcoming</span>':'<span class="tag core">in force</span>';
-      h+=`<li><b>${esc(s.title||w.heading)}</b> ${badge}<br><span class="note" style="margin:0">${/Kota Kinabalu/.test(s.text)?'names Kota Kinabalu':"via Sabah's West Coast division"} · issued ${fmtDT(w.issued)} · valid ${s.from?fmtDT(s.from):'from issue'} – ${to?fmtDT(s.to):'?'} MYT</span><details data-key="${esc(w.heading+'|'+(s.title||'')+'|'+(s.to||''))}"><summary>Full text</summary><div class="note">${esc(s.text)}</div></details></li>`});h+='</ul></div>'}
+      h+=`<li><b>${esc(s.title||w.heading)}</b> ${badge}<br><span class="note" style="margin:0">${/Kota Kinabalu/.test(s.text)?'names Kota Kinabalu':"via Sabah's West Coast division"} · issued ${fmtDT(w.issued)} · valid ${s.from?fmtDT(s.from):'from issue'} – ${to?fmtDT(s.to):'?'} MYT</span><details data-key="${esc(skey(w,s))}"><summary>Full text</summary><div class="note">${esc(s.text)}</div></details></li>`});h+='</ul></div>'}
     else if(undetermined.length)h+=`<p><b>No warning naming Kota Kinabalu or Sabah's West Coast was found in the ${esc(D.warnings_retrieved)} bulletins retrieved${esc(qualifier)}, but ${undetermined.length} bulletin${undetermined.length>1?'s':''} could not be read for local applicability (listed below): treat the local status as undetermined.</b></p>`;
     else h+=`<p><b>No warning covering Kota Kinabalu land (by name or via Sabah's West Coast) in the ${esc(D.warnings_retrieved)} bulletins retrieved${esc(qualifier)}.</b></p>`;
     h+='<p class="note">Other bulletins for Sabah and nearby waters:</p><ul>';
-    W.forEach(w=>{if(!w)return;const subs=subsOf(w);if(w.kind=='cyclone'){h+=`<li><b>Tropical cyclone:</b> ${esc(w.heading)} <span class="note" style="display:inline">issued ${fmtDT(w.issued)}</span><details data-key="${esc(w.heading+'|'+(w.issued||''))}"><summary>Full text</summary><div class="note">${esc(w.text)}</div></details></li>`;return}
-      if(!subs.length||!w.parsed){const named=(w.areas||[]).filter(isLocal);h+=`<li><b>${esc(kindName[w.kind]||w.kind)}:</b> ${esc(w.heading)} <span class="tag">applicability / validity not determined</span><br><span class="note" style="margin:0">This bulletin could not be split into dated subsections${named.length?'; it names '+esc(named.join(', ')):''}. Issued ${fmtDT(w.issued)}${w.valid_to?'; bulletin validity to '+fmtDT(w.valid_to)+' MYT':''}.</span><details data-key="${esc(w.heading+'|'+(w.issued||''))}"><summary>Full text</summary><div class="note">${esc(w.text)}</div></details></li>`;if(!subs.length)return}
+    W.forEach(w=>{if(!w)return;const subs=subsOf(w);if(w.kind=='cyclone'){h+=`<li><b>Tropical cyclone:</b> ${esc(w.heading)} <span class="note" style="display:inline">issued ${fmtDT(w.issued)}</span><details data-key="${esc(wkey(w))}"><summary>Full text</summary><div class="note">${esc(w.text)}</div></details></li>`;return}
+      if(!subs.length||!w.parsed){const named=(w.areas||[]).filter(isLocal);h+=`<li><b>${esc(kindName[w.kind]||w.kind)}:</b> ${esc(w.heading)} <span class="tag">applicability / validity not determined</span><br><span class="note" style="margin:0">This bulletin could not be split into dated subsections${named.length?'; it names '+esc(named.join(', ')):''}. Issued ${fmtDT(w.issued)}${w.valid_to?'; bulletin validity to '+fmtDT(w.valid_to)+' MYT':''}.</span><details data-key="${esc(wkey(w))}"><summary>Full text</summary><div class="note">${esc(w.text)}</div></details></li>`;if(!subs.length)return}
       subs.filter(s=>s&&(s.areas||[]).some(isLocal)&&!(s.covers_kk&&!s.sea)).forEach(s=>{const from=s.from?P(s.from):P(w.issued),to=s.to?P(s.to):null,exp=to&&ended(s.to),fut=from.getTime()>now;const badge=!to?'<span class="tag">validity not parsed</span>':exp?'<span class="tag drop">expired</span>':fut?'<span class="tag sec">upcoming</span>':'<span class="tag core">in force</span>';const danger=/dangerous to small (boats|crafts)/i.test(s.text)?' Dangerous to small boats.':'';const ar=(s.areas||[]),sab=ar.filter(isLocal),oth=ar.length-sab.length;
-        h+=`<li><b>${esc(kindName[w.kind]||w.kind)}${s.scope?' ('+esc(s.scope)+')':''}:</b> ${esc(s.title||w.heading)} ${badge}<br><span class="note" style="margin:0">Areas named: ${esc(sab.join(', ')||'–')}${oth>0?' and '+oth+' other area'+(oth>1?'s':''):''} · valid ${s.from?fmtDT(s.from):'from issue '+fmtDT(w.issued)} – ${to?fmtDT(s.to):'?'} MYT · issued ${fmtDT(w.issued)}.${esc(danger)}</span><details data-key="${esc(w.heading+'|'+(s.title||'')+'|'+(s.to||''))}"><summary>Subsection text</summary><div class="note">${esc(s.text)}</div></details></li>`})});
+        h+=`<li><b>${esc(kindName[w.kind]||w.kind)}${s.scope?' ('+esc(s.scope)+')':''}:</b> ${esc(s.title||w.heading)} ${badge}<br><span class="note" style="margin:0">Areas named: ${esc(sab.join(', ')||'–')}${oth>0?' and '+oth+' other area'+(oth>1?'s':''):''} · valid ${s.from?fmtDT(s.from):'from issue '+fmtDT(w.issued)} – ${to?fmtDT(s.to):'?'} MYT · issued ${fmtDT(w.issued)}.${esc(danger)}</span><details data-key="${esc(skey(w,s))}"><summary>Subsection text</summary><div class="note">${esc(s.text)}</div></details></li>`})});
     h+='</ul><div class="note">In force / upcoming / expired is judged against the time on your device, re-checked every minute; bulletins are re-read every 60 s. Live radar: <a href="https://www.met.gov.my/pencerapan/radar-sabah-and-sarawak" target="_blank" rel="noopener">MetMalaysia radar</a>.</div>';
     if(h===lastWarnHTML){refreshWarnAsOf();return}                                      // nothing changed: keep open bulletins and focus as they are
     const root=$('#warn'),open=[...root.querySelectorAll('details[open]')].map(d=>d.dataset.key),ae=document.activeElement,fk=ae&&root.contains(ae)&&ae.closest('details')?ae.closest('details').dataset.key:null;
@@ -513,7 +520,7 @@ function updateClock(){const d=new Date(),m=myt(d);$('#clock').textContent=pad(m
   const active=tsPer.filter(p=>p.from.getTime()<=t&&p.to.getTime()>t),up=tsPer.find(p=>p.from.getTime()>t),per=p=>`${fmtDT(p.from.toISOString())}–${fmtDT(p.to.toISOString())} MYT`,wordsFor=p=>(p.prob!=null?p.prob+'% probability of ':'')+(p.change=='TEMPO'?'temporary spells of ':p.change=='BECMG'?'a change to ':'')+(p.wx.includes('TSRA')?'thunderstorm rain':'thunderstorms');
   if(active.length){const a=active[0];cd.textContent=(a.prob!=null?a.prob+'% chance · ':'')+(a.change=='TEMPO'?'Thunderstorms possible now':a.change=='BECMG'?'Thunderstorms expected now':'Thunderstorms forecast now');cd.classList.add('live');cn.textContent=active.map(p=>wordsFor(p)+' until '+fmtDT(p.to.toISOString())+' MYT').join('; ')+' (TAF '+active.map(p=>(p.prob!=null?'PROB'+p.prob+' ':'')+p.change+' '+p.wx).join(', ')+'). Check the radar above before heading out.'}
   else if(up){const mins=Math.max(0,Math.round((up.from.getTime()-t)/60e3));cd.textContent=Math.floor(mins/60)+'h '+pad(mins%60)+'m';cn.textContent=`until the TAF period ${per(up)}: ${wordsFor(up)}. TEMPO means temporary spells within the period, not a continuous storm; showers can start earlier.`}
-  else{cd.textContent='No TS period';cn.textContent='The current TAF ('+fmtDT(D.taf.valid_from)+' – '+fmtDT(D.taf.valid_to)+' MYT) has no thunderstorm period left.'}}
+  else{cd.textContent='No thunderstorm period remaining';cn.textContent='The current TAF ('+fmtDT(D.taf.valid_from)+' – '+fmtDT(D.taf.valid_to)+' MYT) has no thunderstorm period left.'}}
 function minute(){if(!A)return;const today=dayStr(nowMYT());if(today!==lastDay){lastDay=today;compose();render();return}compose();renderWarnings();renderParts();refreshLabels();updateClock();updateStale();renderSources();renderStatus()}
 setInterval(minute,60e3);setInterval(updateClock,1000);setInterval(tick,1000);setInterval(renderStatus,1000);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)dropLeader();else{tick();minute();renderStatus()}});

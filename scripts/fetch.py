@@ -193,16 +193,75 @@ def parse_time(s):
     return f"{h:02d}:{m.group(2)}"
 
 
-def covers_kk(text):
-    """Kota Kinabalu is covered when named, or when Sabah's West Coast division is listed without a restriction that leaves KK out."""
-    if "Kota Kinabalu" in text:
+DIVISION_STATES = {"Sabah", "Sarawak"}
+
+
+def _name_re(n):
+    return re.compile(r"(^|[^A-Za-z])" + re.escape(n) + r"(?=$|[^A-Za-z])", re.I)
+
+
+def area_coverage(text, state, division=None, district=None, ctx=""):
+    """Same reading as areaCoverage() in index.html: True / False / None (cannot tell).
+    Reads "State: item, item (district, district) and item" after the state's name; in Sabah and Sarawak the items are divisions,
+    elsewhere districts; an item with a bracket list covers only the districts listed; a state named with no list covers the whole
+    state; whole names only, never substrings."""
+    if not state:
+        return None
+    whole = text + " " + (ctx or "")
+    if not _name_re(state).search(whole):
+        return False
+    m = re.search(r"(?:^|[^A-Za-z])" + re.escape(state) + r"\s*:\s*(.*)", text, re.S | re.I)
+    if not m:
+        return True if _name_re(state).search(text) else None
+    seg = re.split(r"(?:^|\s)(?:[A-Z][A-Za-z.' ]*:)", m.group(1))[0]
+    seg = re.split(r"\.\s|\s(?:within|until|from|is|are|expected|valid|issued|will|may)\b", seg, flags=re.I)[0]
+    items, depth, cur, i = [], 0, "", 0
+    while i < len(seg):  # split on "," and " and " outside brackets only
+        ch = seg[i]
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+        is_and = (depth == 0 and seg[i:i + 3].lower() == "and" and (i == 0 or seg[i - 1].isspace())
+                  and (i + 3 >= len(seg) or seg[i + 3].isspace()))
+        if depth == 0 and (ch == "," or is_and):
+            items.append(cur)
+            cur = ""
+            if is_and:
+                i += 2
+        else:
+            cur += ch
+        i += 1
+    items.append(cur)
+    parsed = []
+    for x in items:
+        mm = re.match(r"^\s*([^()]+?)\s*(?:\(([^)]*)\))?\s*\.?\s*$", x)
+        if mm and mm.group(1).strip():
+            parsed.append((mm.group(1).strip(), mm.group(2)))
+    if not parsed:
+        return None
+
+    def same(a, b):
+        return bool(a and b and _name_re(a).search(b) and _name_re(b).search(a))
+
+    def in_list(lst, name):
+        return bool(lst and name and _name_re(name).search(lst))
+
+    if state in DIVISION_STATES:
+        dv = next((p for p in parsed if division and same(p[0], division)), None)
+        if dv:
+            return True if dv[1] is None else (in_list(dv[1], district) if district else None)
+        if district and any(same(p[0], district) or in_list(p[1], district) for p in parsed):
+            return True
+        return False if division else None
+    if district and any(same(p[0], district) or in_list(p[1], district) for p in parsed):
         return True
-    if "Sabah" in text:
-        m = re.search(r"West Coast\s*(\(([^)]*)\))?", text)
-        if m:
-            inner = m.group(2)
-            return (inner is None) or ("Kota Kinabalu" in inner)
-    return False
+    return False if district else None
+
+
+def covers_kk(text):
+    """Kota Kinabalu is covered when the subsection, read by area_coverage, names KK or Sabah's West Coast without leaving KK out."""
+    return area_coverage(text, "Sabah", "West Coast", "Kota Kinabalu") is True
 
 
 def subsections(text):

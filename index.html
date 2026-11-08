@@ -50,7 +50,8 @@ a{color:var(--ac)}
 .tl input[type=range]{width:140px;accent-color:var(--ac)}.tl .lab{color:var(--mu)}
 #hud{position:fixed;top:calc(var(--hdr,56px) + 10px);right:14px;z-index:3;background:rgba(10,18,32,.86);border:1px solid var(--bd);border-radius:12px;padding:10px 14px;font-size:13px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);max-width:280px;box-shadow:0 10px 30px rgba(0,0,0,.35)}#hud b{font-size:16px;font-weight:600}
 .num{transition:color .4s}.num.up{color:var(--hot)}.num.down{color:var(--wet)}
-@media(max-width:720px){.hero{grid-template-columns:1fr}.big{font-size:64px}main{padding-top:18vh}.tl input[type=range]{width:90px}header.top{padding:8px 12px;gap:6px 12px}.status{margin-left:0;flex-wrap:nowrap;overflow-x:auto;max-width:100%;padding-bottom:2px;scrollbar-width:none}.status::-webkit-scrollbar{display:none}.pill{font-size:11px;padding:2px 8px}}
+@media(max-width:720px){.hero{grid-template-columns:1fr}.big{font-size:64px}main{padding-top:18vh}.tl input[type=range]{width:90px}header.top{padding:8px 12px;gap:6px 12px}.status{margin-left:0;max-width:100%}.pill{font-size:11px;padding:2px 8px}}
+@media(max-width:520px){.status{flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);mask-image:linear-gradient(90deg,#000 88%,transparent)}.status::-webkit-scrollbar{display:none}}
 .rm *,.paused *{animation-play-state:paused!important}.rm .card,.paused .card{animation:none!important;opacity:1!important;transform:none!important}.rm .ticker span,.paused .ticker span{animation:none!important;padding-left:0;white-space:normal}.rm .bar i,.paused .bar i{transition:none!important}
 </style></head><body><canvas id="sky"></canvas>
 <header class="top"><div class="brand">Sandy<span>Kota Kinabalu weather</span></div><div id="clock">--:--:-- MYT</div><div class="status" id="status"><span class="pill"><span class="ring" id="ring"></span><span id="nextchk">next check 60 s</span></span></div></header>
@@ -482,7 +483,7 @@ function drawFrame(advance){
   if(f<0){const a=Math.min(1,-f*2)*(1-cl);cx.fillStyle='#fff';stars.forEach(s=>{cx.globalAlpha=a*(.5+.5*Math.sin(now/900+s.tw));cx.beginPath();cx.arc(s.x*w,s.y*hh,s.r,0,7);cx.fill()});cx.globalAlpha=1}
   const arc=(hod,a,b)=>{const p=(hod-a)/(b-a);return[w*(.1+.8*p),hh*(.6-.5*Math.sin(Math.PI*p))]};
   if(c.hod>c.sr-.5&&c.hod<c.ss+.5){const [sx,sy]=arc(c.hod,c.sr,c.ss),low=Math.max(0,1-Math.min(c.hod-c.sr,c.ss-c.hod)/1.5);const glow=cx.createRadialGradient(sx,sy,0,sx,sy,hh*.45);glow.addColorStop(0,rgb(mix([255,240,200],[255,160,90],low),.55*(1-cl*.6)));glow.addColorStop(.25,rgb(mix([255,220,150],[255,130,80],low),.22*(1-cl*.6)));glow.addColorStop(1,'rgba(255,220,150,0)');cx.fillStyle=glow;cx.fillRect(0,0,w,hh);
-    cx.fillStyle=rgb(mix([255,250,230],[255,170,110],low),.95*(1-cl*.5));cx.beginPath();cx.arc(sx,sy,22+8*low,0,7);cx.fill()}
+    cx.fillStyle=rgb(mix([255,250,230],[255,170,110],low),.95*(1-cl*.5)*(1-.75*sp)*(c.rain?.6:1));cx.beginPath();cx.arc(sx,sy,22+8*low,0,7);cx.fill()}   // the disc fades behind rain and storm cloud
   else{const nh=(c.hod-c.ss+24)%24,nl=(c.sr-c.ss+24)%24,[mx,my]=arc(nh,0,nl);cx.fillStyle=`rgba(236,240,250,${.9*(1-cl*.6)})`;cx.beginPath();cx.arc(mx,my,18,0,7);cx.fill();cx.fillStyle=rgb(top,1);cx.beginPath();cx.arc(mx-7,my-5,16,0,7);cx.fill()}
   // humidity haze near the horizon
   if(c.hum!=null&&c.hum>70){const hz=cx.createLinearGradient(0,hh*.5,0,hh*.86);hz.addColorStop(0,'rgba(200,215,235,0)');hz.addColorStop(1,`rgba(200,215,235,${(c.hum-70)/30*.25})`);cx.fillStyle=hz;cx.fillRect(0,hh*.5,w,hh*.36)}

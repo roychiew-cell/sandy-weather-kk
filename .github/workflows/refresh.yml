@@ -2,9 +2,8 @@ name: Refresh weather data and deploy
 
 on:
   schedule:
-    # 23:00 and 11:00 UTC = 07:00 and 19:00 Malaysia time (MYT, UTC+8). GitHub may delay or skip a run at busy times.
-    - cron: "0 23 * * *"
-    - cron: "0 11 * * *"
+    # every hour at :07 (off the top of the hour, when GitHub's queue is busiest). GitHub may still delay or skip a run.
+    - cron: "7 * * * *"
   push:
     branches: [main]
     paths: ["index.html", "call.json", "README.md", "data/**", "scripts/**", ".github/workflows/**"]

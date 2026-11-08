@@ -266,15 +266,15 @@ out = {
     "ts_episodes_yday": ts_episodes, "recent_ts_yday": recent_ts,
     "taf": taf_out, "metmy": metmy_out, "warnings": uniq, "warnings_retrieved": len(warn or []),
     "ens": ens_days, "scores": scores, "score_hours": score_hours, "score_window": list(STORM_WINDOW), "fc": fc, "days": days,
-    "blend": {"daily": blend["daily"], "hourly": {k: v[:72] for k, v in blend["hourly"].items()}, "units": blend.get("hourly_units")} if blend else None,
+    "blend": {"daily": blend["daily"], "hourly": blend["hourly"], "units": blend.get("hourly_units")} if blend else None,
     "aq": {"current": aq.get("current"), "units": aq.get("current_units"), "time_myt": (aq.get("current") or {}).get("time")} if aq else None,
 }
 with open(os.path.join(ROOT, "data", "latest.json"), "w") as f:
     json.dump(out, f, separators=(",", ":"))
 hist = os.path.join(ROOT, "data", "history"); os.makedirs(hist, exist_ok=True)
-with open(os.path.join(hist, now.strftime("%Y-%m-%d_%H") + ".json"), "w") as f:
+with open(os.path.join(hist, now.strftime("%Y-%m-%d_%H%M") + ".json"), "w") as f:
     json.dump(out, f, separators=(",", ":"))
-# keep 14 days of history
-for fn in sorted(os.listdir(hist))[:-28]:
+# keep the last 72 hourly snapshots (3 days)
+for fn in sorted(os.listdir(hist))[:-72]:
     os.remove(os.path.join(hist, fn))
 print("written", today, "ok:", [k for k, v in status.items() if v["ok"]], "failed:", [k for k, v in status.items() if not v["ok"]])

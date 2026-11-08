@@ -51,19 +51,19 @@ details summary{cursor:pointer;color:var(--mu);font-size:12px}
 .rm .bar i,.paused .bar i{transition:none!important}
 </style></head><body><canvas id="sky"></canvas>
 <div id="hud" hidden></div>
-<div class="ctl"><button id="play">▶ Play next 24 h</button><input id="scrub" type="range" min="0" max="24" step="0.25" value="0" aria-label="Scrub forecast hours ahead" hidden><button id="live" hidden>● Live</button><button id="pause">Pause motion</button></div>
+<div class="ctl"><button id="play">▶ Play 24 h</button><button id="play7">▶ Play 7 days</button><input id="scrub" type="range" min="0" max="24" step="0.25" value="0" aria-label="Scrub forecast hours ahead" hidden><button id="live" hidden>● Live</button><button id="pause">Pause motion</button></div>
 <main>
 <h1>Sandy · weather expert</h1>
 <div id="stale" class="stale" hidden></div>
-<div class="hero"><div><div style="color:var(--mu)">Kota Kinabalu, Sabah · <span id="stamp">loading…</span></div><div class="big"><span id="temp">--</span><small>°C</small></div><div id="cond" style="font-size:18px"></div></div>
+<div class="hero"><div><div style="color:var(--mu)">Kota Kinabalu, Sabah · <span id="stamp">loading…</span></div><div class="big"><span id="temp">--</span><small>°C</small></div><div id="cond" style="font-size:18px"></div><div id="phase" class="note"></div></div>
 <div class="grid" style="flex:1;min-width:280px" id="tiles"></div></div>
 <div class="card call" id="call"><h2>Sandy's call</h2><p class="unavail">Loading…</p></div>
+<div class="card"><h2>7-day forecast</h2><div class="days" id="days"></div><div class="note">Morning / afternoon / night icons and temperatures: MetMalaysia town forecast (district wording on hover). Bar and odds: ECMWF ensemble, chance of 10 mm+ at the airport grid point. Press "Play 7 days" below to watch the week in the sky.</div></div>
 <div class="card warn" id="warn"><h2>MetMalaysia warnings</h2><p class="unavail">Loading…</p></div>
 <div class="card"><h2>Storm clock · airport forecast (TAF)</h2><div style="display:flex;flex-wrap:wrap;gap:20px;align-items:center"><div><div class="count" id="countdown"></div><div class="note" id="countnote"></div></div><svg id="clock" viewBox="0 0 640 90" style="flex:1;min-width:260px" role="img" aria-label="Today's timeline with the forecast thunderstorm periods"></svg></div><div class="ticker"><span id="tick"></span></div></div>
 <div class="card"><h2>Radar now · MetMalaysia composite, Sabah and Sarawak</h2><a href="https://www.met.gov.my/pencerapan/radar-sabah-and-sarawak" target="_blank" rel="noopener"><img id="radar" alt="MetMalaysia composite radar image for Sabah and Sarawak; the time is printed on the image"></a><div class="note" id="radarnote">Live image from MetMalaysia (time stamp printed top right, MYT); reloaded every 10 minutes while the page is open. Reference only, not analysed by the page. Kota Kinabalu is on the west coast of the northern land mass.</div></div>
 <div class="card"><h2>What actually happened · KK airport, last 36 hours</h2><svg id="obs" viewBox="0 0 1000 230" width="100%" role="img" aria-label="Measured airport temperature over the last 36 hours"></svg><div class="note" id="obsnote"></div><details><summary>Data table</summary><div style="overflow:auto;max-height:260px"><table id="obstbl"></table></div></details></div>
 <div class="card"><h2 id="hrtitle">Next hours · rain chance and temperature</h2><svg id="hr" viewBox="0 0 1000 260" width="100%" role="img" aria-label="Hourly rain chance bars and temperature line"></svg><div class="note">Bars = rain chance % (Open-Meteo blend, left axis; a gap means no value). Orange line = temperature (right axis). Yellow band = TAF thunderstorm period. Times are MYT.</div><details><summary>Data table</summary><div style="overflow:auto;max-height:260px"><table id="hrtbl"></table></div></details></div>
-<div class="card"><h2>7-day outlook</h2><div class="days" id="days"></div><div class="note">Icon and temperatures: MetMalaysia town forecast. Bar and odds: ECMWF ensemble, chance of 10 mm+ at the airport grid point.</div></div>
 <div class="card"><h2>Official forecast · MetMalaysia</h2><div style="overflow:auto"><table id="mmt"></table></div><div class="note" id="mmnote"></div></div>
 <div class="card"><h2>Rain odds · ECMWF ensemble</h2><svg id="ens" viewBox="0 0 1000 250" width="100%" role="img" aria-label="Daily chance of rain and heavy rain with likely rainfall range" aria-describedby="ensnote"></svg><div class="note" id="ensnote"></div><details><summary>Data table</summary><div style="overflow:auto"><table id="enstbl"></table></div></details></div>
 <div class="card"><h2>Exploratory comparison · yesterday's 24-hour-ahead forecasts against the airport</h2><svg id="score" viewBox="0 0 1000 330" width="100%" role="img" aria-label="Model temperature error and bias for yesterday"></svg><div class="note" id="scorenote"></div><details><summary>Data table</summary><div style="overflow:auto"><table id="scoretbl"></table></div></details></div>
@@ -242,9 +242,13 @@ function render(){
   const town=recs.find(m=>m.kind=='town'), dist=recs.find(m=>m.kind=='district'), mmMain=town||dist;
   section('#days',['#days'],()=>{
     const days=Array.isArray(D.days)?D.days.filter(d=>d>=viewToday):[]; if(!days.length)throw new Error('no forecast dates from today');
-    $('#days').innerHTML=days.map((d,i)=>{const e=(D.ens||[]).find(x=>x&&x.day==d)||{},m=mmMain&&mmMain.days.find(r=>r&&r.date==d),heavy=fin(e.p10)?e.p10:null;
-      return`<div class="day" style="animation:rise .7s ${i*90}ms both"><b>${d==viewToday?'Today':esc(fmtD(d))}</b><br><span class="ic" style="animation-delay:${i*.3}s">${m?icon(m.afternoon_forecast):'·'}</span>
-      <div style="font-size:15px">${m?num(m.max_temp)+'° / '+num(m.min_temp)+'°':'<span class="unavail">no official</span>'}</div><div>${m?esc(tr(m.afternoon_forecast))+' (pm)':''}</div>
+    const wcIcon=c=>!fin(c)?'·':c<=1?'☀️':c==2?'⛅':c==3?'☁️':c<=48?'🌫️':c<=67?'🌧️':c<=82?'🌦️':'⛈️';
+    $('#days').innerHTML=days.map((d,i)=>{const e=(D.ens||[]).find(x=>x&&x.day==d)||{},m=mmMain&&mmMain.days.find(r=>r&&r.date==d),dd=dist&&dist.days.find(r=>r&&r.date==d),heavy=fin(e.p10)?e.p10:null;
+      const bi=bd&&Array.isArray(bd.time)?bd.time.indexOf(d):-1, bmax=bi>=0&&arr(bd,'temperature_2m_max')?bd.temperature_2m_max[bi]:null, bmin=bi>=0&&arr(bd,'temperature_2m_min')?bd.temperature_2m_min[bi]:null, bcode=bi>=0&&arr(bd,'weather_code')?bd.weather_code[bi]:null;
+      const parts=m?[['am',m.morning_forecast],['pm',m.afternoon_forecast],['night',m.night_forecast]]:null;
+      return`<div class="day" style="animation:rise .7s ${i*90}ms both"><b>${d==viewToday?'Today':esc(fmtD(d))}</b>
+      <div style="display:flex;justify-content:space-around;margin:6px 0 2px">${parts?parts.map(([k,v],j)=>`<span title="${esc(k)}: ${esc(tr(v))}${dd?' · district: '+esc(tr(dd[k=='am'?'morning_forecast':k=='pm'?'afternoon_forecast':'night_forecast'])):''}"><span class="ic" style="font-size:22px;animation-delay:${(i*3+j)*.2}s">${icon(v)}</span><br><span class="note">${k}</span></span>`).join(''):`<span class="ic" style="font-size:26px">${wcIcon(bcode)}</span>`}</div>
+      <div style="font-size:15px">${m?num(m.max_temp)+'° / '+num(m.min_temp)+'°':fin(bmax)&&fin(bmin)?num(bmax)+'° / '+num(bmin)+'° <span class="note">(model)</span>':'<span class="unavail">no data</span>'}</div><div>${m?esc(tr(m.afternoon_forecast))+' (pm)':''}</div>
       <div class="bar"><i data-w="${heavy??0}" style="background:${heavy>=30?'#ff6b6b':heavy>=20?'#ffd166':'#4aa3ff'}"></i></div>
       <div>${heavy!=null?heavy+'% chance 10 mm+<br>likely '+num(e.q10,1)+'–'+num(e.q90,1)+' mm':'<span class="unavail">ensemble n/a</span>'}</div></div>`}).join('');
     setTimeout(()=>document.querySelectorAll('.bar i').forEach(e=>e.style.width=e.dataset.w+'%'),RM||paused?0:300);
@@ -325,7 +329,7 @@ function render(){
     DROP.forEach(r=>s+=`<tr><td><span class="tag drop">Not used</span></td><td class="l">${esc(r[0])}</td><td colspan="4" class="l">${esc(r[1])}</td></tr>`);
     $('#src').innerHTML=s;
   });
-  $('#foot').textContent='Data refreshed automatically about 07:00 and 19:00 MYT by a scheduled job on GitHub (GitHub may delay or skip a scheduled run). This page re-checks for new data every 30 minutes while open and when you return to it. Raw responses for every source are archived in the repository under data/raw. Point: Kota Kinabalu International Airport ('+(D.point?esc(D.point.lat+', '+D.point.lon):'')+').';
+  $('#foot').textContent='Data refreshed automatically every hour (at about :07) by a scheduled job on GitHub (GitHub may delay or skip a scheduled run). This page re-checks for new data every 15 minutes while open and when you return to it. Raw responses for every source are archived in the repository under data/raw. Point: Kota Kinabalu International Airport ('+(D.point?esc(D.point.lat+', '+D.point.lon):'')+').';
   updateClock(); updateStale(); refreshRadar();
 }
 // ---------- warnings: own function, re-judged every minute
@@ -364,6 +368,7 @@ function updateClock(){
   if(!D)return;
   const t=Date.now(), n=nowMYT(), nowH=n.getUTCHours()+n.getUTCMinutes()/60, x=20+600*nowH/24, nl=$('#nowline'), nt=$('#nowtxt');
   if(nl){nl.setAttribute('x1',x);nl.setAttribute('x2',x);nt.setAttribute('x',x-12)}
+  {const {sr,ss}=solar(dayStr(n));$('#phase').textContent='Now: '+phaseOf(nowH,sr,ss)+' · sunrise '+pad(Math.floor(sr))+':'+pad(Math.round(sr%1*60))+', sunset '+pad(Math.floor(ss))+':'+pad(Math.round(ss%1*60))+' MYT'}
   const cd=$('#countdown'), cn=$('#countnote'); cd.classList.remove('live');
   if(!D.taf){cd.textContent='–';cn.textContent='No airport forecast (TAF) available in this run.';return}
   if(ended(D.taf.valid_to)){cd.textContent='TAF expired';cn.textContent='The airport forecast in this data ran to '+fmtDT(D.taf.valid_to)+' MYT. Wait for the next refresh.';return}
@@ -382,7 +387,7 @@ function minute(){
   updateClock();renderWarnings();updateStale();
 }
 setInterval(minute,60e3);
-setInterval(()=>load(),30*60e3);
+setInterval(()=>load(),15*60e3);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){minute();load()}});
 // ---------- radar image
 const RADAR_NOTE='Live image from MetMalaysia (time stamp printed top right, MYT); reloaded every 10 minutes while the page is open. Reference only, not analysed by the page. Kota Kinabalu is on the west coast of the northern land mass.';
@@ -398,30 +403,37 @@ function setPaused(p){
 }
 pb.onclick=()=>setPaused(!paused);
 // ---------- playback timeline: fixed origin, cursor in hours, elapsed counts only while playing and not paused
-let origin=0, cursorH=0, playing=false, playStart=0, playAccum=0, maxH=24;
+let origin=0, cursorH=0, playing=false, playStart=0, playAccum=0, maxH=24, playSpan=24, playSpeed=1;   // playSpeed = forecast hours per real second
 const vTime=()=>origin+cursorH*3600e3;
-function timelineReset(){playing=false;cursorH=0;playAccum=0;origin=0;$('#live').hidden=true;$('#scrub').hidden=true;$('#scrub').value=0;$('#play').textContent='▶ Play next 24 h';$('#hud').hidden=true}
+const playBtn=()=>playSpan>24?$('#play7'):$('#play');
+const labels=()=>{$('#play').textContent='▶ Play 24 h';$('#play7').textContent='▶ Play 7 days'};
+function timelineReset(){playing=false;cursorH=0;playAccum=0;origin=0;$('#live').hidden=true;$('#scrub').hidden=true;$('#scrub').value=0;labels();$('#hud').hidden=true}
 function timelineStart(){ // returns false when there is no forecast coverage ahead of now
   const tm=D&&D.blend&&arr(D.blend.hourly,'time'); if(!tm||!tm.length)return false;
   origin=Math.floor(Date.now()/3600e3)*3600e3;
   const have=new Set(tm.map(t=>{const d=P(t).getTime();return isNaN(d)?null:d}).filter(v=>v!=null));
   if(!have.has(origin))return false;                       // the current hour itself must be covered
-  let h=0; while(h<24&&have.has(origin+(h+1)*3600e3))h++;  // walk forward until the first gap
+  let h=0; while(h<playSpan&&have.has(origin+(h+1)*3600e3))h++;  // walk forward until the first gap, up to the chosen span
   maxH=h; if(maxH<=0)return false;
-  $('#scrub').max=maxH;$('#scrub').hidden=false;$('#live').hidden=false;return true}
-function noPlayback(){$('#play').textContent='No forecast hours to play';$('#play').disabled=true;setTimeout(()=>{$('#play').disabled=false;$('#play').textContent='▶ Play next 24 h'},4000)}
-function advancePlayback(){if(!playing||paused)return;const el=playAccum+(Date.now()-playStart)/1000;cursorH=Math.min(maxH,el);$('#scrub').value=cursorH.toFixed(2);if(cursorH>=maxH){playing=false;$('#play').textContent='▶ Replay'}}
-$('#play').onclick=()=>{
-  if(playing){playing=false;playAccum+=(Date.now()-playStart)/1000;$('#play').textContent='▶ Resume';return}
-  if(!origin||cursorH>=maxH){if(!timelineStart()){timelineReset();noPlayback();return}cursorH=0;playAccum=0}else{playAccum=cursorH}
-  playing=true;playStart=Date.now();$('#play').textContent='❚❚ Pause play';if(paused)setPaused(false);ensureLoop()};
-$('#scrub').oninput=e=>{if(!origin&&!timelineStart()){timelineReset();noPlayback();return}playing=false;cursorH=Math.min(maxH,+e.target.value||0);playAccum=cursorH;$('#play').textContent='▶ Play from here';drawFrame(false);if(!paused)ensureLoop()};
+  $('#scrub').max=maxH;$('#scrub').step=playSpan>24?1:.25;$('#scrub').hidden=false;$('#live').hidden=false;return true}
+function noPlayback(){const b=playBtn();b.textContent='No forecast hours to play';b.disabled=true;setTimeout(()=>{b.disabled=false;labels()},4000)}
+function advancePlayback(){if(!playing||paused)return;const el=playAccum+(Date.now()-playStart)/1000;cursorH=Math.min(maxH,el*playSpeed);$('#scrub').value=cursorH.toFixed(2);if(cursorH>=maxH){playing=false;labels();playBtn().textContent='▶ Replay'}}
+function startPlay(span){
+  const b=span>24?$('#play7'):$('#play');
+  if(playing&&span===playSpan){playing=false;playAccum+=(Date.now()-playStart)/1000;b.textContent='▶ Resume';return}
+  if(span!==playSpan||!origin||cursorH>=maxH){playSpan=span;playSpeed=span>24?6:1;if(!timelineStart()){timelineReset();noPlayback();return}cursorH=0;playAccum=0}else{playAccum=cursorH/playSpeed}
+  playing=true;playStart=Date.now();labels();b.textContent='❚❚ Pause';if(paused)setPaused(false);ensureLoop()}
+$('#play').onclick=()=>startPlay(24);
+$('#play7').onclick=()=>startPlay(168);
+$('#scrub').oninput=e=>{if(!origin&&!timelineStart()){timelineReset();noPlayback();return}playing=false;cursorH=Math.min(maxH,+e.target.value||0);playAccum=cursorH/playSpeed;labels();playBtn().textContent='▶ Play from here';drawFrame(false);if(!paused)ensureLoop()};
 $('#live').onclick=()=>{timelineReset();drawFrame(false);if(!paused)ensureLoop()};
 // ---------- sky scene
 const cv=$('#sky'),cx=cv.getContext('2d');let w=0,hh=0;const rs=()=>{w=cv.width=innerWidth;hh=cv.height=innerHeight;drawFrame(false)};rs();addEventListener('resize',rs);
 const stars=[...Array(160)].map(()=>({x:Math.random(),y:Math.random()*.6,r:Math.random()*1.4+.3,tw:Math.random()*6}));
 const clouds=[...Array(14)].map(()=>({x:Math.random(),y:.05+Math.random()*.35,s:.3+Math.random()*.7,v:(.00008+Math.random()*.00012),r:50+Math.random()*90}));
 const drops=[...Array(320)].map(()=>({x:Math.random(),y:Math.random(),v:.012+Math.random()*.012,l:10+Math.random()*14}));
+const lights=[...Array(70)].map(()=>({x:Math.random(),y:Math.random(),c:Math.random()}));
+function phaseOf(hod,sr,ss){return hod<sr-1||hod>=ss+1.5?'Night':hod<sr+.5?'Dawn':hod<12?'Morning':hod<ss-1?'Afternoon':'Evening'}
 let flash=0,bolt=null,lastF=0,rafId=null;
 const lerp=(a,b,t)=>a+(b-a)*t, mix=(c1,c2,t)=>c1.map((v,i)=>Math.round(lerp(v,c2[i],t))), rgb=(c,a=1)=>`rgba(${c[0]},${c[1]},${c[2]},${a})`;
 function solar(dateStr){const bd=D&&D.blend&&D.blend.daily;let sr=6.1,ss=17.9;if(bd&&Array.isArray(bd.time)){const i=bd.time.indexOf(dateStr);if(i>=0&&arr(bd,'sunrise')&&arr(bd,'sunset')){const a=+String(bd.sunrise[i]).slice(11,13)+(+String(bd.sunrise[i]).slice(14,16))/60,b=+String(bd.sunset[i]).slice(11,13)+(+String(bd.sunset[i]).slice(14,16))/60;if(fin(a)&&fin(b)){sr=a;ss=b}}}return{sr,ss}}
@@ -451,17 +463,20 @@ function drawFrame(advance){
   if(advance)advancePlayback();
   const liveMode=!origin, t=liveMode?now:vTime(), c=condAt(t,liveMode&&ob&&Math.abs(now-P(ob.t).getTime())<90*60e3);
   const cl=(c.cloud??50)/100, rainI=c.rain?Math.min(1,.35+(c.pop??70)/100*.4+Math.min(.4,(c.mm??0)/8)):0, sp=(c.stormProb??0)/100;   // unknown cloud draws as half cover; the HUD says "cloud unknown"
-  const dayTop=[72,160,224],dayBot=[168,213,245],duskTop=[58,74,122],duskBot=[244,162,97],nightTop=[5,11,24],nightBot=[11,22,36];
-  let top,bot;const f=c.dayF;
-  if(f>.25){top=dayTop;bot=dayBot}else if(f>-.15){const k=(f+.15)/.4;top=mix(duskTop,dayTop,k);bot=mix(duskBot,dayBot,k)}else{const k=Math.min(1,(-f-.15)/.6);top=mix(duskTop,nightTop,k);bot=mix(duskBot,nightBot,k)}
-  const dim=1-.45*cl-(c.storm?.2*sp:0);top=top.map(v=>v*dim);bot=bot.map(v=>v*dim);
+  // sky colour keyed to the time of day relative to this date's sunrise/sunset: night → dawn → morning → midday → afternoon → dusk → night
+  const K=[[c.sr-1.2,[5,11,24],[11,22,36]],[c.sr-.3,[70,60,110],[250,150,80]],[c.sr+.6,[110,160,215],[255,210,150]],[c.sr+2.5,[95,170,232],[205,228,246]],[12.5,[38,128,214],[160,210,245]],[c.ss-2.2,[85,150,215],[240,200,140]],[c.ss-.2,[80,70,120],[250,120,60]],[c.ss+.9,[18,22,52],[70,45,75]],[c.ss+1.8,[5,11,24],[11,22,36]]];
+  let top=K[0][1],bot=K[0][2],hod=c.hod;if(hod<K[0][0])hod+=24;
+  for(let i=0;i<K.length-1;i++){const [h0,t0,b0]=K[i],[h1,t1,b1]=K[i+1];if(hod>=h0&&hod<=h1){const k=(hod-h0)/Math.max(.01,h1-h0);top=mix(t0,t1,k);bot=mix(b0,b1,k);break}}
+  if(hod>K[K.length-1][0]){top=K[0][1];bot=K[0][2]}
+  const f=c.dayF, dim=1-.45*cl-(c.storm?.2*sp:0);top=top.map(v=>v*dim);bot=bot.map(v=>v*dim);
   const g=cx.createLinearGradient(0,0,0,hh);g.addColorStop(0,rgb(top));g.addColorStop(1,rgb(bot));cx.fillStyle=g;cx.fillRect(0,0,w,hh);
   if(f<0){const a=Math.min(1,-f*2)*(1-cl);cx.fillStyle='#fff';stars.forEach(s=>{cx.globalAlpha=a*(.5+.5*Math.sin(now/700+s.tw));cx.beginPath();cx.arc(s.x*w,s.y*hh,s.r,0,7);cx.fill()});cx.globalAlpha=1}
   const arc=(hod,a,b)=>{const p=(hod-a)/(b-a);return [w*(.1+.8*p),hh*(.55-.45*Math.sin(Math.PI*p))]};
-  if(c.hod>c.sr-.5&&c.hod<c.ss+.5){const [sx,sy]=arc(c.hod,c.sr,c.ss);const sg=cx.createRadialGradient(sx,sy,10,sx,sy,220);sg.addColorStop(0,`rgba(255,235,170,${.9*(1-cl*.7)})`);sg.addColorStop(.15,`rgba(255,210,120,${.5*(1-cl*.7)})`);sg.addColorStop(1,'rgba(255,200,100,0)');cx.fillStyle=sg;cx.fillRect(0,0,w,hh);cx.fillStyle=`rgba(255,246,200,${1-cl*.6})`;cx.beginPath();cx.arc(sx,sy,26,0,7);cx.fill()}
+  if(c.hod>c.sr-.5&&c.hod<c.ss+.5){const [sx,sy]=arc(c.hod,c.sr,c.ss);const low=Math.max(0,1-Math.min(c.hod-c.sr,c.ss-c.hod)/1.5);const sunCol=mix([255,246,200],[255,120,60],low);const sg=cx.createRadialGradient(sx,sy,10,sx,sy,220+120*low);sg.addColorStop(0,rgb(mix([255,235,170],[255,140,80],low),.9*(1-cl*.7)));sg.addColorStop(.15,rgb(mix([255,210,120],[255,120,60],low),.5*(1-cl*.7)));sg.addColorStop(1,'rgba(255,200,100,0)');cx.fillStyle=sg;cx.fillRect(0,0,w,hh);cx.fillStyle=rgb(sunCol,1-cl*.6);cx.beginPath();cx.arc(sx,sy,26+10*low,0,7);cx.fill()}
   else{const nh=(c.hod-c.ss+24)%24,nl=(c.sr-c.ss+24)%24;const [mx,my]=arc(nh,0,nl);cx.fillStyle=`rgba(230,235,245,${.9*(1-cl*.7)})`;cx.beginPath();cx.arc(mx,my,18,0,7);cx.fill();cx.fillStyle=rgb(top,.9);cx.beginPath();cx.arc(mx-8,my-5,16,0,7);cx.fill()}
   cx.fillStyle=rgb(mix(top,[0,0,0],.55),.9);cx.beginPath();cx.moveTo(0,hh*.78);cx.lineTo(w*.55,hh*.78);cx.lineTo(w*.66,hh*.6);cx.lineTo(w*.72,hh*.63);cx.lineTo(w*.78,hh*.56);cx.lineTo(w*.86,hh*.68);cx.lineTo(w,hh*.76);cx.lineTo(w,hh);cx.lineTo(0,hh);cx.fill();
   const sea=cx.createLinearGradient(0,hh*.86,0,hh);sea.addColorStop(0,rgb(mix(bot,[10,40,80],.5),.9));sea.addColorStop(1,rgb(mix(bot,[0,10,30],.7)));cx.fillStyle=sea;cx.fillRect(0,hh*.86,w,hh*.14);
+  if(f<.08){const la=Math.min(1,(.08-f)/.2);lights.forEach((l,i)=>{cx.fillStyle=`rgba(255,${200+l.c*40},${120+l.c*60},${la*(.5+.5*Math.sin(now/900+i))})`;cx.beginPath();cx.arc(l.x*w,hh*(.84-l.y*.06),1.6,0,7);cx.fill();cx.fillStyle=`rgba(255,220,150,${la*.12})`;cx.fillRect(l.x*w-1,hh*.86,2,hh*.05)})}   // city and shoreline lights after dusk
   const nC=Math.round(cl*clouds.length);
   clouds.forEach((k,i)=>{if(advance){k.x+=k.v*(1+rainI);if(k.x>1.3)k.x=-.3}if(i>=nC)return;const dark=c.storm?.55*sp:c.rain?.4:.1;const col=mix([235,240,248],[60,70,90],dark);cx.fillStyle=rgb(col,.12+.5*k.s*(.6+.4*cl));for(let j=0;j<5;j++){cx.beginPath();cx.arc(k.x*w+j*k.r*.55,k.y*hh+(j%2)*k.r*.25,k.r*(.5+.2*(j%3))*k.s+30,0,7);cx.fill()}});
   if(rainI>0){cx.strokeStyle=`rgba(190,215,245,${.2+.35*rainI})`;cx.lineWidth=1.2;drops.slice(0,Math.floor(drops.length*rainI)).forEach(d=>{if(advance){d.y+=d.v*(1+rainI);d.x-=.0015;if(d.y>1){d.y=-.05;d.x=Math.random()*1.1}}cx.beginPath();cx.moveTo(d.x*w,d.y*hh);cx.lineTo(d.x*w+2,d.y*hh-d.l);cx.stroke()})}
@@ -471,7 +486,9 @@ function drawFrame(advance){
   if(!liveMode){hud.hidden=false;const ts=tsPer.find(p=>p.from.getTime()<=t&&p.to.getTime()>t);
     const skyWord=c.cloud==null?'cloud unknown':cl>.7?'☁️ cloudy':cl>.35?'⛅ partly cloudy':c.dayF>0?'☀️ sunny':'🌙 clear';
     const wxWord=c.rain==null?'conditions cannot be determined':c.storm?'⛈️ thunderstorm'+(c.stormProb!=null&&c.stormProb<100?' possible':''):c.rain?'🌧️ rain'+(c.basis=='model without probability'?' (no probability given)':''):skyWord;
-    hud.innerHTML=`<b>${esc(fmtDT(new Date(t).toISOString()))}</b> MYT<br>${wxWord} · rain chance ${c.pop!=null?num(c.pop)+'%':'–'}${fin(c.temp)?' · '+num(c.temp)+'°C':''}<br><span class="note">${c.covered?'forecast hour '+esc(String(c.iso).slice(11,16)):'no model data for this hour'}${ts?' · TAF '+esc((ts.prob!=null?'PROB'+ts.prob+' ':'')+ts.change+' '+ts.wx):''}</span>`}
+    const ph=phaseOf(c.hod,c.sr,c.ss), segs=[[0,c.sr-1,'#0b1624'],[c.sr-1,c.sr+.5,'#e8905a'],[c.sr+.5,12,'#6fb6ea'],[12,c.ss-1,'#2f86d6'],[c.ss-1,c.ss+1.5,'#e07a4a'],[c.ss+1.5,24,'#0b1624']];
+    const strip=`<svg viewBox="0 0 240 14" width="100%" height="14" aria-hidden="true">${segs.map(s=>`<rect x="${s[0]*10}" y="2" width="${(s[1]-s[0])*10}" height="8" fill="${s[2]}"/>`).join('')}<rect x="${c.hod*10-1.5}" y="0" width="3" height="12" fill="#fff"/></svg>`;
+    hud.innerHTML=`<b>${esc(fmtDT(new Date(t).toISOString()))}</b> MYT · <b>${ph}</b><br>${wxWord} · rain chance ${c.pop!=null?num(c.pop)+'%':'–'}${fin(c.temp)?' · '+num(c.temp)+'°C':''}<br>${strip}<span class="note">${c.covered?'forecast hour '+esc(String(c.iso).slice(11,16)):'no model data for this hour'}${ts?' · TAF '+esc((ts.prob!=null?'PROB'+ts.prob+' ':'')+ts.change+' '+ts.wx):''} · sunrise ${pad(Math.floor(c.sr))}:${pad(Math.round(c.sr%1*60))} · sunset ${pad(Math.floor(c.ss))}:${pad(Math.round(c.ss%1*60))}</span>`}
   else hud.hidden=true;
 }
 function loop(){rafId=null;if(paused||!D)return;drawFrame(true);rafId=requestAnimationFrame(loop)}

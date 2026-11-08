@@ -50,7 +50,7 @@ a{color:var(--ac)}
 .tl input[type=range]{width:140px;accent-color:var(--ac)}.tl .lab{color:var(--mu)}
 #hud{position:fixed;top:calc(var(--hdr,56px) + 10px);right:14px;z-index:3;background:rgba(10,18,32,.86);border:1px solid var(--bd);border-radius:12px;padding:10px 14px;font-size:13px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);max-width:280px;box-shadow:0 10px 30px rgba(0,0,0,.35)}#hud b{font-size:16px;font-weight:600}
 .num{transition:color .4s}.num.up{color:var(--hot)}.num.down{color:var(--wet)}
-@media(max-width:720px){.hero{grid-template-columns:1fr}.big{font-size:64px}main{padding-top:18vh}.tl input[type=range]{width:90px}header.top{padding:8px 12px}}
+@media(max-width:720px){.hero{grid-template-columns:1fr}.big{font-size:64px}main{padding-top:18vh}.tl input[type=range]{width:90px}header.top{padding:8px 12px;gap:6px 12px}.status{margin-left:0;flex-wrap:nowrap;overflow-x:auto;max-width:100%;padding-bottom:2px;scrollbar-width:none}.status::-webkit-scrollbar{display:none}.pill{font-size:11px;padding:2px 8px}}
 .rm *,.paused *{animation-play-state:paused!important}.rm .card,.paused .card{animation:none!important;opacity:1!important;transform:none!important}.rm .ticker span,.paused .ticker span{animation:none!important;padding-left:0;white-space:normal}.rm .bar i,.paused .bar i{transition:none!important}
 </style></head><body><canvas id="sky"></canvas>
 <header class="top"><div class="brand">Sandy<span>Kota Kinabalu weather</span></div><div id="clock">--:--:-- MYT</div><div class="status" id="status"><span class="pill"><span class="ring" id="ring"></span><span id="nextchk">next check 60 s</span></span></div></header>

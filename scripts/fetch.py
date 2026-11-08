@@ -194,6 +194,8 @@ def parse_time(s):
 
 
 DIVISION_STATES = {"Sabah", "Sarawak"}
+OTHER_STATES = ["Perlis", "Kedah", "Penang", "Pulau Pinang", "Perak", "Kelantan", "Terengganu", "Pahang", "Selangor", "Kuala Lumpur", "Putrajaya",
+                "Negeri Sembilan", "N. Sembilan", "Melaka", "Malacca", "Johor", "Sarawak", "Sabah", "Labuan"]
 DIVISIONS = {"Sabah": {"West Coast": ["Kota Kinabalu", "Penampang", "Papar", "Tuaran", "Kota Belud", "Ranau", "Putatan"],
                        "Interior": ["Beaufort", "Kuala Penyu", "Sipitang", "Tenom", "Keningau", "Tambunan", "Nabawan"],
                        "Kudat": ["Kudat", "Kota Marudu", "Pitas"], "Sandakan": ["Sandakan", "Beluran", "Kinabatangan", "Tongod", "Telupid"],
@@ -241,19 +243,46 @@ def area_coverage(text, state, division=None, district=None, ctx=""):
     def same(x, y):
         return bool(x and y and _name_re(x).search(y) and _name_re(y).search(x))
 
+    known = (list(DIVISIONS[state].keys()) + [d for v in DIVISIONS[state].values() for d in v]) if state in DIVISIONS else []
+
+    def placey(n):  # a place name is Title Case; prose ("other affected areas") is not
+        return bool(re.match(r"^(?:[A-Z][A-Za-z.'&-]*\s*)+$", (n or "").strip()))
+
+    def other_state(n):  # a bullet list continues into the next state's entry: understood, and never a match
+        x = re.sub(r"^(?:W\.?P\.?|Wilayah Persekutuan)\s+", "", (n or "").strip(), flags=re.I).strip().lower()
+        return x in {s.lower() for s in OTHER_STATES} and x not in {a.lower() for a in STATE_ALIAS.get(state, [state])}
+
+    def recog(n):  # an item the parser understands
+        if other_state(n):
+            return True
+        if known:
+            return any(same(k, n) for k in known) or bool(district and same(n, district)) or bool(division and same(n, division))
+        return placey(n)
+
+    def list_ok(lst):  # every bracketed name understood
+        if lst is None:
+            return True
+        parts = [x.strip() for x in re.split(r",|\band\b|•|;", lst) if x.strip()]
+        return all((known and any(same(k, x) for k in known)) or placey(x) for x in parts)
+
     m = re.search(r"(?:^|[^A-Za-z])" + alt + r"\s*:\s*(.*)", text, re.S | re.I) if in_text else None
     if in_text and not m:
         ml = re.search(r"(?:^|[^A-Za-z])" + alt + r"\s*\(([^)]*)\)", text, re.I)
-        if ml:  # "State (district, district)": only those districts
-            return in_list(ml.group(1), district) if district else None
+        if ml:  # "State (district, district)": only those districts, and only when every name is understood
+            if not district:
+                return None
+            if in_list(ml.group(1), district):
+                return True
+            return False if list_ok(ml.group(1)) else None
         return True  # state named in the text without any list: whole state
     if m:
         seg = m.group(1)
     else:  # heading-only state: the body's list (after "over …") is that state's list
         mo = re.search(r"\bover\s+(?:the\s+(?:areas?|states?|districts?|divisions?)\s+of\s+)?(.*)", text, re.S | re.I)
         seg = mo.group(1) if mo else re.sub(r"^\s*(?:[IVX]+|\d+)\)\s*", "", text)
+    seg = re.sub(r"\b(W\.P|N)\.", "\\1\x01", seg)  # "W.P." and "N." are abbreviations, not sentence ends
     seg = re.split(r"(?:^|\s)(?:[A-Z][A-Za-z.' ]*:)", seg)[0]
-    seg = re.split(r"\.\s|\s(?:within|until|from|is|are|expected|valid|issued|will|may)\b", seg, flags=re.I)[0]
+    seg = re.split(r"\.\s|\s(?:within|until|from|is|are|expected|valid|issued|will|may)\b", seg, flags=re.I)[0].replace("\x01", ".")
     items, depth, cur, i = [], 0, "", 0
     while i < len(seg):  # split on ",", "•", ";" and " and " outside brackets only
         ch = seg[i]
@@ -279,20 +308,28 @@ def area_coverage(text, state, division=None, district=None, ctx=""):
             parsed.append((mm.group(1).strip(), mm.group(2)))
     if not parsed:
         return None
-    if not m:  # heading-only body: exclude only when a geographic list was actually recognised
-        known = (list(DIVISIONS[state].keys()) + [d for v in DIVISIONS[state].values() for d in v]) if state in DIVISIONS else []
-        if not any(any(same(k, p[0]) for k in known) or (district and same(p[0], district)) or (division and same(p[0], division)) for p in parsed):
-            return None
+    def hit(p):
+        return bool(district and (same(p[0], district) or in_list(p[1], district)))
+
+    def understood():  # a negative needs the whole list understood
+        return all(recog(p[0]) and list_ok(p[1]) for p in parsed)
+
     if state in DIVISION_STATES:
         dv = next((p for p in parsed if division and same(p[0], division)), None)
         if dv:
-            return True if dv[1] is None else (in_list(dv[1], district) if district else None)
-        if district and any(same(p[0], district) or in_list(p[1], district) for p in parsed):
+            if dv[1] is None:
+                return True
+            if not district:
+                return None
+            if in_list(dv[1], district):
+                return True
+            return False if list_ok(dv[1]) else None
+        if any(hit(p) for p in parsed):
             return True
-        return False if division else None
-    if district and any(same(p[0], district) or in_list(p[1], district) for p in parsed):
+        return False if (division and understood()) else None
+    if any(hit(p) for p in parsed):
         return True
-    return False if district else None
+    return False if (district and understood()) else None
 
 
 def covers_kk(text, ctx=""):

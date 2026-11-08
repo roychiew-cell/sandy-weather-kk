@@ -503,7 +503,7 @@ function renderWarnings(){const prevWarnHTML=lastWarnHTML;
     const seen=new Map(),uk=b=>{const n=(seen.get(b)||0)+1;seen.set(b,n);return n>1?b+'#'+n:b},skey=(w,s)=>uk([w.heading,w.issued||'',s.scope||'',s.title||'',s.from||'',s.to||'',(s.areas||[]).join(',')].join('|')),wkey=w=>uk([w.heading,w.issued||''].join('|'));   // unique keys for open-state and focus restoration
     const qualifier=sel.warn==='live'&&wst==='failed'?' (as of the last successful read at '+hhmm(new Date(L.warn.okAt))+'; the latest check failed)':sel.warn==='archive'?' (archive of '+fmtT(A.generated)+')':'';
     const kindName={marine:'Sea / shipping',rain:'Rain',thunder:'Thunderstorms',cyclone:'Tropical cyclone',other:'Other'},isLocal=a=>/Sabah|West Coast|Kota Kinabalu|Labuan|Kudat|Sandakan|Tawau|Reef|Layang|Sulu|Sulawesi/.test(a),subsOf=w=>Array.isArray(w.subsections)?w.subsections:[];
-    const as=assessWarnings(KK_AREA),kk=[...as.active,...as.upcoming,...as.unparsed],undetermined=as.undetermined;   // the same reading as the At-a-glance tile and the location card
+    const as=assessWarnings(KK_AREA),kk=[...as.active,...as.upcoming,...as.unparsed],undetermined=as.undetermined,undetSubs=new Set(undetermined.filter(x=>x.s).map(x=>x.s));   // the same reading as the At-a-glance tile and the location card
     let expired=0;W.forEach(w=>{if(!w)return;subsOf(w).forEach(s=>{if(s&&!s.sea&&areaCoverage(String(s.text||''),KK_AREA,String(w.heading||'')+' '+(s.scope||''))===true&&s.to&&!isNaN(P(s.to))&&ended(s.to))expired++})});
     if(kk.length){h+='<div class="alert"><b>Warning covering Kota Kinabalu</b>'+esc(qualifier)+'<ul style="margin:6px 0 0">';kk.forEach(x=>{const {w,s,f}=x,badge=(!x.to||!f.ok)?'<span class="tag">validity not parsed</span>':x.from.getTime()>now?'<span class="tag sec">upcoming</span>':'<span class="tag core">in force</span>';
       h+=`<li><b>${esc(x.name)}</b> ${badge}<br><span class="note" style="margin:0">${nameRe('Kota Kinabalu').test(s.text)?'names Kota Kinabalu':"via Sabah's West Coast division"} · issued ${fmtDT(w.issued)} · valid ${fmtMs(f.t)}${esc(f.src)} – ${fmtMs(x.to)} MYT</span><details data-key="${esc(skey(w,s))}"><summary>Full text</summary><div class="note">${esc(s.text)}</div></details></li>`});h+='</ul></div>'}
@@ -512,8 +512,8 @@ function renderWarnings(){const prevWarnHTML=lastWarnHTML;
     h+='<p class="note">Other bulletins for Sabah and nearby waters:</p><ul>';
     W.forEach(w=>{if(!w)return;const subs=subsOf(w);if(w.kind=='cyclone'){h+=`<li><b>Tropical cyclone:</b> ${esc(w.heading)} <span class="note" style="display:inline">issued ${fmtDT(w.issued)}</span><details data-key="${esc(wkey(w))}"><summary>Full text</summary><div class="note">${esc(w.text)}</div></details></li>`;return}
       if(!subs.length||!w.parsed){const named=(w.areas||[]).filter(isLocal);h+=`<li><b>${esc(kindName[w.kind]||w.kind)}:</b> ${esc(w.heading)} <span class="tag">${subs.length?'validity not fully parsed':'applicability / validity not determined'}</span><br><span class="note" style="margin:0">${subs.length?'Not every part of this bulletin carries a readable end time':'This bulletin could not be split into dated subsections'}${named.length?'; it names '+esc(named.join(', ')):''}. Issued ${fmtDT(w.issued)}${w.valid_to&&!isNaN(P(w.valid_to))?'; bulletin validity to '+fmtDT(w.valid_to)+' MYT':''}.</span><details data-key="${esc(wkey(w))}"><summary>Full text</summary><div class="note">${esc(w.text)}</div></details></li>`;if(!subs.length)return}
-      subs.filter(s=>s&&((s.areas||[]).some(isLocal)||nameRe('Sabah').test(String(w.heading||'')))&&!kk.some(x=>x.s===s)).forEach(s=>{const f=effFrom(w,s),from=f.t,to=s.to&&!isNaN(P(s.to))?P(s.to):null,exp=to&&ended(s.to),fut=f.ok&&from.getTime()>now;const badge=(!to||!f.ok)?'<span class="tag">validity not parsed</span>':exp?'<span class="tag drop">expired</span>':fut?'<span class="tag sec">upcoming</span>':'<span class="tag core">in force</span>';const danger=/dangerous to small (boats|crafts)/i.test(s.text)?' Dangerous to small boats.':'';const ar=(s.areas||[]),sab=ar.filter(isLocal),oth=ar.length-sab.length;
-        const cov=s.sea?false:areaCoverage(String(s.text||''),KK_AREA,String(w.heading||'')+' '+(s.scope||'')),undet=cov===null&&nameRe('Sabah').test(String(s.text||'')+' '+String(w.heading||''))?' <span class="tag">applicability for KK undetermined</span>':'';
+      subs.filter(s=>s&&((s.areas||[]).some(isLocal)||nameRe('Sabah').test(String(w.heading||''))||undetSubs.has(s))&&!kk.some(x=>x.s===s)).forEach(s=>{const f=effFrom(w,s),from=f.t,to=s.to&&!isNaN(P(s.to))?P(s.to):null,exp=to&&ended(s.to),fut=f.ok&&from.getTime()>now;const badge=(!to||!f.ok)?'<span class="tag">validity not parsed</span>':exp?'<span class="tag drop">expired</span>':fut?'<span class="tag sec">upcoming</span>':'<span class="tag core">in force</span>';const danger=/dangerous to small (boats|crafts)/i.test(s.text)?' Dangerous to small boats.':'';const ar=(s.areas||[]),sab=ar.filter(isLocal),oth=ar.length-sab.length;
+        const undet=undetSubs.has(s)?' <span class="tag">applicability for KK undetermined</span>':'';   // the same membership the intro counted
         h+=`<li><b>${esc(kindName[w.kind]||w.kind)}${s.scope?' ('+esc(s.scope)+')':''}:</b> ${esc(s.title||w.heading)} ${badge}${undet}<br><span class="note" style="margin:0">Areas named: ${esc(sab.join(', ')||'–')}${oth>0?' and '+oth+' other area'+(oth>1?'s':''):''} · valid ${fmtMs(from)}${esc(f.src)} – ${fmtMs(to)} MYT · issued ${fmtDT(w.issued)}.${esc(danger)}</span><details data-key="${esc(skey(w,s))}"><summary>Subsection text</summary><div class="note">${esc(s.text)}</div></details></li>`})});
     h+='</ul><div class="note">In force / upcoming / expired is judged against the time on your device, re-checked every minute; bulletins are re-read every 60 s. Live radar: <a href="https://www.met.gov.my/pencerapan/radar-sabah-and-sarawak" target="_blank" rel="noopener">MetMalaysia radar</a>.</div>';
     if(h===prevWarnHTML){lastWarnHTML=h;refreshWarnAsOf();return}                       // nothing changed: keep open bulletins and focus as they are
@@ -586,6 +586,7 @@ const DIVISIONS={'Sabah':{'West Coast':['Kota Kinabalu','Penampang','Papar','Tua
 const divisionOf=(state,district)=>{const d=DIVISIONS[state];if(!d||!district)return null;return Object.keys(d).find(k=>d[k].some(x=>district.toLowerCase().includes(x.toLowerCase())))||null};
 const stateWord=s=>String(s||'').replace(/^(WP|Wilayah Persekutuan|W\.P\.)\s+/i,'').replace(/Pulau Pinang/i,'Penang').replace(/^Federal Territory of\s+/i,'').trim();
 const nameRe=n=>new RegExp('(^|[^A-Za-z])'+reEsc(n)+'(?=$|[^A-Za-z])','i');   // whole-name match: "Papar" never matches "Paparan"
+const OTHER_STATES=['Perlis','Kedah','Penang','Pulau Pinang','Perak','Kelantan','Terengganu','Pahang','Selangor','Kuala Lumpur','Putrajaya','Negeri Sembilan','N. Sembilan','Melaka','Malacca','Johor','Sarawak','Sabah','Labuan'];
 const STATE_ALIAS={'Penang':['Penang','Pulau Pinang'],'Negeri Sembilan':['Negeri Sembilan','N. Sembilan'],'Melaka':['Melaka','Malacca'],'Labuan':['Labuan','W.P. Labuan','WP Labuan'],'Kuala Lumpur':['Kuala Lumpur','W.P. Kuala Lumpur','WP Kuala Lumpur'],'Putrajaya':['Putrajaya','W.P. Putrajaya','WP Putrajaya']};   // how MetMalaysia bulletins spell the states
 const fmtMs=d=>d&&!isNaN(d)?fmtDT(d.toISOString()):'?';
 const effFrom=(w,s)=>{ // effective start of a subsection: a date parsed from its own text, else the bulletin's validity (unresolved when duplicate copies disagree), else the issue time; ok=false when it cannot be trusted
@@ -600,27 +601,30 @@ function areaCoverage(text,ar,ctx){ // does a warning subsection cover an area {
   // an item with a bracket list covers only the districts listed; a state named with no list covers the whole state; whole names only, never substrings
   if(!ar||!ar.state)return null;const S=ar.state,alt='(?:'+(STATE_ALIAS[S]||[S]).map(reEsc).join('|')+')',sRe=new RegExp('(^|[^A-Za-z])'+alt+'(?=$|[^A-Za-z])','i'),qRe=new RegExp('\\b(?:Eastern|Western|Northern|Southern|Central|Coastal|Interior|Upper|Lower)\\s+'+alt+'(?=$|[^A-Za-z])','i'),ctxText=String(ctx||'');
   const same=(a,b)=>a&&b&&nameRe(a).test(b)&&nameRe(b).test(a),inList=(list,name)=>!!(list&&name&&nameRe(name).test(list));
+  const known=DIVISIONS[S]?[...Object.keys(DIVISIONS[S]),...Object.values(DIVISIONS[S]).flat()]:[],placey=n=>/^(?:[A-Z][A-Za-z.'&-]*\s*)+$/.test(String(n||'').trim());   // a place name is Title Case; prose ("other affected areas") is not
+  const otherState=n=>{const x=String(n||'').replace(/^(?:W\.?P\.?|Wilayah Persekutuan)\s+/i,'').trim().toLowerCase();return OTHER_STATES.some(s=>s.toLowerCase()===x)&&!(STATE_ALIAS[S]||[S]).some(a=>a.toLowerCase()===x)};   // a bullet list continues into the next state's entry: understood, and never a match
+  const recog=n=>otherState(n)||(known.length?(known.some(k=>same(k,n))||!!(ar.district&&same(n,ar.district))||!!(ar.division&&same(n,ar.division))):placey(n));   // an item the parser understands
+  const listOK=list=>list==null||list.split(/,|\band\b|•|;/).map(x=>x.trim()).filter(Boolean).every(x=>(known.length&&known.some(k=>same(k,x)))||placey(x));   // every bracketed name understood
   const plain=t=>t.replace(new RegExp(qRe.source,'gi'),' ');                          // "Eastern Sabah" is a region the page cannot resolve, never the whole state
   const inText=sRe.test(plain(text)),inCtx=sRe.test(plain(ctxText));
   if(!inText&&!inCtx)return (qRe.test(text)||qRe.test(ctxText))?null:false;          // a qualified region anywhere and no plain state: unresolved, not excluded
   let seg;const m=inText?new RegExp('(?:^|[^A-Za-z])'+alt+'\\s*:\\s*([^]*)','i').exec(text):null;
-  if(inText&&!m){const ml=new RegExp('(?:^|[^A-Za-z])'+alt+'\\s*\\(([^)]*)\\)','i').exec(text);if(ml)return ar.district?inList(ml[1],ar.district):null;   // "State (district, district)": only those districts
+  if(inText&&!m){const ml=new RegExp('(?:^|[^A-Za-z])'+alt+'\\s*\\(([^)]*)\\)','i').exec(text);if(ml){if(!ar.district)return null;if(inList(ml[1],ar.district))return true;return listOK(ml[1])?false:null}   // "State (district, district)": only those districts, and only when every name is understood
     return true}                                                                     // state named in the text without any list: whole state
   if(m)seg=m[1];else{const mo=/\bover\s+(?:the\s+(?:areas?|states?|districts?|divisions?)\s+of\s+)?([^]*)/i.exec(text);seg=mo?mo[1]:text.replace(/^\s*(?:[IVX]+|\d+)\)\s*/,'')}   // heading-only state: the body's list (after "over …") is that state's list
-  seg=seg.split(/(?:^|\s)(?:[A-Z][A-Za-z.' ]*:)/)[0].split(/\.\s|\s(?:within|until|from|is|are|expected|valid|issued|will|may)\b/i)[0];
+  seg=seg.replace(/\b(W\.P|N)\./g,'$1\u0001').split(/(?:^|\s)(?:[A-Z][A-Za-z.' ]*:)/)[0].split(/\.\s|\s(?:within|until|from|is|are|expected|valid|issued|will|may)\b/i)[0].replace(/\u0001/g,'.');   // "W.P." and "N." are abbreviations, not sentence ends
   const items=[];let depth=0,cur='';for(let i=0;i<seg.length;i++){const ch=seg[i];if(ch==='(')depth++;else if(ch===')')depth--;   // split on "," and " and " outside brackets only
     const isAnd=depth===0&&seg.substr(i,3).toLowerCase()==='and'&&(i===0||/\s/.test(seg[i-1]))&&(i+3>=seg.length||/\s/.test(seg[i+3]));
     if(depth===0&&(ch===','||ch==='•'||ch===';'||isAnd)){items.push(cur);cur='';if(isAnd)i+=2}else cur+=ch}items.push(cur);   // MetMalaysia also separates items with "•"
   const parsed=[];items.forEach(x=>{const mm=/^\s*([^()]+?)\s*(?:\(([^)]*)\))?\s*\.?\s*$/.exec(x);if(mm&&mm[1].trim())parsed.push({name:mm[1].trim(),list:mm[2]!=null?mm[2]:null})});
   if(!parsed.length)return null;
-  if(!m){const known=DIVISIONS[S]?[...Object.keys(DIVISIONS[S]),...Object.values(DIVISIONS[S]).flat()]:[];   // heading-only body: exclude only when a geographic list was actually recognised
-    if(!parsed.some(p=>known.some(k=>same(k,p.name))||(ar.district&&same(p.name,ar.district))||(ar.division&&same(p.name,ar.division))))return null}
+  const hit=p=>!!(ar.district&&(same(p.name,ar.district)||inList(p.list,ar.district))),understood=()=>parsed.every(p=>recog(p.name)&&listOK(p.list));   // a negative needs the whole list understood
   if(DIVISIONS[S]){const dv=ar.division?parsed.find(p=>same(p.name,ar.division)):null;
-    if(dv)return dv.list==null?true:(ar.district?inList(dv.list,ar.district):null);
-    if(ar.district&&parsed.some(p=>same(p.name,ar.district)||inList(p.list,ar.district)))return true;
-    return ar.division?false:null}
-  if(ar.district&&parsed.some(p=>same(p.name,ar.district)||inList(p.list,ar.district)))return true;
-  return ar.district?false:null}
+    if(dv){if(dv.list==null)return true;if(!ar.district)return null;if(inList(dv.list,ar.district))return true;return listOK(dv.list)?false:null}
+    if(parsed.some(hit))return true;
+    return (ar.division&&understood())?false:null}
+  if(parsed.some(hit))return true;
+  return (ar.district&&understood())?false:null}
 let LOC=null,PLACEDB=null,locTimer=null,locSeq=0,locGen=0,locCtl=null,LOCRES=null,locRestoreT=null,locNote='';
 const locLS=()=>{try{return JSON.parse(localStorage.getItem('sandy-loc')||'null')}catch(e){return null}};
 async function loadPlaces(ctl){if(PLACEDB)return PLACEDB;const j=await fetchJSON('places.json?v=2',20000,ctl);if(!j||!Array.isArray(j.places))throw new Error('places table unavailable');j.readAt=Date.now();PLACEDB=j;return j}

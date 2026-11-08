@@ -102,7 +102,7 @@ h1{position:absolute;top:14px;left:16px;margin:0}
 </div><div class="note">Sandy's own characters. Press "Play 24 h" to watch them change shifts through the day.</div></div>
 <div class="card"><h2>Radar now · MetMalaysia composite, Sabah and Sarawak</h2><a href="https://www.met.gov.my/pencerapan/radar-sabah-and-sarawak" target="_blank" rel="noopener"><img id="radar" alt="MetMalaysia composite radar image for Sabah and Sarawak; the time is printed on the image"></a><div class="note" id="radarnote">Live image from MetMalaysia (time stamp printed top right, MYT); reloaded every 10 minutes while the page is open. Reference only, not analysed by the page. Kota Kinabalu is on the west coast of the northern land mass.</div></div>
 <div class="card"><h2>What actually happened · KK airport, last 36 hours</h2><svg id="obs" viewBox="0 0 1000 230" width="100%" role="img" aria-label="Measured airport temperature over the last 36 hours"></svg><div class="note" id="obsnote"></div><details><summary>Data table</summary><div style="overflow:auto;max-height:260px"><table id="obstbl"></table></div></details></div>
-<div class="card"><h2 id="hrtitle">Next hours · rain chance and temperature</h2><svg id="hr" viewBox="0 0 1000 260" width="100%" role="img" aria-label="Hourly rain chance bars and temperature line"></svg><div class="note">Bars = rain chance % (Open-Meteo blend, left axis; a gap means no value). Orange line = temperature (right axis). Yellow band = TAF thunderstorm period. Times are MYT.</div><details><summary>Data table</summary><div style="overflow:auto;max-height:260px"><table id="hrtbl"></table></div></details></div>
+<div class="card"><h2 id="hrtitle">Next hours · rain chance and temperature</h2><svg id="hr" viewBox="0 0 1000 260" width="100%" role="img" aria-label="Hourly rain chance bars and temperature line"></svg><div class="note">Bars = rain chance % for the hour starting at that position (Open-Meteo blend values are for the preceding hour, so each bar uses the value stored at the hour's end; a gap means no value), left axis. Orange line = temperature at each hour (right axis). Yellow band = TAF thunderstorm period. Times are MYT.</div><details><summary>Data table</summary><div style="overflow:auto;max-height:260px"><table id="hrtbl"></table></div></details></div>
 <div class="card"><h2>Official forecast · MetMalaysia</h2><div style="overflow:auto"><table id="mmt"></table></div><div class="note" id="mmnote"></div></div>
 <div class="card"><h2>Rain odds · ECMWF ensemble</h2><svg id="ens" viewBox="0 0 1000 250" width="100%" role="img" aria-label="Daily chance of rain and heavy rain with likely rainfall range" aria-describedby="ensnote"></svg><div class="note" id="ensnote"></div><details><summary>Data table</summary><div style="overflow:auto"><table id="enstbl"></table></div></details></div>
 <div class="card"><h2>Exploratory comparison · yesterday's 24-hour-ahead forecasts against the airport</h2><svg id="score" viewBox="0 0 1000 330" width="100%" role="img" aria-label="Model temperature error and bias for yesterday"></svg><div class="note" id="scorenote"></div><details><summary>Data table</summary><div style="overflow:auto"><table id="scoretbl"></table></div></details></div>
@@ -265,14 +265,14 @@ function render(){
     const lo=Math.min(...tmp)-1,hi=Math.max(...tmp)+1,ty=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo)),py=p=>T+(H-T-B)*(1-p/100),tA=P(tm[i0]).getTime();
     tsPer.forEach(p=>{const a=(p.from.getTime()-tA)/3600e3,b=(p.to.getTime()-tA)/3600e3;if(b>0&&a<N)s+=`<rect x="${L+Math.max(0,a)*bw}" y="${T}" width="${(Math.min(N,b)-Math.max(0,a))*bw}" height="${H-T-B}" fill="rgba(255,209,102,${p.prob!=null?.09:.16})"/>`});
     for(let p=0;p<=100;p+=25)s+=`<line x1="${L}" x2="${W-R}" y1="${py(p)}" y2="${py(p)}" stroke="rgba(43,43,74,.12)"/><text x="2" y="${py(p)+4}">${p}%</text>`;
-    for(let i=0;i<N;i++){const p=hv('precipitation_probability',i0+i),x=L+i*bw,d=(i*25)+'ms';
+    for(let i=0;i<N;i++){const p=hv('precipitation_probability',i0+i+1),x=L+i*bw,d=(i*25)+'ms';   // the bar for the hour starting at tm[i0+i] uses the value stored at its END (preceding-hour value)
       if(fin(p)){const h=(H-T-B)*p/100;s+=`<rect x="${x+1}" y="${ST()?H-B-h:H-B}" width="${bw-2}" height="${ST()?h:0}" rx="2" fill="#4aa3ff" opacity="${.35+p/160}">${anim('height',0,h,'.9s',d)}${anim('y',H-B,H-B-h,'.9s',d)}</rect>`}
       const t=String(tm[i0+i]);if(/T(00|06|12|18):00/.test(t))s+=`<text x="${x}" y="${H-10}">${t.slice(11,13)}h${t.endsWith('00:00')?' '+fmtD(t).slice(4):''}</text>`}
     const pts=[];for(let i=0;i<N;i++){const v=hv('temperature_2m',i0+i);if(fin(v))pts.push(`${L+i*bw+bw/2},${ty(v)}`)}
     s+=`<polyline points="${pts.join(' ')}" fill="none" stroke="#ffb347" stroke-width="2.5" stroke-dasharray="2000" stroke-dashoffset="${ST()?0:2000}">${anim('stroke-dashoffset',2000,0,'2s')}</polyline>`;
     for(let v=Math.ceil(lo);v<=hi;v+=2)s+=`<text x="${W-R+4}" y="${ty(v)+4}" style="fill:#9a4a00">${v}°</text>`;
     $('#hr').innerHTML=s;
-    $('#hrtbl').innerHTML='<tr><th>Time (MYT)</th><th>Rain chance %</th><th>Rain mm</th><th>°C</th><th>Feels</th><th>Wind km/h</th><th>Cloud %</th></tr>'+Array.from({length:N},(_,j)=>{const i=i0+j;return`<tr><td>${fmtDT(tm[i])}</td><td>${num(hv('precipitation_probability',i))}</td><td>${num(hv('precipitation',i),1)}</td><td>${num(hv('temperature_2m',i),1)}</td><td>${num(hv('apparent_temperature',i),1)}</td><td>${num(hv('wind_speed_10m',i),1)}</td><td>${num(hv('cloud_cover',i))}</td></tr>`}).join('');
+    $('#hrtbl').innerHTML='<tr><th>Hour starting (MYT)</th><th>Rain chance % in that hour</th><th>Rain mm in that hour</th><th>°C at start</th><th>Feels</th><th>Wind km/h</th><th>Cloud %</th></tr>'+Array.from({length:N},(_,j)=>{const i=i0+j;return`<tr><td>${fmtDT(tm[i])}</td><td>${num(hv('precipitation_probability',i+1))}</td><td>${num(hv('precipitation',i+1),1)}</td><td>${num(hv('temperature_2m',i),1)}</td><td>${num(hv('apparent_temperature',i),1)}</td><td>${num(hv('wind_speed_10m',i),1)}</td><td>${num(hv('cloud_cover',i))}</td></tr>`}).join('');
   });
   // MetMalaysia
   const TR=[['ribut petir menyeluruh','Widespread thunderstorms'],['ribut petir di kebanyakan tempat','Thunderstorms in most places'],['ribut petir di beberapa tempat','Thunderstorms in a few places'],['ribut petir','Thunderstorms'],['hujan menyeluruh','Widespread rain'],['hujan di kebanyakan tempat','Rain in most places'],['hujan di beberapa tempat','Rain in a few places'],['tiada hujan','No rain'],['hujan','Rain'],['berangin','Windy'],['cerah','Fair'],['mendung','Cloudy']];
@@ -380,7 +380,8 @@ function render(){
 // ---------- next three parts of the day: morning 06–12, afternoon 12–18, evening and night 18–06; re-rendered every minute so it rolls at 06:00, 12:00 and 18:00
 const WORDS=[['ribut petir menyeluruh','Widespread thunderstorms','⛈️'],['ribut petir di kebanyakan tempat','Thunderstorms in most places','⛈️'],['ribut petir di beberapa tempat','Thunderstorms in a few places','⛈️'],['ribut petir','Thunderstorms','⛈️'],['hujan menyeluruh','Widespread rain','🌧️'],['hujan di kebanyakan tempat','Rain in most places','🌧️'],['hujan di beberapa tempat','Rain in a few places','🌧️'],['hujan','Rain','🌧️'],['tiada hujan','No rain','☀️'],['cerah','Fair','☀️'],['mendung','Cloudy','☁️'],['berangin','Windy','💨']];
 const wordRow=s=>{const l=String(s||'').toLowerCase().trim();return l?WORDS.find(([a])=>a===l):null};
-const codeIcon=c=>!fin(c)?'·':c<=1?'☀️':c==2?'⛅':c==3?'☁️':c<=48?'🌫️':c<=67?'🌧️':c<=77?'🌨️':c<=82?'🌦️':'⛈️';
+const CODES={0:'☀️',1:'☀️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌧️',53:'🌧️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',97:'⛈️',99:'⛈️'};
+const codeIcon=c=>fin(c)&&CODES[c]!==undefined?CODES[c]:'·';
 function renderParts(){
   section('#partsnote',['#parts'],()=>{
     if(!D)return;const bh=D.blend&&D.blend.hourly, hv=(k,i)=>{const a=arr(bh,k);return a?a[i]:null};
@@ -397,7 +398,7 @@ function renderParts(){
       const inst=[],prec=[];tms.forEach((ms,j)=>{if(ms>=o.start&&ms<o.end)inst.push(j);if(ms>o.start&&ms<=o.end)prec.push(j)});   // instantaneous samples vs preceding-hour accumulations
       const gi=k=>inst.map(j=>hv(k,j)).filter(fin), gp=k=>prec.map(j=>hv(k,j)).filter(fin);
       const pop=gp('precipitation_probability'),mm=gp('precipitation'),tp=gi('temperature_2m'),cape=gi('cape'),code=gi('weather_code');
-      const expectedInst=(h1-h0), partial=inst.length&&inst.length<expectedInst;
+      const expected=(h1-h0), cov=[['rain chance',pop.length],['rain amount',mm.length],['temperature',tp.length]].filter(([k,n])=>n<expected), partial=cov.length&&(pop.length||mm.length||tp.length);
       const ts=tsPer.filter(p=>p.from.getTime()<o.end&&p.to.getTime()>o.start).map(p=>({p,a:Math.max(p.from.getTime(),o.start),b:Math.min(p.to.getTime(),o.end)}));
       let ic=rec?(row?row[2]:'·'):(code.length?codeIcon(Math.max(...code)):'·'); if(ic==='☀️'&&h0>=18)ic='🌙';
       const when=o.date==dayStr(n)?'Today':o.date==dayStr(new Date(n.getTime()+864e5))?'Tomorrow':o.date==dayStr(new Date(n.getTime()-864e5))?'Yesterday':fmtD(o.date);
@@ -405,9 +406,9 @@ function renderParts(){
       return`<div class="day" style="animation:rise .7s ${i*90}ms both"><b>${esc(when)} · ${esc(label)}</b>${prog}<br><span class="ic" style="font-size:34px;animation-delay:${i*.3}s">${ic}</span>
       <div style="font-size:15px">${wording?esc(wording):'<span class="unavail">no official wording</span>'}</div>
       <div class="note">${src?'MetMalaysia '+esc(src):(code.length?'model icon':'–')}${td&&dd&&dd[field]&&wordRow(dd[field])&&wordRow(dd[field])[1]!==wording?' · district: '+esc(wordRow(dd[field])[1]):''}</div>
-      <div style="margin-top:6px">${pop.length?'rain chance up to <b>'+Math.max(...pop)+'%</b>':'<span class="unavail">no model hours</span>'}${mm.length?' · ~'+mm.reduce((a,b)=>a+b,0).toFixed(1)+' mm':''}</div>
+      <div style="margin-top:6px">${pop.length?'rain chance up to <b>'+Math.max(...pop)+'%</b>'+(pop.length<expected?' (partial)':''):(mm.length||tp.length?'<span class="unavail">rain probability unavailable</span>':'<span class="unavail">no model hours</span>')}${mm.length?' · ~'+mm.reduce((a,b)=>a+b,0).toFixed(1)+' mm'+(mm.length<expected?' (partial)':''):''}</div>
       <div>${tp.length?Math.round(Math.min(...tp))+'–'+Math.round(Math.max(...tp))+'°C':''}${cape.length&&Math.max(...cape)>2500?' · storm fuel high':''}</div>
-      ${partial?`<div class="note">model covers ${inst.length} of ${expectedInst} hours of this part</div>`:''}
+      ${partial?`<div class="note">model coverage: ${cov.map(([k,n])=>k+' '+n+'/'+expected+' h').join(', ')}</div>`:''}
       ${ts.length?'<div class="note">TAF: '+ts.map(x=>esc((x.p.prob!=null?'PROB'+x.p.prob+' ':'')+x.p.change+' '+x.p.wx)+' '+fmtT(new Date(x.a).toISOString())+'–'+fmtT(new Date(x.b).toISOString())+(nowMs>=x.b?' (ended)':'')).join('; ')+'</div>':''}</div>`}).join('');
     $('#partsnote').textContent='Morning 06:00–12:00, afternoon 12:00–18:00, evening and night 18:00–06:00, MYT, rolling from the part of the day you are in now (re-checked every minute). Wording: MetMalaysia town forecast for that date, else district. Rain chance and amount: Open-Meteo blend values for the hours ending inside the part (each value describes the preceding hour); temperatures and storm fuel: samples inside the part. TAF: the airport forecast\'s thunderstorm periods, cut to the part.';
   });
@@ -541,7 +542,10 @@ function condAt(tms,live){ // conditions at a time. Each field is null when unkn
   const c={hod,dayF,sr,ss,live,cloud:null,pop:null,mm:null,temp:null,code:null,iso:null,rain:null,storm:null,stormProb:null,inTS:false,covered:false,basis:''};
   const ts=tsPer.find(p=>p.from.getTime()<=tms&&p.to.getTime()>tms); c.inTS=!!ts; const tsProb=ts?(ts.prob!=null?ts.prob:(ts.change=='TEMPO'?60:100)):null;
   if(tm&&tm.length){const key=dayStr(m)+'T'+pad(m.getUTCHours()), i=tm.findIndex(t=>String(t).slice(0,13)===key);
-    if(i>=0){const g=k=>{const a=arr(bh,k);return a&&fin(a[i])?a[i]:null};c.covered=true;c.iso=tm[i];c.cloud=g('cloud_cover');c.pop=g('precipitation_probability');c.mm=g('precipitation');c.temp=g('temperature_2m');c.code=g('weather_code')}}
+    if(i>=0){const g=k=>{const a=arr(bh,k);return a&&fin(a[i])?a[i]:null};c.covered=true;c.iso=tm[i];c.cloud=g('cloud_cover');c.temp=g('temperature_2m');c.code=g('weather_code');
+      // rain probability and amount describe the PRECEDING hour, so the interval [h, h+1) takes the values stored at the endpoint h+1, found by timestamp
+      const endKey=dayStr(myt(new Date(tms+3600e3)))+'T'+pad(myt(new Date(tms+3600e3)).getUTCHours()), ie=tm.findIndex(t=>String(t).slice(0,13)===endKey);
+      if(ie>=0){const ge=k=>{const a=arr(bh,k);return a&&fin(a[ie])?a[ie]:null};c.pop=ge('precipitation_probability');c.mm=ge('precipitation')}}}
   if(live&&ob){ // the real observation decides what is happening now, whether or not the model covers this hour; model values stay as context
     const cov={CLR:5,SKC:5,CAVOK:5,FEW:20,SCT:45,BKN:75,OVC:95}[ob.cover];if(cov!=null)c.cloud=cov;
     if(fin(ob.temp))c.temp=ob.temp;

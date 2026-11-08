@@ -265,14 +265,18 @@ function render(){
     const lo=Math.min(...tmp)-1,hi=Math.max(...tmp)+1,ty=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo)),py=p=>T+(H-T-B)*(1-p/100),tA=P(tm[i0]).getTime();
     tsPer.forEach(p=>{const a=(p.from.getTime()-tA)/3600e3,b=(p.to.getTime()-tA)/3600e3;if(b>0&&a<N)s+=`<rect x="${L+Math.max(0,a)*bw}" y="${T}" width="${(Math.min(N,b)-Math.max(0,a))*bw}" height="${H-T-B}" fill="rgba(255,209,102,${p.prob!=null?.09:.16})"/>`});
     for(let p=0;p<=100;p+=25)s+=`<line x1="${L}" x2="${W-R}" y1="${py(p)}" y2="${py(p)}" stroke="rgba(43,43,74,.12)"/><text x="2" y="${py(p)+4}">${p}%</text>`;
-    for(let i=0;i<N;i++){const p=hv('precipitation_probability',i0+i+1),x=L+i*bw,d=(i*25)+'ms';   // the bar for the hour starting at tm[i0+i] uses the value stored at its END (preceding-hour value)
+    // slots are absolute hours from tA; each slot looks up its own timestamp (instantaneous fields) and the following hour's timestamp (rain fields); a missing record leaves a gap
+    const byTs=new Map();tm.forEach((t,j)=>{const ms=P(t).getTime();if(!isNaN(ms))byTs.set(ms,j)});
+    const slotRows=[];
+    for(let i=0;i<N;i++){const s0=tA+i*3600e3, ji=byTs.has(s0)?byTs.get(s0):-1, je=byTs.has(s0+3600e3)?byTs.get(s0+3600e3):-1, p=je>=0?hv('precipitation_probability',je):null, x=L+i*bw, d=(i*25)+'ms';
+      slotRows.push({s0,ji,je});
       if(fin(p)){const h=(H-T-B)*p/100;s+=`<rect x="${x+1}" y="${ST()?H-B-h:H-B}" width="${bw-2}" height="${ST()?h:0}" rx="2" fill="#4aa3ff" opacity="${.35+p/160}">${anim('height',0,h,'.9s',d)}${anim('y',H-B,H-B-h,'.9s',d)}</rect>`}
-      const t=String(tm[i0+i]);if(/T(00|06|12|18):00/.test(t))s+=`<text x="${x}" y="${H-10}">${t.slice(11,13)}h${t.endsWith('00:00')?' '+fmtD(t).slice(4):''}</text>`}
-    const pts=[];for(let i=0;i<N;i++){const v=hv('temperature_2m',i0+i);if(fin(v))pts.push(`${L+i*bw+bw/2},${ty(v)}`)}
+      const hr=myt(new Date(s0)).getUTCHours();if(hr%6===0)s+=`<text x="${x}" y="${H-10}">${pad(hr)}h${hr===0?' '+fmtD(new Date(s0).toISOString()).slice(4):''}</text>`}
+    const pts=[];slotRows.forEach((r,i)=>{const v=r.ji>=0?hv('temperature_2m',r.ji):null;if(fin(v))pts.push(`${L+i*bw},${ty(v)}`)});
     s+=`<polyline points="${pts.join(' ')}" fill="none" stroke="#ffb347" stroke-width="2.5" stroke-dasharray="2000" stroke-dashoffset="${ST()?0:2000}">${anim('stroke-dashoffset',2000,0,'2s')}</polyline>`;
     for(let v=Math.ceil(lo);v<=hi;v+=2)s+=`<text x="${W-R+4}" y="${ty(v)+4}" style="fill:#9a4a00">${v}°</text>`;
     $('#hr').innerHTML=s;
-    $('#hrtbl').innerHTML='<tr><th>Hour starting (MYT)</th><th>Rain chance % in that hour</th><th>Rain mm in that hour</th><th>°C at start</th><th>Feels</th><th>Wind km/h</th><th>Cloud %</th></tr>'+Array.from({length:N},(_,j)=>{const i=i0+j;return`<tr><td>${fmtDT(tm[i])}</td><td>${num(hv('precipitation_probability',i+1))}</td><td>${num(hv('precipitation',i+1),1)}</td><td>${num(hv('temperature_2m',i),1)}</td><td>${num(hv('apparent_temperature',i),1)}</td><td>${num(hv('wind_speed_10m',i),1)}</td><td>${num(hv('cloud_cover',i))}</td></tr>`}).join('');
+    $('#hrtbl').innerHTML='<tr><th>Hour starting (MYT)</th><th>Rain chance % in that hour</th><th>Rain mm in that hour</th><th>°C at start</th><th>Feels</th><th>Wind km/h</th><th>Cloud %</th></tr>'+slotRows.map(r=>{const i=r.ji,e=r.je;return`<tr><td>${fmtDT(new Date(r.s0).toISOString())}</td><td>${e>=0?num(hv('precipitation_probability',e)):'–'}</td><td>${e>=0?num(hv('precipitation',e),1):'–'}</td><td>${i>=0?num(hv('temperature_2m',i),1):'–'}</td><td>${i>=0?num(hv('apparent_temperature',i),1):'–'}</td><td>${i>=0?num(hv('wind_speed_10m',i),1):'–'}</td><td>${i>=0?num(hv('cloud_cover',i)):'–'}</td></tr>`}).join('');
   });
   // MetMalaysia
   const TR=[['ribut petir menyeluruh','Widespread thunderstorms'],['ribut petir di kebanyakan tempat','Thunderstorms in most places'],['ribut petir di beberapa tempat','Thunderstorms in a few places'],['ribut petir','Thunderstorms'],['hujan menyeluruh','Widespread rain'],['hujan di kebanyakan tempat','Rain in most places'],['hujan di beberapa tempat','Rain in a few places'],['tiada hujan','No rain'],['hujan','Rain'],['berangin','Windy'],['cerah','Fair'],['mendung','Cloudy']];
@@ -382,6 +386,7 @@ const WORDS=[['ribut petir menyeluruh','Widespread thunderstorms','⛈️'],['ri
 const wordRow=s=>{const l=String(s||'').toLowerCase().trim();return l?WORDS.find(([a])=>a===l):null};
 const CODES={0:'☀️',1:'☀️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌧️',53:'🌧️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',97:'⛈️',99:'⛈️'};
 const codeIcon=c=>fin(c)&&CODES[c]!==undefined?CODES[c]:'·';
+const RAIN_CODES=new Set([51,53,55,56,57,61,63,65,66,67,71,73,75,77,80,81,82,85,86]), TS_CODES=new Set([95,96,97,99]);
 function renderParts(){
   section('#partsnote',['#parts'],()=>{
     if(!D)return;const bh=D.blend&&D.blend.hourly, hv=(k,i)=>{const a=arr(bh,k);return a?a[i]:null};
@@ -551,11 +556,12 @@ function condAt(tms,live){ // conditions at a time. Each field is null when unkn
     if(fin(ob.temp))c.temp=ob.temp;
     const wx=String(ob.wx||'');c.rain=/TS|RA|SH|DZ/.test(wx);c.storm=/TS/.test(wx);c.stormProb=c.storm?100:null;c.basis='airport observation';
   }else{
-    const known=c.pop!=null||c.mm!=null||c.code!=null||c.inTS;
+    const codeRain=c.code!=null&&RAIN_CODES.has(c.code), codeTS=c.code!=null&&TS_CODES.has(c.code), codeKnown=c.code!=null&&CODES[c.code]!==undefined;   // an unrecognised code is no evidence
+    const known=c.pop!=null||c.mm!=null||codeKnown||c.inTS;
     if(!known){c.rain=null;c.storm=null;c.basis='no data'}
-    else if(c.pop!=null){c.rain=c.pop>=55&&((c.mm??0)>0.05||c.inTS||(c.code??0)>=51);c.storm=c.rain&&(c.inTS||(c.code??0)>=95);c.basis='model'}
-    else{c.rain=(c.mm??0)>0.05||(c.code??0)>=51||c.inTS;c.storm=c.rain&&(c.inTS||(c.code??0)>=95);c.basis='model without probability'}
-    if(c.storm)c.stormProb=tsProb!=null?tsProb:((c.code??0)>=95?100:60);
+    else if(c.pop!=null){c.rain=c.pop>=55&&((c.mm??0)>0.05||c.inTS||codeRain||codeTS);c.storm=c.rain&&(c.inTS||codeTS);c.basis='model'}
+    else{c.rain=(c.mm??0)>0.05||codeRain||codeTS||c.inTS;c.storm=c.rain&&(c.inTS||codeTS);c.basis='model without probability'}
+    if(c.storm)c.stormProb=tsProb!=null?tsProb:(codeTS?100:60);
   }
   return c;
 }

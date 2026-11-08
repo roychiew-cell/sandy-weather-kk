@@ -20,6 +20,21 @@
    "division": "Sandakan",
    "district": "Sandakan"
   },
+  "TNM": {
+   "state": "Sabah",
+   "division": "Interior",
+   "district": "Tenom"
+  },
+  "KKnd": {
+   "state": "Sabah",
+   "division": "West Coast",
+   "district": null
+  },
+  "KKnv": {
+   "state": "Sabah",
+   "division": null,
+   "district": "Kota Kinabalu"
+  },
   "LBN": {
    "state": "Labuan",
    "division": null,
@@ -35,6 +50,11 @@
    "division": "Kuching",
    "district": "Kuching"
   },
+  "BAU": {
+   "state": "Sarawak",
+   "division": "Kuching",
+   "district": "Bau"
+  },
   "JB": {
    "state": "Johor",
    "division": null,
@@ -44,6 +64,11 @@
    "state": "Johor",
    "division": null,
    "district": "Muar"
+  },
+  "JBx": {
+   "state": "Johor",
+   "division": null,
+   "district": "Unknownville"
   },
   "PEN": {
    "state": "Penang",
@@ -59,337 +84,451 @@
    "state": "Negeri Sembilan",
    "division": null,
    "district": "Seremban"
+  },
+  "KL": {
+   "state": "Kuala Lumpur",
+   "division": null,
+   "district": "Kuala Lumpur"
+  },
+  "KB": {
+   "state": "Kelantan",
+   "division": null,
+   "district": "Kota Bharu"
+  },
+  "KT": {
+   "state": "Terengganu",
+   "division": null,
+   "district": "Kuala Terengganu"
+  },
+  "CAM": {
+   "state": "Pahang",
+   "division": null,
+   "district": "Cameron Highlands"
+  },
+  "KTN": {
+   "state": "Pahang",
+   "division": null,
+   "district": "Kuantan"
+  },
+  "LMS": {
+   "state": "Perak",
+   "division": null,
+   "district": "Larut Matang dan Selama"
   }
  },
  "cases": [
   {
    "text": "Thunderstorms, heavy rain and strong winds are expected over the states of Johor (Tangkak, Muar, Segamat and Batu Pahat) • Sarawak: Miri, Sri Aman, Limbang, Bintulu (Tatau), Kapit (Kapit), Betong, Mukah (Tanjung Manis), Sarikei (Sarikei), Samarahan (Sebuyau, Gedong and Simunjan) • Sabah: Tawau (Kalabakan), Sandakan (Tongod), Interior (Pensiangan, Tenom, Sipitang and Sook), Kudat (Pitas and Kudat) • W.P. Labuan until 9:00 PM; Sunday, 8 November 2026.",
    "area": "KK",
-   "ctx": "",
+   "ctx": "THUNDERSTORMS WARNING",
    "expect": false,
-   "note": "17:15 land bulletin, bullet-separated, W.P. Labuan"
+   "note": "real land bulletin of 8 Nov 17:15"
   },
   {
    "text": "Thunderstorms, heavy rain and strong winds are expected over the states of Johor (Tangkak, Muar, Segamat and Batu Pahat) • Sarawak: Miri, Sri Aman, Limbang, Bintulu (Tatau), Kapit (Kapit), Betong, Mukah (Tanjung Manis), Sarikei (Sarikei), Samarahan (Sebuyau, Gedong and Simunjan) • Sabah: Tawau (Kalabakan), Sandakan (Tongod), Interior (Pensiangan, Tenom, Sipitang and Sook), Kudat (Pitas and Kudat) • W.P. Labuan until 9:00 PM; Sunday, 8 November 2026.",
    "area": "KUD",
-   "ctx": "",
+   "ctx": "THUNDERSTORMS WARNING",
    "expect": true,
-   "note": "17:15 land bulletin, bullet-separated, W.P. Labuan"
+   "note": "real land bulletin of 8 Nov 17:15"
   },
   {
    "text": "Thunderstorms, heavy rain and strong winds are expected over the states of Johor (Tangkak, Muar, Segamat and Batu Pahat) • Sarawak: Miri, Sri Aman, Limbang, Bintulu (Tatau), Kapit (Kapit), Betong, Mukah (Tanjung Manis), Sarikei (Sarikei), Samarahan (Sebuyau, Gedong and Simunjan) • Sabah: Tawau (Kalabakan), Sandakan (Tongod), Interior (Pensiangan, Tenom, Sipitang and Sook), Kudat (Pitas and Kudat) • W.P. Labuan until 9:00 PM; Sunday, 8 November 2026.",
    "area": "TGD",
-   "ctx": "",
+   "ctx": "THUNDERSTORMS WARNING",
    "expect": true,
-   "note": "17:15 land bulletin, bullet-separated, W.P. Labuan"
+   "note": "real land bulletin of 8 Nov 17:15"
   },
   {
    "text": "Thunderstorms, heavy rain and strong winds are expected over the states of Johor (Tangkak, Muar, Segamat and Batu Pahat) • Sarawak: Miri, Sri Aman, Limbang, Bintulu (Tatau), Kapit (Kapit), Betong, Mukah (Tanjung Manis), Sarikei (Sarikei), Samarahan (Sebuyau, Gedong and Simunjan) • Sabah: Tawau (Kalabakan), Sandakan (Tongod), Interior (Pensiangan, Tenom, Sipitang and Sook), Kudat (Pitas and Kudat) • W.P. Labuan until 9:00 PM; Sunday, 8 November 2026.",
    "area": "SDK",
-   "ctx": "",
+   "ctx": "THUNDERSTORMS WARNING",
    "expect": false,
-   "note": "17:15 land bulletin, bullet-separated, W.P. Labuan"
+   "note": "real land bulletin of 8 Nov 17:15"
   },
   {
    "text": "Thunderstorms, heavy rain and strong winds are expected over the states of Johor (Tangkak, Muar, Segamat and Batu Pahat) • Sarawak: Miri, Sri Aman, Limbang, Bintulu (Tatau), Kapit (Kapit), Betong, Mukah (Tanjung Manis), Sarikei (Sarikei), Samarahan (Sebuyau, Gedong and Simunjan) • Sabah: Tawau (Kalabakan), Sandakan (Tongod), Interior (Pensiangan, Tenom, Sipitang and Sook), Kudat (Pitas and Kudat) • W.P. Labuan until 9:00 PM; Sunday, 8 November 2026.",
    "area": "LBN",
-   "ctx": "",
+   "ctx": "THUNDERSTORMS WARNING",
    "expect": true,
-   "note": "17:15 land bulletin, bullet-separated, W.P. Labuan"
+   "note": "real land bulletin of 8 Nov 17:15"
   },
   {
    "text": "Thunderstorms, heavy rain and strong winds are expected over the states of Johor (Tangkak, Muar, Segamat and Batu Pahat) • Sarawak: Miri, Sri Aman, Limbang, Bintulu (Tatau), Kapit (Kapit), Betong, Mukah (Tanjung Manis), Sarikei (Sarikei), Samarahan (Sebuyau, Gedong and Simunjan) • Sabah: Tawau (Kalabakan), Sandakan (Tongod), Interior (Pensiangan, Tenom, Sipitang and Sook), Kudat (Pitas and Kudat) • W.P. Labuan until 9:00 PM; Sunday, 8 November 2026.",
    "area": "MIRI",
-   "ctx": "",
+   "ctx": "THUNDERSTORMS WARNING",
    "expect": true,
-   "note": "17:15 land bulletin, bullet-separated, W.P. Labuan"
+   "note": "real land bulletin of 8 Nov 17:15"
   },
   {
    "text": "Thunderstorms, heavy rain and strong winds are expected over the states of Johor (Tangkak, Muar, Segamat and Batu Pahat) • Sarawak: Miri, Sri Aman, Limbang, Bintulu (Tatau), Kapit (Kapit), Betong, Mukah (Tanjung Manis), Sarikei (Sarikei), Samarahan (Sebuyau, Gedong and Simunjan) • Sabah: Tawau (Kalabakan), Sandakan (Tongod), Interior (Pensiangan, Tenom, Sipitang and Sook), Kudat (Pitas and Kudat) • W.P. Labuan until 9:00 PM; Sunday, 8 November 2026.",
    "area": "KCH",
-   "ctx": "",
+   "ctx": "THUNDERSTORMS WARNING",
    "expect": false,
-   "note": "17:15 land bulletin, bullet-separated, W.P. Labuan"
+   "note": "real land bulletin of 8 Nov 17:15"
   },
   {
    "text": "Thunderstorms, heavy rain and strong winds are expected over the states of Johor (Tangkak, Muar, Segamat and Batu Pahat) • Sarawak: Miri, Sri Aman, Limbang, Bintulu (Tatau), Kapit (Kapit), Betong, Mukah (Tanjung Manis), Sarikei (Sarikei), Samarahan (Sebuyau, Gedong and Simunjan) • Sabah: Tawau (Kalabakan), Sandakan (Tongod), Interior (Pensiangan, Tenom, Sipitang and Sook), Kudat (Pitas and Kudat) • W.P. Labuan until 9:00 PM; Sunday, 8 November 2026.",
    "area": "JB",
-   "ctx": "",
+   "ctx": "THUNDERSTORMS WARNING",
    "expect": false,
-   "note": "17:15 land bulletin, bullet-separated, W.P. Labuan"
+   "note": "real land bulletin of 8 Nov 17:15"
   },
   {
    "text": "Thunderstorms, heavy rain and strong winds are expected over the states of Johor (Tangkak, Muar, Segamat and Batu Pahat) • Sarawak: Miri, Sri Aman, Limbang, Bintulu (Tatau), Kapit (Kapit), Betong, Mukah (Tanjung Manis), Sarikei (Sarikei), Samarahan (Sebuyau, Gedong and Simunjan) • Sabah: Tawau (Kalabakan), Sandakan (Tongod), Interior (Pensiangan, Tenom, Sipitang and Sook), Kudat (Pitas and Kudat) • W.P. Labuan until 9:00 PM; Sunday, 8 November 2026.",
    "area": "MUAR",
-   "ctx": "",
+   "ctx": "THUNDERSTORMS WARNING",
    "expect": true,
-   "note": "17:15 land bulletin, bullet-separated, W.P. Labuan"
+   "note": "real land bulletin of 8 Nov 17:15"
   },
   {
-   "text": "Sabah: Sandakan (Paitan, Telupid and Tongod) and Tawau.",
-   "area": "TGD",
-   "ctx": "",
-   "expect": true,
-   "note": ""
-  },
-  {
-   "text": "Sabah: West Coast (Tuaran) and Kudat until 5:00 PM.",
+   "text": "Thunderstorms, heavy rain and strong winds are expected over the states of Kedah (Bandar Baharu, Kulim, Baling, Kuala Muda, Yan, Pendang, Sik and Padang Terap) • Penang • Perak • Pahang (Bentong) • Selangor • W.P. Kuala Lumpur • W.P. Putrajaya • Sarawak: Limbang (Limbang), Miri (Marudi, Beluru and Telang Usan), Bintulu (Sebauh), Kapit (Bukit Mabong) • Sabah: Interior (Pensiangan, Tenom and Sipitang) until 1:00 AM; Monday, 9 November 2026.",
    "area": "KK",
-   "ctx": "",
+   "ctx": "THUNDERSTORMS WARNING",
    "expect": false,
-   "note": ""
+   "note": "real land bulletin of 9 Nov 00:37"
   },
   {
-   "text": "Sabah: West Coast and Interior.",
-   "area": "KK",
-   "ctx": "",
+   "text": "Thunderstorms, heavy rain and strong winds are expected over the states of Kedah (Bandar Baharu, Kulim, Baling, Kuala Muda, Yan, Pendang, Sik and Padang Terap) • Penang • Perak • Pahang (Bentong) • Selangor • W.P. Kuala Lumpur • W.P. Putrajaya • Sarawak: Limbang (Limbang), Miri (Marudi, Beluru and Telang Usan), Bintulu (Sebauh), Kapit (Bukit Mabong) • Sabah: Interior (Pensiangan, Tenom and Sipitang) until 1:00 AM; Monday, 9 November 2026.",
+   "area": "TNM",
+   "ctx": "THUNDERSTORMS WARNING",
    "expect": true,
-   "note": ""
+   "note": "real land bulletin of 9 Nov 00:37"
   },
   {
-   "text": "Sarawak: Kuching (Bau and Lundu), Samarahan.",
-   "area": "KCH",
-   "ctx": "",
-   "expect": false,
-   "note": ""
-  },
-  {
-   "text": "Pulau Pinang: Timur Laut and Barat Daya; Kedah: Kulim.",
+   "text": "Thunderstorms, heavy rain and strong winds are expected over the states of Kedah (Bandar Baharu, Kulim, Baling, Kuala Muda, Yan, Pendang, Sik and Padang Terap) • Penang • Perak • Pahang (Bentong) • Selangor • W.P. Kuala Lumpur • W.P. Putrajaya • Sarawak: Limbang (Limbang), Miri (Marudi, Beluru and Telang Usan), Bintulu (Sebauh), Kapit (Bukit Mabong) • Sabah: Interior (Pensiangan, Tenom and Sipitang) until 1:00 AM; Monday, 9 November 2026.",
    "area": "PEN",
-   "ctx": "",
+   "ctx": "THUNDERSTORMS WARNING",
+   "expect": true,
+   "note": "real land bulletin of 9 Nov 00:37"
+  },
+  {
+   "text": "Thunderstorms, heavy rain and strong winds are expected over the states of Kedah (Bandar Baharu, Kulim, Baling, Kuala Muda, Yan, Pendang, Sik and Padang Terap) • Penang • Perak • Pahang (Bentong) • Selangor • W.P. Kuala Lumpur • W.P. Putrajaya • Sarawak: Limbang (Limbang), Miri (Marudi, Beluru and Telang Usan), Bintulu (Sebauh), Kapit (Bukit Mabong) • Sabah: Interior (Pensiangan, Tenom and Sipitang) until 1:00 AM; Monday, 9 November 2026.",
+   "area": "KL",
+   "ctx": "THUNDERSTORMS WARNING",
+   "expect": true,
+   "note": "real land bulletin of 9 Nov 00:37"
+  },
+  {
+   "text": "Thunderstorms, heavy rain and strong winds are expected over the states of Kedah (Bandar Baharu, Kulim, Baling, Kuala Muda, Yan, Pendang, Sik and Padang Terap) • Penang • Perak • Pahang (Bentong) • Selangor • W.P. Kuala Lumpur • W.P. Putrajaya • Sarawak: Limbang (Limbang), Miri (Marudi, Beluru and Telang Usan), Bintulu (Sebauh), Kapit (Bukit Mabong) • Sabah: Interior (Pensiangan, Tenom and Sipitang) until 1:00 AM; Monday, 9 November 2026.",
+   "area": "KCH",
+   "ctx": "THUNDERSTORMS WARNING",
+   "expect": false,
+   "note": "real land bulletin of 9 Nov 00:37"
+  },
+  {
+   "text": "Thunderstorms, heavy rain and strong winds are expected over the states of Kedah (Bandar Baharu, Kulim, Baling, Kuala Muda, Yan, Pendang, Sik and Padang Terap) • Penang • Perak • Pahang (Bentong) • Selangor • W.P. Kuala Lumpur • W.P. Putrajaya • Sarawak: Limbang (Limbang), Miri (Marudi, Beluru and Telang Usan), Bintulu (Sebauh), Kapit (Bukit Mabong) • Sabah: Interior (Pensiangan, Tenom and Sipitang) until 1:00 AM; Monday, 9 November 2026.",
+   "area": "MIRI",
+   "ctx": "THUNDERSTORMS WARNING",
+   "expect": false,
+   "note": "real 00:37 bulletin: Miri division is restricted to Marudi, Beluru and Telang Usan, so the district Miri is not covered"
+  },
+  {
+   "text": "Thunderstorms, heavy rain and strong winds are expected over the states of Kedah (Bandar Baharu, Kulim, Baling, Kuala Muda, Yan, Pendang, Sik and Padang Terap) • Penang • Perak • Pahang (Bentong) • Selangor • W.P. Kuala Lumpur • W.P. Putrajaya • Sarawak: Limbang (Limbang), Miri (Marudi, Beluru and Telang Usan), Bintulu (Sebauh), Kapit (Bukit Mabong) • Sabah: Interior (Pensiangan, Tenom and Sipitang) until 1:00 AM; Monday, 9 November 2026.",
+   "area": "JB",
+   "ctx": "THUNDERSTORMS WARNING",
+   "expect": false,
+   "note": "real land bulletin of 9 Nov 00:37"
+  },
+  {
+   "text": "I) Continuous rain is expected to occur over the states of Kelantan (Tanah Merah, Pasir Mas, Tumpat, Kota Bharu, Machang, Bachok, Pasir Puteh, Kuala Krai and Jeli) • Terengganu • Pahang (Kuantan, Pekan and Rompin) until Wednesday, 11 November 2026.",
+   "area": "KB",
+   "ctx": "CONTINUOUS RAIN WARNING (ALERT)",
+   "expect": true,
+   "note": "real continuous-rain subsection I"
+  },
+  {
+   "text": "I) Continuous rain is expected to occur over the states of Kelantan (Tanah Merah, Pasir Mas, Tumpat, Kota Bharu, Machang, Bachok, Pasir Puteh, Kuala Krai and Jeli) • Terengganu • Pahang (Kuantan, Pekan and Rompin) until Wednesday, 11 November 2026.",
+   "area": "KT",
+   "ctx": "CONTINUOUS RAIN WARNING (ALERT)",
+   "expect": true,
+   "note": "real continuous-rain subsection I"
+  },
+  {
+   "text": "I) Continuous rain is expected to occur over the states of Kelantan (Tanah Merah, Pasir Mas, Tumpat, Kota Bharu, Machang, Bachok, Pasir Puteh, Kuala Krai and Jeli) • Terengganu • Pahang (Kuantan, Pekan and Rompin) until Wednesday, 11 November 2026.",
+   "area": "KTN",
+   "ctx": "CONTINUOUS RAIN WARNING (ALERT)",
+   "expect": true,
+   "note": "real continuous-rain subsection I"
+  },
+  {
+   "text": "I) Continuous rain is expected to occur over the states of Kelantan (Tanah Merah, Pasir Mas, Tumpat, Kota Bharu, Machang, Bachok, Pasir Puteh, Kuala Krai and Jeli) • Terengganu • Pahang (Kuantan, Pekan and Rompin) until Wednesday, 11 November 2026.",
+   "area": "KK",
+   "ctx": "CONTINUOUS RAIN WARNING (ALERT)",
+   "expect": false,
+   "note": "real continuous-rain subsection I"
+  },
+  {
+   "text": "I) Continuous rain is expected to occur over the states of Kelantan (Tanah Merah, Pasir Mas, Tumpat, Kota Bharu, Machang, Bachok, Pasir Puteh, Kuala Krai and Jeli) • Terengganu • Pahang (Kuantan, Pekan and Rompin) until Wednesday, 11 November 2026.",
+   "area": "CAM",
+   "ctx": "CONTINUOUS RAIN WARNING (ALERT)",
+   "expect": false,
+   "note": "real continuous-rain subsection I"
+  },
+  {
+   "text": "II) Continuous rain is expected to occur over the state of Sabah: Kudat, Sandakan (Paitan, Telupid, Labuk & Sugut, Sandakan and Kinabatangan) within the period of Monday, 9 November 2026 until Wednesday, 11 November 2026.",
+   "area": "SDK",
+   "ctx": "CONTINUOUS RAIN WARNING (ALERT)",
+   "expect": true,
+   "note": "real continuous-rain subsection II"
+  },
+  {
+   "text": "II) Continuous rain is expected to occur over the state of Sabah: Kudat, Sandakan (Paitan, Telupid, Labuk & Sugut, Sandakan and Kinabatangan) within the period of Monday, 9 November 2026 until Wednesday, 11 November 2026.",
+   "area": "KUD",
+   "ctx": "CONTINUOUS RAIN WARNING (ALERT)",
+   "expect": true,
+   "note": "real continuous-rain subsection II"
+  },
+  {
+   "text": "II) Continuous rain is expected to occur over the state of Sabah: Kudat, Sandakan (Paitan, Telupid, Labuk & Sugut, Sandakan and Kinabatangan) within the period of Monday, 9 November 2026 until Wednesday, 11 November 2026.",
+   "area": "KK",
+   "ctx": "CONTINUOUS RAIN WARNING (ALERT)",
+   "expect": false,
+   "note": "real continuous-rain subsection II"
+  },
+  {
+   "text": "II) Continuous rain is expected to occur over the state of Sabah: Kudat, Sandakan (Paitan, Telupid, Labuk & Sugut, Sandakan and Kinabatangan) within the period of Monday, 9 November 2026 until Wednesday, 11 November 2026.",
+   "area": "TGD",
+   "ctx": "CONTINUOUS RAIN WARNING (ALERT)",
+   "expect": false,
+   "note": "real continuous-rain subsection II"
+  },
+  {
+   "text": "Thunderstorms over Sabah: Sandakan (Paitan, Telupid and Tongod) and Tawau until 6:00 PM; Monday, 9 November 2026.",
+   "area": "TGD",
+   "ctx": "THUNDERSTORM WARNING",
    "expect": true,
    "note": ""
   },
   {
-   "text": "Sabah: West Coast (Paparan) and Kudat.",
-   "area": "PPR",
-   "ctx": "",
-   "expect": null,
-   "note": "unknown name (not Papar): undetermined, never a substring match"
+   "text": "Thunderstorms over Sabah: West Coast (Tuaran) and Kudat until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": false,
+   "note": ""
   },
   {
-   "text": "Heavy rain over Sabah and Sarawak until Tuesday.",
+   "text": "Thunderstorms over Sabah: West Coast and Interior until 6:00 PM; Monday, 9 November 2026.",
    "area": "KK",
-   "ctx": "",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": true,
+   "note": ""
+  },
+  {
+   "text": "Thunderstorms over Sarawak: Kuching (Bau and Lundu), Samarahan until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KCH",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": false,
+   "note": ""
+  },
+  {
+   "text": "Thunderstorms over Pulau Pinang: Timur Laut and Barat Daya; Kedah: Kulim until 6:00 PM; Monday, 9 November 2026.",
+   "area": "PEN",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": true,
+   "note": ""
+  },
+  {
+   "text": "Thunderstorms over Sabah: West Coast (Paparan) and Kudat until 6:00 PM; Monday, 9 November 2026.",
+   "area": "PPR",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "unknown name (not Papar): undetermined"
+  },
+  {
+   "text": "Thunderstorms over Sabah: West Coast (Tuaran and Papar) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "PPR",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": true,
+   "note": ""
+  },
+  {
+   "text": "Thunderstorms over Sabah and Sarawak until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
    "expect": true,
    "note": "whole state, no list"
   },
   {
-   "text": "Kedah (Kulim, Bandar Baharu and Baling) • Penang • Perak (Bagan Datuk)",
+   "text": "Thunderstorms over Kedah (Kulim, Bandar Baharu and Baling) • Penang • Perak (Bagan Datuk) until 6:00 PM; Monday, 9 November 2026.",
    "area": "PEN",
-   "ctx": "",
+   "ctx": "THUNDERSTORM WARNING",
    "expect": true,
    "note": ""
   },
   {
-   "text": "Kedah (Kulim) • Perak (Bagan Datuk)",
-   "area": "PEN",
-   "ctx": "",
+   "text": "Thunderstorms over Perak (Bagan Datuk) • N. Sembilan (Jelebu) • Melaka (Alor Gajah) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "NS",
+   "ctx": "THUNDERSTORM WARNING",
    "expect": false,
    "note": ""
   },
   {
-   "text": "Perak (Bagan Datuk) • N. Sembilan (Jelebu) • Melaka (Alor Gajah) until 5:00 PM.",
+   "text": "Thunderstorms over Perak (Bagan Datuk) • N. Sembilan (Jelebu, Seremban) • Melaka (Alor Gajah) until 6:00 PM; Monday, 9 November 2026.",
    "area": "NS",
-   "ctx": "",
-   "expect": false,
-   "note": ""
-  },
-  {
-   "text": "Perak (Bagan Datuk) • N. Sembilan (Jelebu, Seremban) • Melaka (Alor Gajah) until 5:00 PM.",
-   "area": "NS",
-   "ctx": "",
+   "ctx": "THUNDERSTORM WARNING",
    "expect": true,
    "note": ""
   },
   {
-   "text": "I) Thunderstorms over West Coast and Interior until 6:00 PM.",
+   "text": "I) Thunderstorms over West Coast and Interior until 6:00 PM; Monday, 9 November 2026.",
    "area": "KK",
    "ctx": "SECTION A: SABAH",
    "expect": true,
    "note": "heading-only state"
   },
   {
-   "text": "I) Thunderstorms over West Coast (Kota Kinabalu) until 6:00 PM.",
+   "text": "I) Thunderstorms over West Coast (Kota Kinabalu) until 6:00 PM; Monday, 9 November 2026.",
    "area": "KK",
    "ctx": "SABAH THUNDERSTORMS WARNING",
    "expect": true,
    "note": ""
   },
   {
-   "text": "I) Thunderstorms over West Coast (Tuaran) until 6:00 PM.",
+   "text": "I) Thunderstorms over West Coast (Tuaran) until 6:00 PM; Monday, 9 November 2026.",
    "area": "KK",
    "ctx": "SABAH",
    "expect": false,
    "note": ""
   },
   {
-   "text": "Strong winds over Eastern Sabah until Tuesday.",
+   "text": "I) Thunderstorms over Kudat until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "SABAH",
+   "expect": false,
+   "note": ""
+  },
+  {
+   "text": "Strong winds over Eastern Sabah until 6:00 PM; Monday, 9 November 2026.",
    "area": "KK",
    "ctx": "",
    "expect": null,
    "note": "qualified region"
   },
   {
-   "text": "Rain over Western Sarawak and Eastern Sabah.",
+   "text": "Rain over Western Sarawak and Eastern Sabah until 6:00 PM; Monday, 9 November 2026.",
    "area": "KK",
    "ctx": "",
    "expect": null,
    "note": ""
   },
   {
-   "text": "I) Thunderstorms over Kudat until 6:00 PM.",
-   "area": "KK",
-   "ctx": "SABAH",
-   "expect": false,
-   "note": ""
-  },
-  {
-   "text": "II) Continuous rain is expected to occur over the state of Sabah: Kudat, Sandakan (Paitan, Telupid, Labuk & Sugut, Sandakan and Kinabatangan) within the period of 9 November 2026 until 11 November 2026.",
-   "area": "SDK",
-   "ctx": "",
-   "expect": true,
-   "note": "raw continuous-rain subsection II (R21-M1: Labuk & Sugut)"
-  },
-  {
-   "text": "II) Continuous rain is expected to occur over the state of Sabah: Kudat, Sandakan (Paitan, Telupid, Labuk & Sugut, Sandakan and Kinabatangan) within the period of 9 November 2026 until 11 November 2026.",
-   "area": "KUD",
-   "ctx": "",
-   "expect": true,
-   "note": "raw continuous-rain subsection II (R21-M1: Labuk & Sugut)"
-  },
-  {
-   "text": "II) Continuous rain is expected to occur over the state of Sabah: Kudat, Sandakan (Paitan, Telupid, Labuk & Sugut, Sandakan and Kinabatangan) within the period of 9 November 2026 until 11 November 2026.",
-   "area": "KK",
-   "ctx": "",
-   "expect": false,
-   "note": "raw continuous-rain subsection II (R21-M1: Labuk & Sugut)"
-  },
-  {
-   "text": "II) Continuous rain is expected to occur over the state of Sabah: Kudat, Sandakan (Paitan, Telupid, Labuk & Sugut, Sandakan and Kinabatangan) within the period of 9 November 2026 until 11 November 2026.",
-   "area": "TGD",
-   "ctx": "",
-   "expect": false,
-   "note": "raw continuous-rain subsection II (R21-M1: Labuk & Sugut)"
-  },
-  {
-   "text": "Thunderstorms over the entire region until 6:00 PM; Sunday, 8 November 2026.",
+   "text": "Thunderstorms over the entire region until 6:00 PM; Monday, 9 November 2026.",
    "area": "KK",
    "ctx": "EASTERN SABAH",
    "expect": null,
    "note": "qualified heading"
   },
   {
-   "text": "I) Weather warning applies to affected areas until 6:00 PM; Sunday, 8 November 2026.",
+   "text": "I) Weather warning applies to affected areas until 6:00 PM; Monday, 9 November 2026.",
    "area": "KK",
    "ctx": "SABAH",
    "expect": null,
    "note": "unrecognised prose"
   },
   {
-   "text": "I) Thunderstorms over Seremban until 6:00 PM.",
+   "text": "I) Thunderstorms over Seremban until 6:00 PM; Monday, 9 November 2026.",
    "area": "NS",
    "ctx": "NEGERI SEMBILAN",
    "expect": true,
    "note": ""
   },
   {
-   "text": "I) Thunderstorms over Jelebu until 6:00 PM.",
+   "text": "I) Thunderstorms over Jelebu until 6:00 PM; Monday, 9 November 2026.",
    "area": "NS",
    "ctx": "NEGERI SEMBILAN",
    "expect": false,
    "note": ""
   },
   {
-   "text": "I) Sabah: Weather warning applies to affected areas until 6:00 PM; Sunday, 8 November 2026.",
+   "text": "I) Sabah: Weather warning applies to affected areas until 6:00 PM; Monday, 9 November 2026.",
    "area": "KK",
    "ctx": "THUNDERSTORM WARNING",
    "expect": null,
    "note": "R20-H1"
   },
   {
-   "text": "I) Thunderstorms over Kudat and other affected areas until 6:00 PM; Sunday, 8 November 2026.",
+   "text": "I) Thunderstorms over Kudat and other affected areas until 6:00 PM; Monday, 9 November 2026.",
    "area": "KK",
    "ctx": "SABAH",
    "expect": null,
    "note": "R20-H1"
   },
   {
-   "text": "Sabah: West Coast (Tuaran and other areas) until 5:00 PM.",
+   "text": "Thunderstorms over Sabah: West Coast (Tuaran and other areas) until 6:00 PM; Monday, 9 November 2026.",
    "area": "KK",
-   "ctx": "",
+   "ctx": "THUNDERSTORM WARNING",
    "expect": null,
    "note": ""
   },
   {
-   "text": "Johor (Tangkak and other areas) until 5:00 PM.",
+   "text": "Thunderstorms over Johor (Tangkak and other areas) until 6:00 PM; Monday, 9 November 2026.",
    "area": "JB",
-   "ctx": "",
+   "ctx": "THUNDERSTORM WARNING",
    "expect": null,
    "note": ""
   },
   {
-   "text": "Sabah: West Coast (Tuaran and Papar) until 5:00 PM.",
+   "text": "Thunderstorms over Sabah: West Coast (Tuaran and Papar) until 6:00 PM; Monday, 9 November 2026.",
    "area": "KK",
-   "ctx": "",
+   "ctx": "THUNDERSTORM WARNING",
    "expect": false,
    "note": ""
   },
   {
-   "text": "Thunderstorms over Sabah: West Coast (Tuaran) and other affected areas until 6:00 PM; Sunday, 8 November 2026.",
+   "text": "Thunderstorms over Sabah: West Coast (Tuaran) and other affected areas until 6:00 PM; Monday, 9 November 2026.",
    "area": "KK",
    "ctx": "THUNDERSTORM WARNING",
    "expect": null,
    "note": "R21-H1"
   },
   {
-   "text": "Thunderstorms over Sabah: West Coast (Tuaran) and Kota Kinabalu until 6:00 PM; Sunday, 8 November 2026.",
+   "text": "Thunderstorms over Sabah: West Coast (Tuaran) and Kota Kinabalu until 6:00 PM; Monday, 9 November 2026.",
    "area": "KK",
    "ctx": "THUNDERSTORM WARNING",
    "expect": true,
    "note": "R21-H1"
   },
   {
-   "text": "Thunderstorms over Sabah: West Coast (Tuaran), West Coast (Kota Kinabalu) until 6:00 PM; Sunday, 8 November 2026.",
+   "text": "Thunderstorms over Sabah: West Coast (Tuaran), West Coast (Kota Kinabalu) until 6:00 PM; Monday, 9 November 2026.",
    "area": "KK",
    "ctx": "THUNDERSTORM WARNING",
    "expect": true,
    "note": "R21-H1"
   },
   {
-   "text": "Thunderstorms over Sabah: West Coast (Kota Kinabalu), West Coast (Tuaran) until 6:00 PM; Sunday, 8 November 2026.",
+   "text": "Thunderstorms over Sabah: West Coast (Kota Kinabalu), West Coast (Tuaran) until 6:00 PM; Monday, 9 November 2026.",
    "area": "KK",
    "ctx": "THUNDERSTORM WARNING",
    "expect": true,
    "note": "R21-H1 reversed"
   },
   {
-   "text": "Thunderstorms over Sabah: Kudat and (other affected areas) until 6:00 PM; Sunday, 8 November 2026.",
+   "text": "Thunderstorms over Sabah: Kudat and (other affected areas) until 6:00 PM; Monday, 9 November 2026.",
    "area": "KK",
    "ctx": "THUNDERSTORM WARNING",
    "expect": null,
    "note": "R21-H2"
   },
   {
-   "text": "Thunderstorms over Sabah: Kudat and other affected areas (including Kota Kinabalu until 6:00 PM; Sunday, 8 November 2026.",
+   "text": "Thunderstorms over Sabah: Kudat and other affected areas (including Kota Kinabalu until 6:00 PM; Monday, 9 November 2026.",
    "area": "KK",
    "ctx": "THUNDERSTORM WARNING",
    "expect": null,
    "note": "R21-H2 unclosed bracket"
   },
   {
-   "text": "Thunderstorms over Sabah: Kudat and Tawau until 6:00 PM; Sunday, 8 November 2026.",
+   "text": "Thunderstorms over Sabah: Kudat and Tawau until 6:00 PM; Monday, 9 November 2026.",
    "area": "KK",
    "ctx": "THUNDERSTORM WARNING",
    "expect": false,
-   "note": "both items understood: excluded"
+   "note": ""
   },
   {
    "text": "Thunderstorms over Sabah: Kudat, West Coast and Sarawak: Miri until 6:00 PM; Monday, 9 November 2026.",
    "area": "KK",
    "ctx": "THUNDERSTORM WARNING",
    "expect": true,
-   "note": "R22-H1 preceding division kept"
+   "note": "R22-H1"
   },
   {
    "text": "Thunderstorms over Sabah: Kudat, Sandakan and Sarawak: Miri until 6:00 PM; Monday, 9 November 2026.",
@@ -403,14 +542,14 @@
    "area": "KK",
    "ctx": "THUNDERSTORM WARNING",
    "expect": true,
-   "note": "R22-H1 repeated state entry"
+   "note": "R22-H1"
   },
   {
    "text": "Thunderstorms over Sabah: Kudat may extend to West Coast until 6:00 PM; Monday, 9 November 2026.",
    "area": "KK",
    "ctx": "THUNDERSTORM WARNING",
    "expect": null,
-   "note": "R22-H1 prose in the clause"
+   "note": "R22-H1"
   },
   {
    "text": "Thunderstorms over Sabah (Tuaran), Sabah (Kota Kinabalu) until 6:00 PM; Monday, 9 November 2026.",
@@ -487,7 +626,7 @@
    "area": "KK",
    "ctx": "THUNDERSTORM WARNING",
    "expect": null,
-   "note": "R22-M1 contradictory division/district"
+   "note": "R22-M1 contradictory"
   },
   {
    "text": "Thunderstorms over Sabah: West Coast (Sandakan) until 6:00 PM; Monday, 9 November 2026.",
@@ -543,21 +682,224 @@
    "area": "KK",
    "ctx": "THUNDERSTORM WARNING",
    "expect": null,
-   "note": "prose"
+   "note": ""
+  },
+  {
+   "text": "Thunderstorms over Sabah: Kudat. West Coast may also be affected until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R23-H1 text after a full stop"
+  },
+  {
+   "text": "Thunderstorms over Sabah: West Coast. Kota Kinabalu is excluded until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R23-H1"
+  },
+  {
+   "text": "Thunderstorms over Sabah: West Coast, excluding Kota Kinabalu until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R23-H1"
+  },
+  {
+   "text": "Thunderstorms over Sabah: West Coast. Sabah excludes Kota Kinabalu until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R23-H1"
+  },
+  {
+   "text": "Thunderstorms over Sabah: Kudat until West Coast is included until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R23-H1"
+  },
+  {
+   "text": "No thunderstorms are expected over Sabah: West Coast until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R23-H1 negated intro"
+  },
+  {
+   "text": "Thunderstorms over Sabah: West Coast (Johor Bahru) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R23-H2 other-state name"
+  },
+  {
+   "text": "Thunderstorms over Sabah (Johor Bahru) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R23-H2"
+  },
+  {
+   "text": "Thunderstorms over Sabah: Johor Bahru until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R23-H2"
+  },
+  {
+   "text": "Thunderstorms over Sabah: West Coast (Kota Kinabalu and Johor Bahru) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R23-H2"
+  },
+  {
+   "text": "Thunderstorms over Sabah (Sandakan) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "TGD",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": false,
+   "note": "R23-H2 district-only state list"
+  },
+  {
+   "text": "Thunderstorms over Sarawak (Kuching) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "BAU",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": false,
+   "note": "R23-H2"
+  },
+  {
+   "text": "Thunderstorms over Pahang (Tanah Tinggi Cameron) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "CAM",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": true,
+   "note": "R23-H3 alias"
+  },
+  {
+   "text": "Thunderstorms over Pahang (Cameron Highlands) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "CAM",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": true,
+   "note": "R23-H3"
+  },
+  {
+   "text": "Thunderstorms over Pahang (Cameron Highlands and Kuantan) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KTN",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": true,
+   "note": "R23-H3"
+  },
+  {
+   "text": "Thunderstorms over Perak (Larut, Matang Dan Selama) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "LMS",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": true,
+   "note": "R23-H3 compound name"
+  },
+  {
+   "text": "Thunderstorms over Sabah: West Coast (Tuaran) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KKnd",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R23-M1 district missing"
+  },
+  {
+   "text": "Thunderstorms over Sabah (Tuaran) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KKnd",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R23-M1"
   },
   {
    "text": "Thunderstorms over Sabah: West Coast until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KKnv",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": true,
+   "note": "R23-M1 division derived from the district"
+  },
+  {
+   "text": "Thunderstorms over Sabah: until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R23-M2 empty header"
+  },
+  {
+   "text": "Thunderstorms over Sabah: Kudat; Sabah: until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R23-M2"
+  },
+  {
+   "text": "Thunderstorms over Sarawak: Miri / Sabah: West Coast until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R23-M2 unsupported separator"
+  },
+  {
+   "text": "Thunderstorms over Sarawak: Sabah (Kota Kinabalu) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "R23-M2 conflicting ownership"
+  },
+  {
+   "text": "Thunderstorms over West Coast until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "EASTERN SABAH",
+   "expect": null,
+   "note": "R23-M3 qualified heading context"
+  },
+  {
+   "text": "Thunderstorms over West Coast until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "TIMUR SABAH",
+   "expect": null,
+   "note": "R23-M3 qualified heading context"
+  },
+  {
+   "text": "Thunderstorms over West Coast until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "NORTHEASTERN SABAH",
+   "expect": null,
+   "note": "R23-M3 qualified heading context"
+  },
+  {
+   "text": "SABAH: WEST COAST UNTIL 6:00 PM; MONDAY, 9 NOVEMBER 2026.",
    "area": "KK",
    "ctx": "THUNDERSTORM WARNING",
    "expect": true,
-   "note": "plain"
+   "note": "R23-L1 upper case"
   },
   {
-   "text": "Sabah: West Coast (Tuaran and Papar) until 5:00 PM.",
-   "area": "PPR",
-   "ctx": "",
+   "text": "Sabah: Kudat Until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": false,
+   "note": "R23-L1"
+  },
+  {
+   "text": "n. sembilan (seremban) until 6:00 PM",
+   "area": "NS",
+   "ctx": "THUNDERSTORM WARNING",
    "expect": true,
-   "note": "Papar listed"
+   "note": "R23-L1 lower-case abbreviation"
+  },
+  {
+   "text": "w.p. labuan until 6:00 PM",
+   "area": "LBN",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": true,
+   "note": "R23-L1"
+  },
+  {
+   "text": "Thunderstorms over Johor (Tangkak) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "JBx",
+   "ctx": "THUNDERSTORM WARNING",
+   "expect": null,
+   "note": "a district the vocabulary does not know cannot be excluded"
   }
  ]
 }

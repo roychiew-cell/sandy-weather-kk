@@ -439,7 +439,7 @@ function renderLive(){
 // =============================== at a glance: the four things Roy asks first, re-judged every minute
 function assessWarnings(area){ // one reading of the selected warnings for an area, shared by the At-a-glance tile and the location card: active / upcoming / unparsed validity / undetermined applicability (land only)
   const st=D&&D.status&&D.status.metmalaysia_warnings,W=D&&Array.isArray(D.warnings)?D.warnings:null;if(!st||!st.ok||!W)return{state:'unavailable',active:[],upcoming:[],unparsed:[],undetermined:[]};
-  const r={state:'ok',active:[],upcoming:[],unparsed:[],undetermined:[]},now=Date.now(),namesState=t=>!!(area.state&&nameRe(area.state).test(t));
+  const r={state:'ok',active:[],upcoming:[],unparsed:[],undetermined:[]},now=Date.now(),namesState=t=>!!(area.state&&OTHER_STATES.some(n=>stateKey(n)===stateKey(area.state)&&nameRe(n).test(t)));   // alias-aware, the same spellings the parser recognises
   W.forEach(w=>{if(!w||w.kind==='cyclone')return;const subs=Array.isArray(w.subsections)?w.subsections:[],name=String(w.heading||'').replace(/ Warning$/i,'');
     if(!subs.length){if(namesState(String(w.text||'')+' '+String(w.heading||'')))r.undetermined.push({w,s:null,name});return}
     subs.forEach(s=>{if(!s||s.sea)return;const ctx=String(w.heading||'')+' '+(s.scope||''),c=areaCoverage(String(s.text||''),area,ctx),nm=String(s.title||w.heading||'').replace(/ Warning$/i,'');
@@ -596,54 +596,78 @@ const effFrom=(w,s)=>{ // effective start of a subsection: a date parsed from it
   return{t:P(w.issued),src:' (from issue; start not stated)',ok:!isNaN(P(w.issued))}};
 const km=(a,b,c,d)=>{const R=6371,r=Math.PI/180,x=(c-a)*r,y=(d-b)*r,h=Math.sin(x/2)**2+Math.cos(a*r)*Math.cos(c*r)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
 const reEsc=s=>String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-// COVERAGE BEGIN: a closed reading of a warning's area clause. A definite answer needs the whole clause tokenised into entries that are
-// state names, known divisions or known place names (KNOWN_NAMES) with at most one bracket list; anything else is "cannot tell" (null).
-const KNOWN_NAMES=["alor gajah","alor star","ampang","asajaya","ayer hitam","ayer itam","ayer keroh","bachok","bagan datuk","bagan serai","bahau","balik pulau","baling","bandar al-muktafi billah shah","bandar baharu","bandar baru salak tinggi","bandar baru seri manjung","bandar permaisuri","bandar tun abdul razak","bandar tun abdul razak, jengka","bandar utama","bandaraya melaka","bangi","bangsar","banting","barat daya","bario","batang padang","batu berendam","batu caves","batu gajah","batu kawan","batu pahat","bau","bayan baru","bayan lepas","beaufort","belaga","beluran","beluru","bentong","bera","besut","betong","bintulu","brinchang","bukit bintang","bukit mabong","bukit mertajam","bukit tengah","butterworth","cheras","cukai","cyberjaya","dalat","damansara","daro","dungun","durian tunggal","gedong","gelugor","gemas","georgetown","gerik","gombak","gombak (taman perwira )","gopeng","gua musang","gurun","hilir perak","hulu langat","hulu perak","hulu selangor","hulu terengganu","ipoh","iskandar puteri","jalan duta","jasin","jawi","jelebu","jeli","jempol","jengka","jerantut","jerteh","jertih","jitra","johor bahru","julau","juru","kabong","kajang","kalabakan","kampar","kampong raja","kangar","kanowit","kapit","kelana jaya","kemaman","keningau","kepala batas","kepong","kerian","kertih","kinabatangan","kinta","klang","kluang","kota belud","kota bharu","kota kinabalu","kota marudu","kota setar","kota tinggi","kuah","kuala berang","kuala kangsar","kuala kedah","kuala klawang","kuala krai","kuala kubu bharu","kuala langat","kuala lipis","kuala lumpur","kuala muda","kuala nerang","kuala nerus","kuala penyu","kuala pilah","kuala rompin","kuala selangor","kuala terengganu","kuantan","kubang kerian","kubang pasu","kuching","kudat","kulai","kulim","kunak","labis","labuan","labuk & sugut","lahad datu","langkawi","larut","larut, matang dan selama","lawas","lenggong","limbang","lingga","lipis","lojing","lubok antu","lundu","machang","manjung","maran","marang","marudi","masjid tanah","matang dan selama","matu","melaka tengah","membakut","mentakab","meradong","merlimau","mersing","meru","miri","muadzam shah","muallim","muar","mukah","nabawan","nibong tebal","nilai","padang terap","pagoh","paitan","paka","pakan","pantu","papar","parit buntar","pasir gudang","pasir mas","pasir puteh","pekan","pekan nenas","pelabuhan klang","penampang","penawar","pendang","pensiangan","perai","perak tengah","perlis","petaling","petaling jaya","pitas","pokok sena","pontian","port dickson","puchong","pusa","putatan","putrajaya","ranau","rantau panjang","raub","rawang","rembau","rompin","sabak","sabak bernam","samarahan","sandakan","saratok","sarikei","sebauh","seberang perai selatan","seberang perai tengah","seberang perai utara","sebuyau","segamat","selama","selangau","selayang","semenyih","semporna","senai","sentul","sepang","serdang","seremban","serendah","seri iskandar","seri kembangan","serian","setapak","setiu","shah alam","sibu","siburan","sik","simpang renggam","simunjan","sipitang","sitiawan","skudai","slim river","song","sook","sri aman","sri gombak","subang jaya","subis","sungai ara","sungai besar","sungai besi","sungai dua","sungai dua - sungai nibong","sungai nibong","sungai petani","sungai siput","sungai udang","taiping","tambunan","tampin","tanah merah","tanah rata","tanah rata - brinchang","tanah tinggi cameron","tangga batu","tangkak","tanjong karang","tanjong malim","tanjung bungah","tanjung manis","tanjung tokong","tapah","tatau","tawau","tebedu","telang usan","telok panglima garang","teluk intan","telupid","temerloh","tenom","timur laut","tongod","triang","tuaran","tumpat","ulu kelang","ulu tiram","yan","yong peng"];   // VOCAB (generated by scripts/build_vocab.py)
-const KNOWN_ALL=new Set(KNOWN_NAMES);Object.values(DIVISIONS).forEach(d=>Object.entries(d).forEach(([k,v])=>{KNOWN_ALL.add(k.toLowerCase());v.forEach(x=>KNOWN_ALL.add(x.toLowerCase()))}));
+// COVERAGE BEGIN: a closed reading of a warning's area clause. A definite answer needs the whole text to fit the grammar: a short weather
+// intro, "over [the states of]", a clause of entries (state names, known divisions, names in the owning state's vocabulary, at most one
+// bracket list each) and a strict time tail. Anything else is "cannot tell" (null); a positive survives only other unresolved *entries*.
+const KNOWN_BY_STATE={"johor":["ayer hitam","batu pahat","iskandar puteri","johor bahru","kluang","kota tinggi","kulai","labis","mersing","muar","pagoh","pasir gudang","pekan nenas","penawar","pontian","segamat","senai","simpang renggam","skudai","tangkak","ulu tiram","yong peng"],"kedah":["alor star","baling","bandar baharu","gurun","jitra","kampong raja","kota setar","kuah","kuala kedah","kuala muda","kuala nerang","kubang pasu","kulim","langkawi","padang terap","pendang","pokok sena","sik","sungai petani","yan"],"kelantan":["bachok","gua musang","jeli","kota bharu","kuala krai","kubang kerian","lojing","machang","pasir mas","pasir puteh","rantau panjang","sabak","tanah merah","tumpat"],"kuala lumpur":["ampang","bandar utama","bangsar","bukit bintang","jalan duta","kepong","kuala lumpur","sentul","sungai besi"],"labuan":["labuan"],"melaka":["alor gajah","ayer keroh","bandaraya melaka","batu berendam","durian tunggal","jasin","masjid tanah","melaka tengah","merlimau","sungai udang","tangga batu"],"negeri sembilan":["bahau","gemas","jelebu","jempol","kuala klawang","kuala pilah","nilai","port dickson","rembau","seremban","tampin"],"pahang":["bandar tun abdul razak, jengka","bentong","bera","brinchang","cameron highlands","jerantut","kuala lipis","kuala rompin","kuantan","lipis","maran","mentakab","muadzam shah","pekan","raub","rompin","tanah rata","tanah rata - brinchang","temerloh","triang"],"penang":["ayer itam","balik pulau","barat daya","batu kawan","bayan baru","bayan lepas","bukit mertajam","bukit tengah","butterworth","gelugor","georgetown","jawi","juru","kepala batas","nibong tebal","perai","seberang perai selatan","seberang perai tengah","seberang perai utara","sungai ara","sungai dua","sungai dua - sungai nibong","sungai nibong","tanjung bungah","tanjung tokong","timur laut"],"perak":["bagan datuk","bagan serai","bandar baru seri manjung","batang padang","batu gajah","gerik","gopeng","hilir perak","hulu perak","ipoh","kampar","kerian","kinta","kuala kangsar","larut matang dan selama","lenggong","manjung","muallim","parit buntar","perak tengah","selama","serdang","seri iskandar","sitiawan","slim river","sungai siput","taiping","tanjong malim","tapah","teluk intan"],"perlis":["kangar","perlis"],"putrajaya":["putrajaya"],"sabah":["beaufort","beluran","kalabakan","keningau","kinabatangan","kota belud","kota kinabalu","kota marudu","kuala penyu","kudat","kunak","labuk & sugut","lahad datu","membakut","nabawan","paitan","papar","penampang","pensiangan","pitas","putatan","ranau","sandakan","semporna","sipitang","sook","tambunan","tawau","telupid","tenom","tongod","tuaran"],"sarawak":["asajaya","bario","bau","belaga","beluru","betong","bintulu","bukit mabong","dalat","daro","gedong","julau","kabong","kanowit","kapit","kuching","lawas","limbang","lingga","lubok antu","lundu","marudi","matu","meradong","miri","mukah","pakan","pantu","pusa","samarahan","saratok","sarikei","sebauh","sebuyau","selangau","serian","sibu","siburan","simunjan","song","sri aman","subis","tanjung manis","tatau","tebedu","telang usan"],"selangor":["bandar baru salak tinggi","bangi","banting","batu caves","cheras","cyberjaya","damansara","gombak","gombak (taman perwira )","hulu langat","hulu selangor","kajang","kelana jaya","klang","kuala kubu bharu","kuala langat","kuala selangor","meru","pelabuhan klang","petaling","petaling jaya","puchong","rawang","sabak bernam","selayang","semenyih","sepang","serendah","seri kembangan","setapak","shah alam","sri gombak","subang jaya","sungai besar","tanjong karang","telok panglima garang","ulu kelang"],"terengganu":["bandar al-muktafi billah shah","bandar permaisuri","besut","cukai","dungun","hulu terengganu","jerteh","jertih","kemaman","kertih","kuala berang","kuala nerus","kuala terengganu","marang","paka","setiu"]};   // VOCAB (generated by scripts/build_vocab.py)
+const ALIASES={"tanah tinggi cameron":"cameron highlands","larut, matang dan selama":"larut matang dan selama","larut, matang and selama":"larut matang dan selama","larut matang and selama":"larut matang dan selama","labuk sugut":"labuk & sugut","labuk and sugut":"labuk & sugut"};   // VOCAB (generated by scripts/build_vocab.py)
+const COMPOUNDS=["larut, matang dan selama","larut, matang and selama","larut matang and selama","larut matang dan selama","labuk & sugut","labuk and sugut"];   // VOCAB (generated by scripts/build_vocab.py)
 const STATE_KEYS=new Set(['perlis','kedah','penang','perak','kelantan','terengganu','pahang','selangor','kuala lumpur','putrajaya','negeri sembilan','melaka','johor','sarawak','sabah','labuan']);
 const normN=s=>String(s==null?'':s).replace(/\u0001/g,'.').replace(/\s+/g,' ').replace(/\.$/,'').trim().toLowerCase();
+const canon=n=>{const x=normN(n);return ALIASES[x]||x};
 const stateKey=n=>{const x=normN(n).replace(/^(?:w\.?p\.?|wilayah persekutuan)\s+/,'');const t={'pulau pinang':'penang','n. sembilan':'negeri sembilan','malacca':'melaka'}[x]||x;return STATE_KEYS.has(t)?t:null};
+const KNOWN_ST={};Object.keys(KNOWN_BY_STATE).forEach(k=>KNOWN_ST[k]=new Set(KNOWN_BY_STATE[k]));
+Object.entries(DIVISIONS).forEach(([st,d])=>{const k=st.toLowerCase();KNOWN_ST[k]=KNOWN_ST[k]||new Set();Object.entries(d).forEach(([dv,ds])=>{KNOWN_ST[k].add(dv.toLowerCase());ds.forEach(x=>KNOWN_ST[k].add(canon(x)))})});
+const SORTED_COMPOUNDS=COMPOUNDS.slice().sort((a,b)=>b.length-a.length),COMPOUND_RES=SORTED_COMPOUNDS.map(c=>new RegExp('(^|[^A-Za-z])'+reEsc(c).replace(/ /g,'\\s+')+'(?![A-Za-z])','gi'));
+const protectCompounds=t=>{let s=t;COMPOUND_RES.forEach((re,i)=>{s=s.replace(re,(m,p)=>p+'\u0002'+i+'\u0003')});return s};
+const restoreCompounds=t=>String(t).replace(/\u0002(\d+)\u0003/g,(m,i)=>SORTED_COMPOUNDS[+i]).replace(/\u0001/g,'.');
 const PFX=new RegExp('^\\s*((?:W\\.?P\\.?\\s+|Wilayah Persekutuan\\s+)?(?:'+OTHER_STATES.map(reEsc).join('|')+'))\\s*:\\s*([^]*)$','i');
-function extractClause(text){ // the text after "over [the states of]" up to the temporal terminator; also returns the tail that was set aside
-  const t=String(text).replace(/\b(W\.P|N)\./g,'$1\u0001').replace(/^\s*(?:[IVX]+|\d+)\)\s*/,'');
-  const mo=/\bover\s+(?:the\s+(?:areas?|states?|districts?|divisions?)\s+of\s+)?/i.exec(t),c=mo?t.slice(mo.index+mo[0].length):t,term=/(?:\s(?:until|within the period)\b|\.(?:\s|$))/y;let depth=0;
-  for(let i=0;i<c.length;i++){const ch=c[i];if(ch==='(')depth++;else if(ch===')')depth--;if(depth===0){term.lastIndex=i;if(term.test(c))return{clause:c.slice(0,i),tail:c.slice(i)}}}
-  return{clause:c,tail:''}}
+const INTRO_RE=/^(?:(?:thunderstorms?|continuous rain|heavy rain|rain|strong winds?|winds?|,|and|\s)+(?:(?:is|are)\s+expected(?:\s+to\s+occur)?)?\s*)?$/i;
+const DATE='(?:[A-Za-z]+,\\s*)?\\d{1,2}\\s+[A-Za-z]+\\s+\\d{4}',TIME='\\d{1,2}[:.]\\d{2}\\s*(?:AM|PM)';
+const TAIL_RE=new RegExp('^\\s*(?:until\\s+'+TIME+'(?:\\s*;\\s*'+DATE+')?|until\\s+'+DATE+'|within the period of\\s+'+DATE+'\\s+until\\s+'+DATE+')\\s*\\.?\\s*$','i');
+const NEGATION_RE=/\b(?:no|not|nil|none|except|excluding|excludes?|excluded|exclusion|without|unless|other than|apart from)\b/i;
+const GENERIC_HEAD=new Set(['WARNING','WARNINGS','THUNDERSTORM','THUNDERSTORMS','RAIN','CONTINUOUS','HEAVY','STRONG','WINDS','WIND','ALERT','SECTION','A','B','C','D','FOR','LAND','AREAS','STATE','STATES','OF','THE','AND','I','II','III','IV','V','WP','W','P','WILAYAH','PERSEKUTUAN','PULAU','PINANG','NEGERI','SEMBILAN','KUALA','LUMPUR','N']);
+function cleanScope(ctx,alt){ // a heading or scope names the state "plainly" only when nothing but the state and generic warning words is left
+  const t=String(ctx||'').toUpperCase().replace(new RegExp(alt,'gi'),' ').replace(new RegExp('(?:'+OTHER_STATES.map(reEsc).join('|')+')','gi'),' ');
+  return (t.match(/[A-Z]+/g)||[]).every(w=>GENERIC_HEAD.has(w))}
+function extractClause(text){ // {intro, clause, tail}: the clause is the text after "over [the states of]" up to the first depth-0 until / within the period / sentence end
+  let t=protectCompounds(String(text).replace(/\b(W\.P|N)\./gi,'$1\u0001').replace(/^\s*(?:[IVX]+|\d+)\)\s*/,''));
+  const mo=/\bover\s+(?:the\s+(?:areas?|states?|districts?|divisions?)\s+of\s+)?/i.exec(t),intro=mo?t.slice(0,mo.index):'',c=mo?t.slice(mo.index+mo[0].length):t,term=/(?:\s(?:until|within the period)\b|\.(?:\s|$))/iy;let depth=0;
+  for(let i=0;i<c.length;i++){const ch=c[i];if(ch==='(')depth++;else if(ch===')')depth--;if(depth===0){term.lastIndex=i;if(term.test(c))return{intro,clause:c.slice(0,i),tail:restoreCompounds(c.slice(i))}}}
+  return{intro,clause:c,tail:''}}
 function splitClause(c){ // entries at bracket depth 0, split on , ; • newline and the words and / dan
   const out=[];let depth=0,cur='',bal=true;
   for(let i=0;i<c.length;i++){const ch=c[i];if(ch==='(')depth++;else if(ch===')'){depth--;if(depth<0){bal=false;depth=0}}
     if(depth===0){if(ch===','||ch===';'||ch==='•'||ch==='\n'){out.push(cur);cur='';continue}const m=/^\s(?:and|dan)\s/i.exec(c.slice(i));if(m){out.push(cur);cur='';i+=m[0].length-1;continue}}
     cur+=ch}
-  out.push(cur);if(depth!==0)bal=false;return{entries:out.map(x=>x.replace(/\u0001/g,'.').trim()).filter(Boolean),balanced:bal}}
+  out.push(cur);if(depth!==0)bal=false;return{entries:out.map(x=>restoreCompounds(x).trim()).filter(Boolean),balanced:bal}}
 function areaCoverage(text,ar,ctx){ // true / false / null (cannot tell) for an area {state, division, district}
   if(!ar||!ar.state)return null;const S=ar.state,Sk=stateKey(S),alt='(?:'+(STATE_ALIAS[S]||[S]).map(reEsc).join('|')+')',sRe=new RegExp('(^|[^A-Za-z])'+alt+'(?=$|[^A-Za-z])','i'),qRe=new RegExp('\\b(?:Eastern|Western|Northern|Southern|Central|Coastal|Interior|Upper|Lower)\\s+'+alt+'(?=$|[^A-Za-z])','i'),ctxText=String(ctx||'');
   const plain=t=>t.replace(new RegExp(qRe.source,'gi'),' '),inText=sRe.test(plain(text)),inCtx=sRe.test(plain(ctxText));
   if(!inText&&!inCtx)return(qRe.test(text)||qRe.test(ctxText))?null:false;            // the state is not named: not covered (a qualified region such as "Eastern Sabah" is unresolved)
-  const {clause,tail}=extractClause(text),{entries,balanced}=splitClause(clause);if(!balanced||!entries.length)return null;
+  if(NEGATION_RE.test(String(text)))return null;                                        // negation or exclusion wording anywhere: never an affirmative reading
+  const {intro,clause,tail}=extractClause(text);if(!INTRO_RE.test(intro.replace(/\s+/g,' ').trim())||!TAIL_RE.test(tail))return null;   // unsupported introduction or time tail
+  const {entries,balanced}=splitClause(clause);if(!balanced||!entries.length)return null;
   const divs=DIVISIONS[S]||null,dkey={};if(divs)Object.keys(divs).forEach(k=>dkey[k.toLowerCase()]=k);
-  const dist=ar.district?normN(ar.district):null,adiv=ar.division?normN(ar.division):null;
-  const districtDivs=n=>{const o=new Set();if(divs)Object.entries(divs).forEach(([dv,ds])=>{if(ds.some(d=>normN(d)===n))o.add(normN(dv))});return o};
-  const evalList=(list,parentDiv)=>{const items=String(list).split(/\s*(?:,|;|•)\s*|\s+(?:and|dan)\s+/i).map(x=>x.trim());if(!items.length||items.some(x=>!x))return null;const ns=items.map(normN);
-    for(const n of ns){if(!KNOWN_ALL.has(n))return null;if(parentDiv&&divs){const dd=districtDivs(n);if(dd.size&&!dd.has(parentDiv))return null}}return ns};     // empty, unknown or cross-division names: unresolved
-  let cur=inCtx?Sk:null,pos=false,unres=false;
+  const vocab=KNOWN_ST[Sk]||new Set(),distNames=new Set();if(divs)Object.values(divs).forEach(ds=>ds.forEach(d=>distNames.add(canon(d))));
+  const districtDivs=n=>{const o=new Set();if(divs)Object.entries(divs).forEach(([dv,ds])=>{if(ds.some(d=>canon(d)===n))o.add(normN(dv))});return o};
+  const dist=ar.district?canon(ar.district):null;let adiv=ar.division?normN(ar.division):null;if(!adiv&&dist){const dd=districtDivs(dist);if(dd.size===1)adiv=[...dd][0]}   // derive a missing division from a known district
+  const evalList=(list,parentDiv)=>{const items=protectCompounds(String(list)).split(/\s*(?:,|;|•)\s*|\s+(?:and|dan)\s+/i).map(x=>restoreCompounds(x).trim());if(!items.length||items.some(x=>!x))return null;const ns=items.map(canon);
+    for(const n of ns){if(!vocab.has(n))return null;if(parentDiv&&divs){const dd=districtDivs(n);if(dd.size&&!dd.has(parentDiv))return null}}return ns};   // empty, unknown, other-state or cross-division names: unresolved
+  const prose=raw=>/(^|[\s(])[a-z]/.test(raw.replace(/\b(?:and|dan)\b/gi,' ').replace(/\([^()]*\)/g,m=>m.replace(/[a-z]/g,c=>c.toUpperCase())));   // an entry with lower-case words is prose, not a name
+  let cur=(inCtx&&cleanScope(ctxText,alt))?Sk:null,pos=false,unres=false,bad=false,pending=false,restricted=false;   // restricted: a list or district item was weighed, so a district the vocabulary does not know cannot be judged
   for(const raw of entries){let prefix=null,rest=raw;const pm=PFX.exec(raw);if(pm){prefix=pm[1];rest=pm[2]}
-    const mm=/^\s*([^()]*?)\s*(?:\(([^()]*)\))?\s*$/.exec(rest),name=mm?mm[1].trim():'',list=mm&&mm[2]!=null?mm[2]:null;
-    if(prefix)cur=stateKey(prefix);
-    if(!mm||(!name&&!prefix)||(!name&&list!=null)){if(cur===Sk||cur===null)unres=true;continue}  // an entry that does not parse belongs to the state in effect
-    if(!name)continue;                                                                    // "Sabah:" on its own only sets the state
-    const nk=stateKey(name);
-    if(nk){cur=nk;if(nk!==Sk)continue;                                                    // a state entry: whole state, or only the districts in its list
-      if(list==null){pos=true;continue}const ns=evalList(list,null);if(!ns){unres=true;continue}if(dist&&ns.includes(dist))pos=true;if(adiv&&divs&&ns.includes(adiv))pos=true;continue}
-    if(cur===null){unres=true;continue}                                                   // cannot say which state this item belongs to
-    if(cur!==Sk)continue;
-    const n=normN(name);
-    if(divs&&dkey[n]){const dv=n;                                                          // a Sabah/Sarawak division, optionally restricted to a list of its districts
-      if(list==null){if(adiv&&dv===adiv)pos=true;continue}
-      const ns=evalList(list,dv);if(!ns){unres=true;continue}if(dist&&ns.includes(dist)&&(!adiv||adiv===dv))pos=true;continue}
-    if(KNOWN_ALL.has(n)&&list==null){if(dist&&n===dist)pos=true;continue}                 // a district item
-    unres=true}                                                                           // unknown wording, qualifiers, a bracket list on a district: cannot tell
-  if(sRe.test(plain(tail)))unres=true;                                                    // the state is named after the clause ended
-  return pos?true:unres?null:false}
+    const mm=/^\s*([^()]*?)\s*(?:\(([^()]*)\))?\s*$/.exec(rest),name=mm?mm[1].trim():'',list=mm&&mm[2]!=null?mm[2]:null,pk=prefix?stateKey(prefix):null;
+    if(prefix){pending=!name&&list==null;cur=pk}else if(pending&&name){pending=false}
+    const nk=name?stateKey(name):null;
+    if(prefix&&nk&&nk!==pk){if(nk===Sk||pk===Sk)bad=true;continue}                       // a prefix and a state name that disagree: ownership unclear
+    if(!mm||(!name&&!prefix)||(!name&&list!=null)){if(cur===Sk||cur===null)bad=true;continue}   // an entry that does not parse belongs to the state in effect
+    if(!name)continue;                                                                    // "Sabah:" on its own only sets the state (checked at the end)
+    if(nk){cur=nk;if(nk!==Sk)continue;                                                    // a state entry: the whole state, or only the districts in its list
+      if(list==null){pos=true;continue}const ns=evalList(list,null);if(!ns){unres=true;if(prose(raw))bad=true;continue}
+      restricted=true;if(!dist){unres=true;continue}if(ns.includes(dist))pos=true;else if(divs)ns.forEach(n=>{if(dkey[n]&&!distNames.has(n)&&adiv===n)pos=true});continue}   // a division named in a state list counts only when it is not also a district name
+    if(cur===null){bad=true;continue}                                                     // cannot say which state this item belongs to
+    if(cur!==Sk){if(sRe.test(plain(rest)))bad=true;continue}                              // another state's entry must not hide a mention of this state
+    const n=canon(name);
+    if(divs&&dkey[n]){                                                                    // a Sabah/Sarawak division, optionally restricted to a list of its districts
+      if(list==null){if(!adiv)unres=true;else if(adiv===n)pos=true;continue}
+      const ns=evalList(list,n);if(!ns){unres=true;if(prose(raw))bad=true;continue}
+      restricted=true;if(!dist){if(adiv&&adiv!==n)continue;unres=true;continue}
+      if(ns.includes(dist)&&(!adiv||adiv===n))pos=true;continue}
+    if(vocab.has(n)&&list==null){restricted=true;if(!dist){const dd=districtDivs(n);if(adiv&&dd.size&&!dd.has(adiv))continue;unres=true;continue}if(n===dist)pos=true;continue}   // a district item
+    unres=true;if(prose(raw))bad=true}                                                    // unknown wording, qualifiers, a bracket list on a district: cannot tell
+  if(pending)unres=true;                                                                  // a state header with nothing under it
+  if(bad)return null;if(pos)return true;if(unres)return null;return(restricted&&dist&&!vocab.has(dist))?null:false}
 // COVERAGE END
 let LOC=null,PLACEDB=null,locTimer=null,locSeq=0,locGen=0,locCtl=null,LOCRES=null,locRestoreT=null,locNote='';
 const locLS=()=>{try{return JSON.parse(localStorage.getItem('sandy-loc')||'null')}catch(e){return null}};

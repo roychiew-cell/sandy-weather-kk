@@ -207,15 +207,18 @@ const fetchJSON=(url,ms,ctl)=>fetchBody(url,ms,'json',ctl);
 const withTimeout=(p,ms,what)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error(what||'timeout')),ms))]);
 // =============================== archive (hourly GitHub job), re-read every 15 min
 async function loadArchive(force,lead){ // every tab loads the archive once at start; afterwards only the polling tab re-reads it (fenced by leadership generation) and shares the result or the failure
-  if(archInflight)return;if(!force&&(Date.now()<archDue||!lead))return;archInflight=true;archLead=!!lead;const my=++archSeq,myGen=gen,ctl=new AbortController();archCtl=ctl;
+  if(archInflight)return;if(!force&&(Date.now()<archDue||!lead))return;archInflight=true;archLead=!!lead;const my=++archSeq,myGen=gen,ctl=new AbortController(),startAt=Date.now();archCtl=ctl;
   try{const nd=await fetchJSON('data/latest.json?'+Date.now(),20000,ctl);if(!validSnapshot(nd))throw new Error('snapshot has an unexpected shape');
     let nc=C,callFail=null;try{const j=await fetchJSON('call.json?'+Date.now(),15000,ctl);if(j&&Array.isArray(j.sections))nc=j;else callFail=new Date()}catch(e){if(e.message==='superseded')throw e;callFail=new Date()}
-    if(my!==archSeq)return;archInflight=false;archCtl=null;archCheckedAt=Date.now();archDue=Date.now()+15*60e3;lastFail=null;archErr=null;lastCallFail=callFail;
-    if(lead&&leader&&myGen===gen)post({type:'arch',nd,nc,at:archCheckedAt,callFail:callFail?+callFail:null});
+    if(my!==archSeq)return;archInflight=false;archCtl=null;const st={v:startAt,ok:true,checkedAt:Date.now(),due:Date.now()+15*60e3,callFail:callFail?+callFail:null};archState(st);
+    if(lead&&leader&&myGen===gen)post({type:'arch',nd,nc,st});
     applyArchive(nd,nc);
-  }catch(e){if(my!==archSeq)return;archInflight=false;archCtl=null;if(e.message==='superseded')return;lastFail=new Date();archErr=e.message||'failed';archDue=Date.now()+5*60e3;
-    if(lead&&leader&&myGen===gen)post({type:'archfail',err:archErr,at:+lastFail,due:archDue});
+  }catch(e){if(my!==archSeq)return;archInflight=false;archCtl=null;if(e.message==='superseded')return;const st={v:startAt,ok:false,failAt:Date.now(),err:e.message||'failed',due:Date.now()+5*60e3};archState(st);
+    if(lead&&leader&&myGen===gen)post({type:'archfail',st});
     if(!A)$('#stamp').textContent='archive could not be loaded ('+archErr+')';else updateStale();renderStatus()}}
+function archState(st){if(!st||!(st.v>archResAt))return false;archResAt=st.v;   // one ordered update for the archive's check state, local or shared; older outcomes never roll it back
+  if(st.ok){archCheckedAt=st.checkedAt||Date.now();archDue=st.due||archCheckedAt+15*60e3;lastFail=null;archErr=null;lastCallFail=st.callFail?new Date(st.callFail):null}
+  else{lastFail=new Date(st.failAt||Date.now());archErr=st.err||'failed';archDue=st.due||Date.now()+5*60e3}return true}
 function applyArchive(nd,nc){if(A&&P(nd.generated).getTime()<P(A.generated).getTime()){updateStale();renderStatus();return}   // never roll the archive back
   const first=!A,changed=first||nd.generated!==A.generated||JSON.stringify(nc)!==JSON.stringify(C);
   if(changed){A=nd;C=nc;lastDay=dayStr(nowMYT());compose();render();if(first)renderRadar();timelineRevalidate();if(paused)drawFrame(false)}
@@ -224,7 +227,8 @@ function applyArchive(nd,nc){if(A&&P(nd.generated).getTime()<P(A.generated).getT
 const TAB=Math.random().toString(36).slice(2);let CH=null;try{CH=('BroadcastChannel' in window)?new BroadcastChannel('sandy-live'):null}catch(e){CH=null}
 // coordination: one polling tab per browser, chosen with the Web Locks API (atomic); where Web Locks or BroadcastChannel is missing there is no safe way to share, so every tab checks on its own and says so
 const coord=(CH&&navigator.locks&&navigator.locks.request)?'locks':'none';
-let leader=false,gen=0,acquiring=false,lockRelease=null;
+if(coord!=='locks'&&CH){try{CH.close()}catch(e){}CH=null}   // no safe election → no sharing at all: each tab is fully independent
+let leader=false,gen=0,acquiring=false,lockRelease=null,archResAt=0;   // archResAt = version of the latest completed archive result (success or failure)
 function becomeLeader(){if(!leader){leader=true;gen++}}
 function dropLeader(){if(!leader)return;leader=false;gen++;Object.keys(SRC).forEach(k=>abortAttempt(k));
   if(archLead&&archInflight&&archCtl){archCtl.superseded=true;try{archCtl.abort()}catch(e){}archCtl=null;archSeq++;archInflight=false}   // a periodic archive re-read dies with the role; a tab's own first load does not
@@ -236,15 +240,15 @@ function claimLeader(){if(leader||document.hidden)return Promise.resolve(leader)
 addEventListener('pagehide',dropLeader);
 const post=m=>{if(CH){try{CH.postMessage({...m,tab:TAB})}catch(e){}}};
 function sendSnap(){const sources={};Object.keys(SRC).forEach(k=>{const s=L[k],f=k==='radar'&&frames.length?frames[frames.length-1]:null;sources[k]={value:k==='radar'?(f?{buf:f.buf,hash:f.hash,at:f.at}:null):s.value,okAt:s.okAt,due:s.due,err:s.err,fails:s.fails,failAt:s.failAt}});
-  post({type:'snap',sources,arch:{checkedAt:archCheckedAt,due:archDue,err:archErr,failAt:lastFail?+lastFail:null,callFail:lastCallFail?+lastCallFail:null}})}
+  post({type:'snap',sources,arch:{v:archResAt,ok:!lastFail,checkedAt:archCheckedAt,due:archDue,err:archErr,failAt:lastFail?+lastFail:null,callFail:lastCallFail?+lastCallFail:null}})}
 if(CH)CH.onmessage=ev=>{const m=ev.data;if(!m||m.tab===TAB)return;
   if(m.type==='src'&&L[m.k])commit(m.k,m.value,m.okAt,false,m.due);
   else if(m.type==='fail'&&L[m.k])applyFail(m.k,m.err,m.due,m.fails,m.failAt,false);
   else if(m.type==='hello'){if(leader)sendSnap()}
   else if(m.type==='snap'){Object.keys(m.sources||{}).forEach(k=>{const r=m.sources[k];if(!L[k]||!r)return;if(r.value!=null&&r.okAt)commit(k,r.value,r.okAt,false,r.due);if(r.err&&r.failAt)applyFail(k,r.err,r.due,r.fails,r.failAt,false)});
-    const a=m.arch;if(a&&a.checkedAt>archCheckedAt){archCheckedAt=a.checkedAt;if(a.due)archDue=a.due;lastFail=a.failAt?new Date(a.failAt):null;archErr=a.err||null;lastCallFail=a.callFail?new Date(a.callFail):null;updateStale();renderStatus()}}
-  else if(m.type==='arch'&&validSnapshot(m.nd)){archCheckedAt=m.at||Date.now();archDue=archCheckedAt+15*60e3;lastFail=null;archErr=null;lastCallFail=m.callFail?new Date(m.callFail):null;applyArchive(m.nd,m.nc)}
-  else if(m.type==='archfail'){lastFail=new Date(m.at||Date.now());archErr=m.err||'failed';archDue=m.due||(Date.now()+5*60e3);updateStale();renderStatus()}};
+    if(archState(m.arch)){updateStale();renderStatus()}flushAnn()}
+  else if(m.type==='arch'){archState(m.st);if(validSnapshot(m.nd))applyArchive(m.nd,m.nc);else{updateStale();renderStatus()}}
+  else if(m.type==='archfail'){if(archState(m.st)){updateStale();renderStatus()}}};
 const READERS={
   current:async(ctl)=>{const j=await fetchJSON(OM_CURRENT,15000,ctl);const c=j&&j.current;if(!c||!fin(c.temperature_2m)||typeof c.time!=='string'||isNaN(P(c.time)))throw new Error('invalid payload');return c},
   metar:async(ctl)=>{const o=parseMetar(await fetchJSON(RELAY+'/metar?hours=36',15000,ctl));if(!o.length)throw new Error('empty');return o},
@@ -269,26 +273,28 @@ function commit(k,v,okAt,broadcast,due){const s=L[k];if(!(okAt>s.okAt))return'du
   if(s.inflight&&okAt>s.tryAt)abortAttempt(k);                                                                  // a newer shared read supersedes this tab's pending attempt
   const before=selKey(k),wasErr=!!s.err;s.fp=k==='radar'?v.hash:JSON.stringify(v);if(dt!=null)s.dataAt=dt;s.olderAt=0;
   const at=k==='radar'?(v.at||Date.now()):null;if(k==='radar'){if(v&&v.buf&&v.hash)addFrame({buf:v.buf,hash:v.hash,at})}else s.value=v;
-  s.okAt=okAt;const newer=okAt>s.resAt;if(newer){s.resAt=okAt;s.err=null;s.fails=0;s.failAt=0;if(fin(due))s.due=due}   // a success older than the latest failure keeps that failure and its deadline
+  s.okAt=okAt;const newer=okAt>=s.resAt;if(newer){s.resAt=okAt;s.err=null;s.fails=0;s.failAt=0;if(fin(due))s.due=due}   // a success wins an equal-version tie; a success older than the latest failure keeps that failure and its deadline
   if(broadcast)post({type:'src',k,value:k==='radar'?{buf:v.buf,hash:v.hash,at}:v,okAt,due:s.due});
   if(A)compose();const changed=before!==selKey(k)||(newer&&wasErr);if(changed)afterChange(k);else{refreshLabels();renderStatus()}return'accepted'}   // redraw when what is shown changed (content or live/archive selection)
 function afterChange(k){if(k==='radar'){if(L.radar.err)radarAsOf();else renderRadar()}if(!A){renderStatus();return}compose();if(k!=='radar'){if(SRC[k].fast)renderLive();else render()}renderSources();renderStatus();if(paused)drawFrame(false)}
 function addFrame(v){if(frames.length&&frames[frames.length-1].hash===v.hash)return;const url=URL.createObjectURL(new Blob([v.buf],{type:'image/png'}));frames.push({url,hash:v.hash,at:v.at||Date.now(),buf:v.buf});while(frames.length>18)URL.revokeObjectURL(frames.shift().url)}
 function tick(){if(document.hidden){dropLeader();return}claimLeader();if(!leader)return;Object.keys(SRC).forEach(k=>poll(k,false));loadArchive(false,true)}
-let pillEls=null;const lastState={};
-function announce(t){const el=$('#srstate');if(el)el.textContent=t}
+let pillEls=null;const lastState={},annQ=[];let annT=null;
+function announce(t){if(!annQ.includes(t))annQ.push(t);if(!annT)annT=setTimeout(flushAnn,0)}   // queued, so one message covers a whole batch of changes
+function flushAnn(){if(annT){clearTimeout(annT);annT=null}if(!annQ.length)return;const el=$('#srstate');if(el)el.textContent=annQ.join('. ')+'.';annQ.length=0}
 function renderStatus(){
   const words={live:'OK',stale:'stale',failed:'failed',waiting:'waiting',checking:'checking'},st$=$('#status');
   if(!pillEls){st$.innerHTML=Object.keys(SRC).map(k=>`<span class="pill" data-k="${k}"><i></i>${esc(SRC[k].name)} <b></b></span>`).join('')+'<span class="pill" data-k="archive"><i></i>Archive <b></b></span>';pillEls={};st$.querySelectorAll('.pill').forEach(p=>pillEls[p.dataset.k]=p)}
   const errs=[],ann=[];const setPill=(k,st,txt,err,name)=>{const p=pillEls[k],cls='pill '+st;if(p.className!==cls)p.className=cls;const b=p.querySelector('b');if(b.textContent!==txt)b.textContent=txt;const al=name+': '+txt+(err?' ('+err+')':'');if(p.getAttribute('aria-label')!==al)p.setAttribute('aria-label',al);if(err)errs.push(name+': '+err);
-    if(lastState[k]&&lastState[k]!==st&&(st==='failed'||lastState[k]==='failed'))ann.push(name+(st==='failed'?' check failed':' check OK again'));lastState[k]=st};
+    if(st==='checking')return;                                                                                         // a retry in progress is not a recovery
+    if(lastState[k]&&lastState[k]!==st&&(st==='failed'||(lastState[k]==='failed'&&st==='live')))ann.push(name+(st==='failed'?' check failed':' check OK again'));lastState[k]=st};
   Object.keys(SRC).forEach(k=>{const s=L[k],st=stateOf(k);const txt=st==='failed'?(s.okAt?'failed · last OK '+hhmm(new Date(s.okAt)):'failed'):st==='checking'?'checking…':st==='waiting'?'waiting':words[st]+' · '+ago(s.okAt);setPill(k,st,txt,s.err,SRC[k].name);
     if(s.olderAt&&Date.now()-s.olderAt<2*SRC[k].every)errs.push(SRC[k].name+': the feed answered with older data than shown at '+hhmm(new Date(s.olderAt))+'; kept the newer')});
   const aAge=A?Date.now()-P(A.generated).getTime():0,aSt=!A?(lastFail?'failed':archInflight?'checking':'waiting'):archInflight&&!archCheckedAt?'checking':lastFail?'failed':aAge>3*3600e3?'stale':'live';
   const aTxt=!A?(aSt==='failed'?'load failed':aSt==='checking'?'checking…':'waiting'):aSt==='checking'?'checking…':aSt==='failed'?'recheck failed · run of '+hhmm(P(A.generated)):(aSt==='stale'?'stale · ':'OK · ')+'run of '+hhmm(P(A.generated))+(archCheckedAt?', checked '+ago(archCheckedAt):'');setPill('archive',aSt,aTxt,lastFail?archErr:null,'Archive');
-  const ed=$('#errs'),et=errs.join(' · ');ed.hidden=!errs.length;const ev=ed.querySelector('div');if(ev.textContent!==et)ev.textContent=et;if(ann.length)announce(ann.join('. ')+'.');
+  const ed=$('#errs'),et=errs.join(' · ');ed.hidden=!errs.length;const ev=ed.querySelector('div');if(ev.textContent!==et)ev.textContent=et;ann.forEach(announce);
   const fastKeys=Object.keys(SRC).filter(k=>SRC[k].fast),anyIn=fastKeys.some(k=>L[k].inflight),nextDue=Math.min(...fastKeys.map(k=>L[k].due||Date.now()));
-  const left=Math.max(0,Math.round((nextDue-Date.now())/1000));$('#nextchk').textContent=document.hidden?'paused (tab hidden)':!leader?'another tab is checking':anyIn?'checking…':(coord==='none'?'this tab checks on its own · ':'')+'next check '+left+' s';$('#ring').style.setProperty('--p',(100*(1-Math.min(60,left)/60))+'%');
+  const left=Math.max(0,Math.round((nextDue-Date.now())/1000));$('#nextchk').textContent=document.hidden?'paused (tab hidden)':!leader?(coord==='none'?'starting…':'another tab is checking'):anyIn?'checking…':(coord==='none'?'this tab checks on its own · ':'')+'next check '+left+' s';$('#ring').style.setProperty('--p',(100*(1-Math.min(60,left)/60))+'%');
 }
 // =============================== render (archive-driven sections) and renderLive (hero, obs, clock, warnings)
 function render(){
@@ -366,7 +372,7 @@ function render(){
     Object.keys(D.fc).sort((a,b)=>(ROLE[a]?0:1)-(ROLE[b]?0:1)).forEach(k=>{const r=arr(D.fc[k],'rain')||[];s+=`<tr><td>${esc(k)}</td><td><span class="tag ${ROLE[k]?'core':'sec'}">${ROLE[k]?'core':'2nd opinion'}</span></td>`+days.map((d,i)=>{const v=r[i];return!fin(v)?'<td style="color:var(--mu)">–</td>':`<td><span class="cell" style="background:rgba(96,165,250,${Math.min(.85,v/16+.04)})">${v.toFixed(1)}</span></td>`}).join('')+'</tr>'});
     s+='<tr><td><b>ECMWF ensemble median</b></td><td><span class="tag core">ENS</span></td>'+days.map(d=>{const e=(D.ens||[]).find(x=>x&&x.day==d);return'<td><b>'+(e&&fin(e.q50)?e.q50.toFixed(1):'–')+'</b></td>'}).join('')+'</tr>';$('#tbl').innerHTML=s});
   renderSources();
-  $('#foot').textContent='This page re-checks its live feeds itself: airport observations, model "now" and MetMalaysia warnings every 60 s; airport TAF and MetMalaysia forecast every 10 min; radar every 5 min; the hourly archive every 15 min. Checking a feed is not the same as the feed issuing new information: the airport reports every 30 min (plus specials), the models update hourly, MetMalaysia a few times a day, the radar every 10 min. So a new airport report or warning shows here within about a minute of being published, a new TAF or forecast within about 10 minutes, a new radar image within about 5 minutes, plus any network delay or the longer wait after a failed check. One visible tab per browser does the checking and shares the results with other open tabs'+(coord==='none'?' (this browser cannot coordinate tabs, so this tab checks on its own)':'')+'; a hidden tab pauses and catches up on return. The hourly GitHub job keeps the archive (raw responses under data/raw), the 7-day models, the ensemble and the daily comparison. Times MYT. Point: Kota Kinabalu International Airport ('+(A.point?esc(A.point.lat+', '+A.point.lon):'')+').';
+  $('#foot').textContent='This page re-checks its live feeds itself: airport observations, model "now" and MetMalaysia warnings every 60 s; airport TAF and MetMalaysia forecast every 10 min; radar every 5 min; the hourly archive every 15 min. Checking a feed is not the same as the feed issuing new information: the airport reports every 30 min (plus specials), the models update hourly, MetMalaysia a few times a day, the radar every 10 min. So a new airport report or warning shows here within about a minute of being published, a new TAF or forecast within about 10 minutes, a new radar image within about 5 minutes, plus any network delay or the longer wait after a failed check. '+(coord==='none'?'This browser cannot coordinate tabs, so each visible tab checks on its own':'One visible tab per browser does the checking and shares the results with the other open tabs')+'; a hidden tab pauses and catches up on return. The hourly GitHub job keeps the archive (raw responses under data/raw), the 7-day models, the ensemble and the daily comparison. Times MYT. Point: Kota Kinabalu International Airport ('+(A.point?esc(A.point.lat+', '+A.point.lon):'')+').';
   updateClock();updateStale();
 }
 function renderLive(){
@@ -473,7 +479,7 @@ const RADAR_NOTE='Live image from MetMalaysia (time stamp printed on the image, 
 function radarAsOf(){const st=stateOf('radar'),s=L.radar,asof=$('#radarasof');asof.className='asof '+({failed:'failed',stale:'stale'}[st]||'');
   if(!frames.length){asof.textContent=liveLabel('radar');$('#rinfo').textContent=st==='failed'?'no frame yet; latest check failed':'no frame yet';$('#radarnote').textContent=st==='failed'?'The radar image could not be loaded from MetMalaysia ('+(s.err||'')+'); open the link to view it on their site.':RADAR_NOTE;return}
   const last=frames[frames.length-1];
-  asof.textContent=frames.length+' frame'+(frames.length>1?'s':'')+' · '+(st==='failed'?'latest check '+hhmm(new Date(s.tryAt))+' failed; showing frame fetched '+hhmm(new Date(last.at)):'latest OK check '+ago(s.okAt)+', newest frame fetched '+hhmm(new Date(last.at)));
+  asof.textContent=frames.length+' frame'+(frames.length>1?'s':'')+' · '+(st==='failed'?'check at '+hhmm(new Date(s.failAt||s.tryAt))+' failed; showing frame fetched '+hhmm(new Date(last.at)):'latest OK check '+ago(s.okAt)+', newest frame fetched '+hhmm(new Date(last.at)));
   $('#radarnote').textContent=(st==='failed'?'The latest radar check failed ('+(s.err||'')+'); the frames shown are from earlier reads. ':'')+RADAR_NOTE}
 function renderRadar(){const img=$('#radar'),info=$('#rinfo');radarAsOf();if(!frames.length)return;
   const show=i=>{rIdx=i;img.src=frames[i].url;info.textContent='frame '+(i+1)+'/'+frames.length+' · fetched '+fmtT(new Date(frames[i].at).toISOString())+(i===frames.length-1?' (latest)':'')};

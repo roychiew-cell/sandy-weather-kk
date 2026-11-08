@@ -29,6 +29,7 @@ main{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:16vh 18p
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
 .tile{background:rgba(255,255,255,.04);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;margin:0;animation:none}.tile b{display:block;font-size:22px;font-weight:600;letter-spacing:-.01em}.tile span{color:var(--mu);font-size:11.5px;line-height:1.3;display:block;margin-top:2px}
 #key{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}.kt b{font-size:17px;line-height:1.25}.kt span{font-size:12px;margin-top:4px}
+#moretiles>summary{display:inline-block;background:rgba(10,18,32,.72);color:#c9d3e0;padding:6px 10px;border-radius:8px;margin:0}
 .call{border-left:3px solid var(--ac)}.call p{margin:8px 0}.lbl{display:inline-block;padding:2px 9px;border-radius:6px;font-size:11px;font-weight:600;letter-spacing:.06em;background:rgba(56,189,248,.14);color:var(--ac);margin-right:8px;vertical-align:1px}
 .warn{border-left:3px solid var(--warn)}.warn li{margin:6px 0}.warn ul{padding-left:18px}
 .alert{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.5);border-radius:10px;padding:10px 14px;margin:0 0 12px;font-size:14px}
@@ -67,7 +68,7 @@ a{color:var(--ac)}
 <div id="stale" class="stale" hidden aria-live="polite"></div>
 <div class="card hero" id="hero"><div><div class="sub" id="stamp">loading…</div><div class="big"><span id="temp" class="num" aria-hidden="true">--</span><span id="tempsr" class="sr"></span><small>°C</small></div><div class="cond" id="cond"></div><div class="sub" id="phase"></div><div class="sub" id="modelnow"></div></div><div class="grid" id="tiles"></div></div>
 <div class="card" id="keycard"><h2>At a glance<span class="asof" id="keyasof"></span></h2><div class="grid" id="key"></div></div>
-<div class="card" id="loc"><h2>Your location<span class="asof" id="locasof"></span></h2><div class="note" id="locintro" style="margin:0 0 10px">Press the button and allow location once: the forecast for where you stand, from the nearest MetMalaysia records, the nearest airport and the models.<details><summary>What is sent where</summary>Your device position is saved in this browser until you press Forget. Coordinates rounded to four decimals are sent to Open-Meteo (forecast) and BigDataCloud (which country, state and district you are in); MetMalaysia receives nearby forecast-location ids and the airport relay an airport code; nothing is sent to GitHub.</details></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button id="locbtn">Use my location</button><button id="locforget" hidden>Forget my location</button></div><div id="locout"></div></div>
+<div class="card" id="loc"><h2>Your location<span class="asof" id="locasof"></span></h2><div class="note" id="locintro" style="margin:0 0 10px">Press the button and allow location once: the forecast for where you stand, from the nearest MetMalaysia records, the nearest airport and the models.<details><summary>What is sent where</summary>Your coordinates, accuracy, acquisition time and location method are saved in this browser until you press Forget. Coordinates rounded to four decimal places go to Open-Meteo (forecast) and BigDataCloud (which country, state and district you are in). MetMalaysia receives forecast-location ids; the airport relay receives an airport code. The page does not send your device position to GitHub. This card refreshes separately in each visible tab.</details></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button id="locbtn">Use my location</button><button id="locforget" hidden>Forget my location</button></div><div id="locout"></div></div>
 <div class="card"><h2>Next three parts of the day<span class="asof" id="partsasof"></span></h2><div class="days" id="parts"></div><div class="note" id="partsnote"></div></div>
 <div class="card"><h2>7-day forecast<span class="asof" id="daysasof"></span></h2><div class="days" id="days"></div><div class="note">Morning / afternoon / night icons and temperatures: MetMalaysia's town record for each date, else its district record (tagged), else the model (tagged); district wording on hover when both exist. Bar and odds: ECMWF ensemble, chance of 10 mm+ at the airport grid point. Use the timeline below to run the week in the sky.</div></div>
 <div class="card"><h2 id="hrtitle">Next hours · rain chance and temperature</h2><svg id="hr" viewBox="0 0 1000 260" width="100%" role="img" aria-label="Hourly rain chance bars and temperature line"></svg><div class="note">Bars = rain chance % for the hour starting at that position (Open-Meteo blend values are for the preceding hour, so each bar uses the value stored at the hour's end; a gap means no value), left axis. Line = temperature at each hour (right axis); the line breaks where a sample is missing. Band = TAF thunderstorm period. Times are MYT.</div><details><summary>Data table</summary><div style="overflow:auto;max-height:260px"><table id="hrtbl"></table></div></details></div>
@@ -140,15 +141,15 @@ const PLACES=["Kota Kinabalu","West Coast","Western Sabah","Eastern Sabah","Labu
 const parseDate=s=>{const m=/(\d{1,2})\s+([A-Z][a-z]+)\s+(\d{4})/.exec(s||'');if(!m||!MONTHS[m[2]])return null;return m[3]+'-'+pad(MONTHS[m[2]])+'-'+pad(+m[1])};
 const parseTime=s=>{const m=/(\d{1,2})[:.](\d{2})\s*(AM|PM)/i.exec(s||'');if(!m)return null;const h=(+m[1])%12+(m[3].toUpperCase()==='PM'?12:0);return pad(h)+':'+m[2]};
 const KK_AREA={state:'Sabah',division:'West Coast',district:'Kota Kinabalu'};
-function coversKK(text){return areaCoverage(text,KK_AREA)===true}   // the same scoped reading as the location card (areaCoverage is defined below; called only at run time)
-function subsections(text){
+function coversKK(text,ctx){return areaCoverage(text,KK_AREA,ctx)===true}   // the same scoped reading as the location card (areaCoverage is defined below; called only at run time)
+function subsections(text,head){
   const parts=text.split(/(?=(?:\b[IVX]+\)|\b\d\))\s)/);const out=[];let scope=null;
   for(let p of parts){p=p.trim();const ms=/SECTION\s+[A-Z]\s*:\s*([A-Z][A-Z \[\]0-9]+?)\s*$/.exec(p);
     if(p.length<30||!/^(?:[IVX]+|\d)\)/.test(p)){if(ms)scope=ms[1].toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());continue}
     const thisScope=scope;if(ms)scope=ms[1].toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
     const mt=/^(?:[IVX]+|\d)\)\s*([A-Z][A-Z \-\/()]{6,}?)(?=\s+[A-Z][a-z]|\s*$)/.exec(p);
     const title=mt?mt[1].trim().toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()):(/ontinuous rain/.test(p)?'Continuous rain':null);
-    const sub={text:p,areas:PLACES.filter(a=>p.includes(a)),from:null,to:null,title,scope:thisScope,sea:/waters/i.test(p),covers_kk:coversKK(p)};
+    const sub={text:p,areas:PLACES.filter(a=>p.includes(a)),from:null,to:null,title,scope:thisScope,sea:/waters/i.test(p),covers_kk:coversKK(p,String(head||'')+' '+(thisScope||''))};   // heading and section scope give the state when the body does not
     let m=/within the period of\s+(.+?)\s+until\s+(.+?)(?:\.|$)/.exec(p);
     if(m){const d1=parseDate(m[1]),d2=parseDate(m[2]);if(d1&&d2){sub.from=d1+'T00:00:00';sub.to=d2+'T23:59:59'}}
     else{m=/until\s+(\d{1,2}[:.]\d{2}\s*(?:AM|PM))\s*;?\s*([A-Za-z]+,\s*\d{1,2}\s+[A-Z][a-z]+\s+\d{4})/i.exec(p);
@@ -160,10 +161,11 @@ function parseWarnings(raw){
   const warnings=[];
   (raw||[]).forEach(w=>{const tx=w.text_en||'',head=w.heading_en||(w.warning_issue&&w.warning_issue.title_en)||'';
     let kind=(/cyclone/i.test(head+tx)&&!/warning/i.test(head))?'cyclone':/SEAS|WIND/i.test(head)?'marine':/RAIN/i.test(head)?'rain':/THUNDERSTORM/i.test(head)?'thunder':'other';
-    let subs=subsections(tx);
-    if(!subs.length&&tx&&kind!=='cyclone')subs=[{text:tx,areas:PLACES.filter(a=>tx.includes(a)),from:w.valid_from||null,to:w.valid_to||null,title:head.toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()),scope:null,sea:/waters/i.test(tx),covers_kk:coversKK(tx)}];
+    let subs=subsections(tx,head);
+    if(!subs.length&&tx&&kind!=='cyclone')subs=[{text:tx,areas:PLACES.filter(a=>tx.includes(a)),from:w.valid_from||null,to:w.valid_to||null,title:head.toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()),scope:null,sea:/waters/i.test(tx),covers_kk:coversKK(tx,head)}];
     warnings.push({issued:w.warning_issue?w.warning_issue.issued:null,heading:head,kind,valid_from:w.valid_from||null,valid_to:w.valid_to||null,text:tx,areas:PLACES.filter(a=>tx.includes(a)),subsections:subs,parsed:subs.length>0&&subs.every(s=>s.to),names_kk_land:subs.some(s=>s.covers_kk&&!s.sea)})});
-  const seen=new Set(),uniq=[];warnings.forEach(w=>{const k=w.heading+'|'+w.text.slice(0,400);if(!seen.has(k)){seen.add(k);uniq.push(w)}});return uniq}
+  const seen=new Map(),uniq=[];warnings.forEach(w=>{const k=w.heading+'|'+w.text.slice(0,400);const first=seen.get(k);if(!first){seen.set(k,w);uniq.push(w)}else if(String(first.valid_from||'')!==String(w.valid_from||'')||String(first.valid_to||'')!==String(w.valid_to||'')){first.valid_conflict=(first.valid_conflict||[String(first.valid_from||'?')+' – '+String(first.valid_to||'?')]).concat([String(w.valid_from||'?')+' – '+String(w.valid_to||'?')])}});   // duplicates with different bulletin validity are kept as a recorded conflict
+  return uniq}
 function parseMetmy(raw){const by={};(raw||[]).forEach(r=>{const id=r.location&&r.location.location_id;if(!id)return;(by[id]=by[id]||{kind:{Ds:'district',Tn:'town',St:'state'}[id.slice(0,2)]||'other',name:r.location.location_name,days:[]}).days.push(r)});Object.values(by).forEach(v=>v.days.sort((a,b)=>a.date<b.date?-1:1));return by}
 function parseMetar(raw){return (raw||[]).filter(m=>fin(m.obsTime)).sort((a,b)=>a.obsTime-b.obsTime).map(m=>{const rawOb=m.rawOb||'';const recent=rawOb.split(' ').filter(w=>w.startsWith('RE')&&w.length>2&&w!=='RMK');return{t:isoMYT(new Date(m.obsTime*1000)),temp:fin(m.temp)?m.temp:null,dewp:fin(m.dewp)?m.dewp:null,wdir:fin(m.wdir)?m.wdir:null,wspd:fin(m.wspd)?m.wspd:null,cover:m.cover||null,wx:m.wxString||'',recent:recent.join(' '),raw:rawOb}})}
 function parseTaf(raw){const t=(raw||[])[0];if(!t||!fin(t.validTimeFrom)||!fin(t.validTimeTo))return null;const per=(t.fcsts||[]).map(f=>({from:isoMYT(new Date(f.timeFrom*1000)),to:isoMYT(new Date(f.timeTo*1000)),change:f.fcstChange||null,prob:fin(f.probability)?f.probability:null,wx:f.wxString||'',wdir:f.wdir,wspd:f.wspd,visib:f.visib,clouds:(f.clouds||[]).map(c=>(c.cover||'')+(c.type?'/'+c.type:''))}));
@@ -193,6 +195,7 @@ function compose(){ // D = archive A, with each live source laid over it only wh
   sel.taf=use('taf')?'live':'archive';if(sel.taf==='live')D.taf=L.taf.value;
   sel.metmy=use('metmy')?'live':'archive';if(sel.metmy==='live')D.metmy=L.metmy.value;
   sel.warn=use('warn')?'live':'archive';if(sel.warn==='live'){D.warnings=L.warn.value.warnings;D.warnings_retrieved=L.warn.value.count}
+  else if(Array.isArray(D.warnings))D.warnings=D.warnings.map(w=>w&&Array.isArray(w.subsections)?{...w,subsections:w.subsections.map(s=>s?{...s,covers_kk:coversKK(String(s.text||''),String(w.heading||'')+' '+(s.scope||''))}:s)}:w);   // archive flags re-judged with the current parser
   D.status={...(A.status||{})};if(sel.warn==='live')D.status.metmalaysia_warnings={ok:true,at:isoMYT(new Date(L.warn.okAt))};
 }
 function validSnapshot(nd){const isRecord=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
@@ -205,10 +208,12 @@ function validSnapshot(nd){const isRecord=v=>v!==null&&typeof v==='object'&&!Arr
   if(nd.fc!=null&&!isRecord(nd.fc))return false; if(nd.scores!=null&&!isRecord(nd.scores))return false; if(nd.metmy!=null&&!isRecord(nd.metmy))return false; if(nd.aq!=null&&!isRecord(nd.aq))return false; return true}
 // =============================== fetching with timeouts
 const retryAfterMs=h=>{if(!h)return 0;const n=+h;if(fin(n))return Math.max(0,n*1000);const d=Date.parse(h);return isNaN(d)?0:Math.max(0,d-Date.now())}; // delay-seconds or HTTP-date
-async function fetchBody(url,ms,kind,ctl){ // the deadline covers headers AND the body read; ctl lets a superseded attempt be aborted from outside
-  ctl=ctl||new AbortController();const t=setTimeout(()=>ctl.abort(),ms||15000);
-  try{const r=await fetch(url,{cache:'no-store',signal:ctl.signal});if(!r.ok){const e=new Error('HTTP '+r.status);e.status=r.status;e.retryAfter=retryAfterMs(r.headers.get('Retry-After'));throw e}return kind==='buf'?await r.arrayBuffer():await r.json()}
-  catch(e){if(e.name==='AbortError')throw new Error(ctl.superseded?'superseded':'timeout');throw e}finally{clearTimeout(t)}}
+async function fetchBody(url,ms,kind,parent){ // the deadline covers headers AND the body read; each request has its own controller, and a parent controller (a superseded attempt, Forget) aborts it too
+  const own=new AbortController();let why='timeout';const onParent=()=>{why=parent&&parent.superseded?'superseded':'cancelled';own.abort()};
+  if(parent){if(parent.signal.aborted)onParent();else parent.signal.addEventListener('abort',onParent)}
+  const t=setTimeout(()=>own.abort(),ms||15000);
+  try{const r=await fetch(url,{cache:'no-store',signal:own.signal});if(!r.ok){const e=new Error('HTTP '+r.status);e.status=r.status;e.retryAfter=retryAfterMs(r.headers.get('Retry-After'));throw e}return kind==='buf'?await r.arrayBuffer():await r.json()}
+  catch(e){if(e.name==='AbortError')throw new Error(why);throw e}finally{clearTimeout(t);if(parent)parent.signal.removeEventListener('abort',onParent)}}
 const fetchJSON=(url,ms,ctl)=>fetchBody(url,ms,'json',ctl);
 const withTimeout=(p,ms,what)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error(what||'timeout')),ms))]);
 // =============================== archive (hourly GitHub job), re-read every 15 min
@@ -432,25 +437,38 @@ function renderLive(){
   updateClock();renderKey();
 }
 // =============================== at a glance: the four things Roy asks first, re-judged every minute
+function assessWarnings(area){ // one reading of the selected warnings for an area, shared by the At-a-glance tile and the location card: active / upcoming / unparsed validity / undetermined applicability (land only)
+  const st=D&&D.status&&D.status.metmalaysia_warnings,W=D&&Array.isArray(D.warnings)?D.warnings:null;if(!st||!st.ok||!W)return{state:'unavailable',active:[],upcoming:[],unparsed:[],undetermined:[]};
+  const r={state:'ok',active:[],upcoming:[],unparsed:[],undetermined:[]},now=Date.now(),namesState=t=>!!(area.state&&nameRe(area.state).test(t));
+  W.forEach(w=>{if(!w||w.kind==='cyclone')return;const subs=Array.isArray(w.subsections)?w.subsections:[],name=String(w.heading||'').replace(/ Warning$/i,'');
+    if(!subs.length){if(namesState(String(w.text||'')+' '+String(w.heading||'')))r.undetermined.push({w,s:null,name});return}
+    subs.forEach(s=>{if(!s||s.sea)return;const ctx=String(w.heading||'')+' '+(s.scope||''),c=areaCoverage(String(s.text||''),area,ctx),nm=String(s.title||w.heading||'').replace(/ Warning$/i,'');
+      if(c===null){if(namesState(String(s.text||'')+' '+ctx))r.undetermined.push({w,s,name:nm});return}if(c!==true)return;
+      const f=effFrom(w,s),to=s.to&&!isNaN(P(s.to))?P(s.to):null;if(!f.ok||!to){r.unparsed.push({w,s,name:nm,f,to});return}
+      if(ended(s.to))return;(f.t.getTime()>now?r.upcoming:r.active).push({w,s,name:nm,f,from:f.t,to})})});
+  return r}
 function renderKey(){section('#keycard',['#key'],()=>{if(!D)return;const bh=D.blend&&D.blend.hourly,tm=arr(bh,'time')||[],hv=(k,i)=>{const a=arr(bh,k);return a?a[i]:null};const now=Date.now(),tiles=[];
-  // 1 warning covering KK
-  const st=D.status&&D.status.metmalaysia_warnings,W=Array.isArray(D.warnings)?D.warnings:null;let wTxt,wSub='MetMalaysia · '+label('warn'),wCls='';
-  if(!st||!st.ok||!W){wTxt='Warning status unknown';wSub='the MetMalaysia feed did not answer'}
-  else{const hits=[];W.forEach(w=>{if(!w)return;(Array.isArray(w.subsections)?w.subsections:[]).forEach(s=>{if(!s||s.sea||!s.covers_kk)return;const f=effFrom(w,s),to=s.to?P(s.to):null;if(to&&ended(s.to))return;hits.push({w,s,f,to,fut:f.t.getTime()>now})})});
-    const act=hits.filter(h=>!h.fut),up=hits.filter(h=>h.fut);
-    if(act.length){const h=act[0];wTxt='⚠ '+(h.s.title||h.w.heading).replace(/ Warning$/i,'')+' warning in force';wSub='for KK until '+(h.to?fmtDT(h.to.toISOString()):'?')+' MYT · '+label('warn');wCls='color:var(--warn)'}
-    else if(up.length){const h=up[0];wTxt='Warning ahead: '+(h.s.title||h.w.heading).replace(/ Warning$/i,'');wSub='from '+fmtDT(h.f.t.toISOString())+' MYT · '+label('warn')}
-    else{wTxt='No warning covers KK';wSub='in the '+(D.warnings_retrieved??'–')+' MetMalaysia bulletins · '+label('warn')}}
+  // 1 warning covering KK (shared assessment)
+  const as=assessWarnings(KK_AREA);let wTxt,wSub,wCls='';
+  if(as.state==='unavailable'){wTxt='Warning status unknown';wSub='the MetMalaysia feed did not answer · '+label('warn')}
+  else if(as.active.length){const h=as.active[0];wTxt='⚠ '+h.name+' warning in force';wSub='for KK until '+fmtDT(h.to.toISOString())+' MYT · '+label('warn');wCls='color:var(--warn)'}
+  else if(as.unparsed.length){const h=as.unparsed[0];wTxt='⚠ '+h.name+' warning names KK';wSub='its validity could not be read (see the warnings card) · '+label('warn');wCls='color:var(--warn)'}
+  else if(as.upcoming.length){const h=as.upcoming[0];wTxt='Warning ahead: '+h.name;wSub='from '+fmtDT(h.from.toISOString())+' MYT · '+label('warn')}
+  else if(as.undetermined.length){wTxt='Warning status undetermined';wSub=as.undetermined.length+' bulletin'+(as.undetermined.length>1?'s':'')+' naming Sabah could not be read for KK (see the warnings card) · '+label('warn')}
+  else{wTxt='No warning covers KK';wSub='in the '+(D.warnings_retrieved??'–')+' MetMalaysia bulletins · '+label('warn')}
   tiles.push([wTxt,wSub,wCls]);
   // 2 storm clock (TAF)
-  const cd=$('#countdown').textContent||'–',cn=($('#countnote').textContent||'').split(/\.\s|\(/)[0];tiles.push([cd,'airport forecast · '+cn,cd.includes('now')?'color:var(--warn)':'']);
-  // 3 next rain in the next 12 h (model, preceding-hour values)
-  const h0=Math.floor(now/3600e3)*3600e3;let first=null,mx=0,n=0;for(let i=0;i<12;i++){const key=dayStr(myt(new Date(h0+(i+1)*3600e3)))+'T'+pad(myt(new Date(h0+(i+1)*3600e3)).getUTCHours()),j=tm.findIndex(t=>String(t).slice(0,13)===key);if(j<0)continue;const pp=hv('precipitation_probability',j);if(!fin(pp))continue;n++;mx=Math.max(mx,pp);if(first===null&&pp>=50)first=i}
-  tiles.push(n?[first===null?'No rain likely in 12 h':'Rain likely '+hhmm(new Date(h0+first*3600e3))+'–'+hhmm(new Date(h0+(first+1)*3600e3)),(first===null?'highest chance '+num(mx)+'%':num(hv('precipitation_probability',tm.findIndex(t=>String(t).slice(0,13)===dayStr(myt(new Date(h0+(first+1)*3600e3)))+'T'+pad(myt(new Date(h0+(first+1)*3600e3)).getUTCHours()))))+'% chance')+' · model, archive run of '+fmtT(D.generated),first===null?'':'color:var(--wet)']:['Rain outlook unavailable','no model hours for the next 12 h','']);
-  // 4 today from MetMalaysia town (else district)
-  const recs=D.metmy&&typeof D.metmy==='object'?Object.values(D.metmy).filter(m=>m&&Array.isArray(m.days)):[],town=recs.find(m=>m.kind=='town'),dist=recs.find(m=>m.kind=='district'),today=dayStr(nowMYT()),rec=(town&&town.days.find(r=>r&&r.date==today))||(dist&&dist.days.find(r=>r&&r.date==today)),hod=nowMYT().getUTCHours();
-  if(rec){const part=hod<12?['morning',rec.morning_forecast]:hod<18?['afternoon',rec.afternoon_forecast]:['night',rec.night_forecast];tiles.push([tr(part[1])+' this '+part[0],'MetMalaysia '+(town&&rec===town.days.find(r=>r&&r.date==today)?'town':'district')+' · '+num(rec.min_temp)+'–'+num(rec.max_temp)+'°C today · '+label('metmy'),''])}
-  else tiles.push(['Today\'s official forecast unavailable','MetMalaysia · '+label('metmy'),'']);
+  const cd=$('#countdown').textContent||'–',cn=($('#countnote').textContent||'').split(/\.\s|\(/)[0];tiles.push([cd,'airport forecast (TAF) · '+cn+' · '+(D.taf?label('taf')+', issued '+fmtT(D.taf.issued):'no TAF'),cd.includes('now')?'color:var(--warn)':'']);
+  // 3 rain in the 13 hourly intervals that overlap the next 12 h (the current hour and the 13th are partial); each value describes the preceding hour
+  const h0=Math.floor(now/3600e3)*3600e3,byKey=new Map();tm.forEach((t,j)=>byKey.set(String(t).slice(0,13),j));let first=null,firstP=0,mx=0,n=0,miss=0;
+  for(let i=0;i<13;i++){const m=myt(new Date(h0+(i+1)*3600e3)),j=byKey.get(dayStr(m)+'T'+pad(m.getUTCHours())),pp=j==null?null:hv('precipitation_probability',j);if(!fin(pp)){miss++;continue}n++;mx=Math.max(mx,pp);if(first===null&&pp>=50){first=i;firstP=pp}}
+  const span=i=>{const a=new Date(h0+i*3600e3),b=new Date(h0+(i+1)*3600e3);return (dayStr(myt(a))!==dayStr(nowMYT())?'tomorrow ':'')+hhmm(a)+'–'+hhmm(b)},run=' · model, archive run of '+fmtT(D.generated),cover=miss?' · '+miss+' of 13 hours without data':'';
+  tiles.push(!n?['Rain outlook unavailable','no model values for the next 12 h'+run,'']:first!==null?['Rain likely '+span(first),num(firstP)+'% chance in that hour'+run+cover,'color:var(--wet)']:miss?['No rain likely in the hours with data','highest chance '+num(mx)+'%'+run+cover,'']:['No rain likely in the next 12 h','highest chance '+num(mx)+'%'+run,'']);
+  // 4 the current part of the day from MetMalaysia town (else district); before 06:00 it is the previous date's night, as on the parts card
+  const recs=D.metmy&&typeof D.metmy==='object'?Object.values(D.metmy).filter(m=>m&&Array.isArray(m.days)):[],town=recs.find(m=>m.kind=='town'),dist=recs.find(m=>m.kind=='district'),n0=nowMYT(),hod=n0.getUTCHours(),today=dayStr(n0),pdate=hod<6?dayStr(new Date(n0.getTime()-864e5)):today,field=hod<6||hod>=18?'night_forecast':hod<12?'morning_forecast':'afternoon_forecast',pname=hod<6?"night (from yesterday's forecast)":hod<12?'morning':hod<18?'afternoon':'night';
+  const pick=d=>{const t=town&&town.days.find(r=>r&&r.date==d);if(t)return[t,'town'];const x=dist&&dist.days.find(r=>r&&r.date==d);return x?[x,'district']:[null,null]};const [rec,rsrc]=pick(pdate),[trec,tsrc]=pick(today);
+  if(rec)tiles.push([tr(rec[field])+' this '+pname,'MetMalaysia '+rsrc+(trec?' · '+num(trec.min_temp)+'–'+num(trec.max_temp)+'°C today ('+tsrc+')':'')+' · '+label('metmy'),'']);
+  else tiles.push(['Official wording unavailable for this '+pname,'MetMalaysia · '+label('metmy'),'']);
   $('#key').innerHTML=tiles.map(([a,b,c])=>`<div class="tile kt"><b style="${esc(c)}">${esc(a)}</b><span>${esc(b)}</span></div>`).join('');$('#keyasof').textContent='re-judged every minute'})}
 // =============================== parts of the day (rolls every minute)
 function renderParts(){
@@ -486,14 +504,14 @@ function renderWarnings(){
     const qualifier=sel.warn==='live'&&wst==='failed'?' (as of the last successful read at '+hhmm(new Date(L.warn.okAt))+'; the latest check failed)':sel.warn==='archive'?' (archive of '+fmtT(A.generated)+')':'';
     const kindName={marine:'Sea / shipping',rain:'Rain',thunder:'Thunderstorms',cyclone:'Tropical cyclone',other:'Other'},isLocal=a=>/Sabah|West Coast|Kota Kinabalu|Labuan|Kudat|Sandakan|Tawau|Reef|Layang|Sulu|Sulawesi/.test(a),subsOf=w=>Array.isArray(w.subsections)?w.subsections:[];
     const kkSubs=[];W.forEach(w=>{if(w)subsOf(w).forEach(s=>{if(s&&s.covers_kk&&!s.sea)kkSubs.push({w,s})})});const undetermined=W.filter(w=>w&&w.kind!=='cyclone'&&(!w.parsed||!subsOf(w).length));
-    if(kkSubs.length){h+='<div class="alert"><b>Warning covering Kota Kinabalu</b>'+esc(qualifier)+'<ul style="margin:6px 0 0">';kkSubs.forEach(({w,s})=>{const f=effFrom(w,s),from=f.t,to=s.to?P(s.to):null,exp=to&&ended(s.to),fut=from.getTime()>now;const badge=!to?'<span class="tag">validity not parsed</span>':exp?'<span class="tag drop">expired</span>':fut?'<span class="tag sec">upcoming</span>':'<span class="tag core">in force</span>';
+    if(kkSubs.length){h+='<div class="alert"><b>Warning covering Kota Kinabalu</b>'+esc(qualifier)+'<ul style="margin:6px 0 0">';kkSubs.forEach(({w,s})=>{const f=effFrom(w,s),from=f.t,to=s.to?P(s.to):null,exp=to&&ended(s.to),fut=from.getTime()>now;const badge=(!to||!f.ok)?'<span class="tag">validity not parsed</span>':exp?'<span class="tag drop">expired</span>':fut?'<span class="tag sec">upcoming</span>':'<span class="tag core">in force</span>';
       h+=`<li><b>${esc(s.title||w.heading)}</b> ${badge}<br><span class="note" style="margin:0">${nameRe('Kota Kinabalu').test(s.text)?'names Kota Kinabalu':"via Sabah's West Coast division"} · issued ${fmtDT(w.issued)} · valid ${fmtDT(from.toISOString())}${esc(f.src)} – ${to?fmtDT(s.to):'?'} MYT</span><details data-key="${esc(skey(w,s))}"><summary>Full text</summary><div class="note">${esc(s.text)}</div></details></li>`});h+='</ul></div>'}
     else if(undetermined.length)h+=`<p><b>No warning naming Kota Kinabalu or Sabah's West Coast was found in the ${esc(D.warnings_retrieved)} bulletins retrieved${esc(qualifier)}, but ${undetermined.length} bulletin${undetermined.length>1?'s':''} could not be read for local applicability (listed below): treat the local status as undetermined.</b></p>`;
     else h+=`<p><b>No warning covering Kota Kinabalu land (by name or via Sabah's West Coast) in the ${esc(D.warnings_retrieved)} bulletins retrieved${esc(qualifier)}.</b></p>`;
     h+='<p class="note">Other bulletins for Sabah and nearby waters:</p><ul>';
     W.forEach(w=>{if(!w)return;const subs=subsOf(w);if(w.kind=='cyclone'){h+=`<li><b>Tropical cyclone:</b> ${esc(w.heading)} <span class="note" style="display:inline">issued ${fmtDT(w.issued)}</span><details data-key="${esc(wkey(w))}"><summary>Full text</summary><div class="note">${esc(w.text)}</div></details></li>`;return}
       if(!subs.length||!w.parsed){const named=(w.areas||[]).filter(isLocal);h+=`<li><b>${esc(kindName[w.kind]||w.kind)}:</b> ${esc(w.heading)} <span class="tag">applicability / validity not determined</span><br><span class="note" style="margin:0">This bulletin could not be split into dated subsections${named.length?'; it names '+esc(named.join(', ')):''}. Issued ${fmtDT(w.issued)}${w.valid_to?'; bulletin validity to '+fmtDT(w.valid_to)+' MYT':''}.</span><details data-key="${esc(wkey(w))}"><summary>Full text</summary><div class="note">${esc(w.text)}</div></details></li>`;if(!subs.length)return}
-      subs.filter(s=>s&&(s.areas||[]).some(isLocal)&&!(s.covers_kk&&!s.sea)).forEach(s=>{const f=effFrom(w,s),from=f.t,to=s.to?P(s.to):null,exp=to&&ended(s.to),fut=from.getTime()>now;const badge=!to?'<span class="tag">validity not parsed</span>':exp?'<span class="tag drop">expired</span>':fut?'<span class="tag sec">upcoming</span>':'<span class="tag core">in force</span>';const danger=/dangerous to small (boats|crafts)/i.test(s.text)?' Dangerous to small boats.':'';const ar=(s.areas||[]),sab=ar.filter(isLocal),oth=ar.length-sab.length;
+      subs.filter(s=>s&&(s.areas||[]).some(isLocal)&&!(s.covers_kk&&!s.sea)).forEach(s=>{const f=effFrom(w,s),from=f.t,to=s.to?P(s.to):null,exp=to&&ended(s.to),fut=from.getTime()>now;const badge=(!to||!f.ok)?'<span class="tag">validity not parsed</span>':exp?'<span class="tag drop">expired</span>':fut?'<span class="tag sec">upcoming</span>':'<span class="tag core">in force</span>';const danger=/dangerous to small (boats|crafts)/i.test(s.text)?' Dangerous to small boats.':'';const ar=(s.areas||[]),sab=ar.filter(isLocal),oth=ar.length-sab.length;
         h+=`<li><b>${esc(kindName[w.kind]||w.kind)}${s.scope?' ('+esc(s.scope)+')':''}:</b> ${esc(s.title||w.heading)} ${badge}<br><span class="note" style="margin:0">Areas named: ${esc(sab.join(', ')||'–')}${oth>0?' and '+oth+' other area'+(oth>1?'s':''):''} · valid ${fmtDT(from.toISOString())}${esc(f.src)} – ${to?fmtDT(s.to):'?'} MYT · issued ${fmtDT(w.issued)}.${esc(danger)}</span><details data-key="${esc(skey(w,s))}"><summary>Subsection text</summary><div class="note">${esc(s.text)}</div></details></li>`})});
     h+='</ul><div class="note">In force / upcoming / expired is judged against the time on your device, re-checked every minute; bulletins are re-read every 60 s. Live radar: <a href="https://www.met.gov.my/pencerapan/radar-sabah-and-sarawak" target="_blank" rel="noopener">MetMalaysia radar</a>.</div>';
     if(h===lastWarnHTML){refreshWarnAsOf();return}                                      // nothing changed: keep open bulletins and focus as they are
@@ -567,18 +585,26 @@ const divisionOf=(state,district)=>{const d=DIVISIONS[state];if(!d||!district)re
 const stateWord=s=>String(s||'').replace(/^(WP|Wilayah Persekutuan|W\.P\.)\s+/i,'').replace(/Pulau Pinang/i,'Penang').replace(/^Federal Territory of\s+/i,'').trim();
 const nameRe=n=>new RegExp('(^|[^A-Za-z])'+reEsc(n)+'(?=$|[^A-Za-z])','i');   // whole-name match: "Papar" never matches "Paparan"
 const STATE_ALIAS={'Penang':['Penang','Pulau Pinang'],'Negeri Sembilan':['Negeri Sembilan','N. Sembilan'],'Melaka':['Melaka','Malacca'],'Labuan':['Labuan','W.P. Labuan','WP Labuan'],'Kuala Lumpur':['Kuala Lumpur','W.P. Kuala Lumpur','WP Kuala Lumpur'],'Putrajaya':['Putrajaya','W.P. Putrajaya','WP Putrajaya']};   // how MetMalaysia bulletins spell the states
-const effFrom=(w,s)=>s.from?{t:P(s.from),src:''}:w.valid_from&&!isNaN(P(w.valid_from))?{t:P(w.valid_from),src:' (bulletin validity)'}:{t:P(w.issued),src:' (from issue; start not stated)'};
+const effFrom=(w,s)=>{ // effective start of a subsection: its own date, else the bulletin's validity (unless duplicates disagree), else the issue time; ok=false when nothing parses
+  if(s.from&&!isNaN(P(s.from)))return{t:P(s.from),src:'',ok:true};
+  if(w.valid_conflict)return{t:P(w.issued),src:' (from issue; the bulletin copies give different starts: '+w.valid_conflict.map(x=>x.replace(/T\d\d:\d\d:\d\d/g,'')).join(' / ')+')',ok:!isNaN(P(w.issued))};
+  if(w.valid_from&&!isNaN(P(w.valid_from)))return{t:P(w.valid_from),src:' (bulletin validity)',ok:true};
+  return{t:P(w.issued),src:' (from issue; start not stated)',ok:!isNaN(P(w.issued))}};
 const km=(a,b,c,d)=>{const R=6371,r=Math.PI/180,x=(c-a)*r,y=(d-b)*r,h=Math.sin(x/2)**2+Math.cos(a*r)*Math.cos(c*r)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
 const reEsc=s=>String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 function areaCoverage(text,ar,ctx){ // does a warning subsection cover an area {state, division, district}? true / false / null (cannot tell)
   // reads "State: item, item (district, district) and item" after the state's name; Sabah and Sarawak items are divisions, elsewhere districts;
   // an item with a bracket list covers only the districts listed; a state named with no list covers the whole state; whole names only, never substrings
-  if(!ar||!ar.state)return null;const S=ar.state,alt='(?:'+(STATE_ALIAS[S]||[S]).map(reEsc).join('|')+')',sRe=new RegExp('(^|[^A-Za-z])'+alt+'(?=$|[^A-Za-z])','i'),whole=text+' '+(ctx||'');if(!sRe.test(whole))return false;
+  if(!ar||!ar.state)return null;const S=ar.state,alt='(?:'+(STATE_ALIAS[S]||[S]).map(reEsc).join('|')+')',sRe=new RegExp('(^|[^A-Za-z])'+alt+'(?=$|[^A-Za-z])','i'),qRe=new RegExp('\\b(?:Eastern|Western|Northern|Southern|Central|Coastal|Interior|Upper|Lower)\\s+'+alt+'(?=$|[^A-Za-z])','ig'),ctxText=String(ctx||'');
   const same=(a,b)=>a&&b&&nameRe(a).test(b)&&nameRe(b).test(a),inList=(list,name)=>!!(list&&name&&nameRe(name).test(list));
-  const m=new RegExp('(?:^|[^A-Za-z])'+alt+'\\s*:\\s*([^]*)','i').exec(text);
-  if(!m){const ml=new RegExp('(?:^|[^A-Za-z])'+alt+'\\s*\\(([^)]*)\\)','i').exec(text);if(ml)return ar.district?inList(ml[1],ar.district):null;   // "State (district, district)": only those districts
-    return sRe.test(text)?true:null}                                                 // state named without any list: whole state (only when the text itself names it)
-  let seg=m[1].split(/(?:^|\s)(?:[A-Z][A-Za-z.' ]*:)/)[0].split(/\.\s|\s(?:within|until|from|is|are|expected|valid|issued|will|may)\b/i)[0];
+  const plain=t=>t.replace(qRe,' ');                                                   // "Eastern Sabah" is a region the page cannot resolve, never the whole state
+  const inText=sRe.test(plain(text)),inCtx=sRe.test(plain(ctxText)),qualifiedOnly=!inText&&qRe.test(text);qRe.lastIndex=0;
+  if(qualifiedOnly)return null;if(!inText&&!inCtx)return false;
+  let seg;const m=inText?new RegExp('(?:^|[^A-Za-z])'+alt+'\\s*:\\s*([^]*)','i').exec(text):null;
+  if(inText&&!m){const ml=new RegExp('(?:^|[^A-Za-z])'+alt+'\\s*\\(([^)]*)\\)','i').exec(text);if(ml)return ar.district?inList(ml[1],ar.district):null;   // "State (district, district)": only those districts
+    return true}                                                                     // state named in the text without any list: whole state
+  if(m)seg=m[1];else{const mo=/\bover\s+(?:the\s+(?:areas?|states?|districts?|divisions?)\s+of\s+)?([^]*)/i.exec(text);seg=mo?mo[1]:text.replace(/^\s*(?:[IVX]+|\d+)\)\s*/,'')}   // heading-only state: the body's list (after "over …") is that state's list
+  seg=seg.split(/(?:^|\s)(?:[A-Z][A-Za-z.' ]*:)/)[0].split(/\.\s|\s(?:within|until|from|is|are|expected|valid|issued|will|may)\b/i)[0];
   const items=[];let depth=0,cur='';for(let i=0;i<seg.length;i++){const ch=seg[i];if(ch==='(')depth++;else if(ch===')')depth--;   // split on "," and " and " outside brackets only
     const isAnd=depth===0&&seg.substr(i,3).toLowerCase()==='and'&&(i===0||/\s/.test(seg[i-1]))&&(i+3>=seg.length||/\s/.test(seg[i+3]));
     if(depth===0&&(ch===','||ch==='•'||ch===';'||isAnd)){items.push(cur);cur='';if(isAnd)i+=2}else cur+=ch}items.push(cur);   // MetMalaysia also separates items with "•"
@@ -592,7 +618,7 @@ function areaCoverage(text,ar,ctx){ // does a warning subsection cover an area {
   return ar.district?false:null}
 let LOC=null,PLACEDB=null,locTimer=null,locSeq=0,locGen=0,locCtl=null,LOCRES=null,locRestoreT=null,locNote='';
 const locLS=()=>{try{return JSON.parse(localStorage.getItem('sandy-loc')||'null')}catch(e){return null}};
-async function loadPlaces(ctl){if(PLACEDB)return PLACEDB;const j=await fetchJSON('places.json?v=2',20000,ctl);if(!j||!Array.isArray(j.places))throw new Error('places table unavailable');PLACEDB=j;return j}
+async function loadPlaces(ctl){if(PLACEDB)return PLACEDB;const j=await fetchJSON('places.json?v=2',20000,ctl);if(!j||!Array.isArray(j.places))throw new Error('places table unavailable');j.readAt=Date.now();PLACEDB=j;return j}
 function nearest(kind,lat,lon,ok,maxKm){let best=null;(PLACEDB.places||[]).forEach(p=>{if(p.kind!==kind||!fin(p.lat)||(ok&&!ok(p)))return;const d=km(lat,lon,p.lat,p.lon);if(d<=(maxKm||1e9)&&(!best||d<best.d))best={p,d,how:'nearest by distance'}});return best}
 const sameState=(a,b)=>{a=stateWord(a);b=stateWord(b);return !a||!b||a===b||a.includes(b)||b.includes(a)};
 function setLoc(pos,save){LOC=pos;locNote='';if(save){try{localStorage.setItem('sandy-loc',JSON.stringify(pos))}catch(e){locNote='used for this visit only; this browser could not save it'}}
@@ -634,7 +660,7 @@ function renderLoc(){const R=LOCRES;if(!R)return;const {pos,res,area,cov,town,di
   const when=new Date(pos.at),posWhen=dayStr(myt(when))===dayStr(nowMYT())?hhmm(when):fmtDT(when.toISOString());
   const covText=cov==='inside'?esc([area.district,area.division?area.division+' division':null,area.state].filter(Boolean).join(', ')||'Malaysia (district not identified)'):cov==='outside'?'outside Malaysia ('+esc(area.country)+'), outside MetMalaysia\'s forecast areas':'area lookup unavailable, so whether MetMalaysia covers this point is not known';
   let h='<div class="lgrid">';
-  h+=`<div class="lbox"><h3>Where</h3>${lat.toFixed(3)}, ${lon.toFixed(3)}${pos.acc?' (±'+Math.round(pos.acc)+' m)':''} · ${esc(pos.how==='device'?(pos.saved?'saved device position from ':'device position at '):'entered by hand at ')}${esc(posWhen)} MYT${locNote?' · '+esc(locNote):''}<br>${km(lat,lon,LAT,LON).toFixed(0)} km from Kota Kinabalu airport · ${covText}<br><span class="note" style="margin:0">Local time zone ${esc(tzn)} · area lookup ${rd('geo')} · places table ${rd('places')}${cov==='inside'?(town?' · nearest MetMalaysia town '+esc(town.p.name)+' ('+town.d.toFixed(0)+' km, '+esc(town.how)+'; placed '+esc(town.p.how||'by name')+')':' · no MetMalaysia town record within 60 km')+(dist?' · district record '+esc(dist.p.name)+' ('+dist.d.toFixed(0)+' km, '+esc(dist.how)+')':' · no district record within 60 km'):''}</span></div>`;
+  h+=`<div class="lbox"><h3>Where</h3>${lat.toFixed(3)}, ${lon.toFixed(3)}${pos.acc?' (±'+Math.round(pos.acc)+' m)':''} · ${esc(pos.how==='device'?(pos.saved?'saved device position from ':'device position at '):'entered by hand at ')}${esc(posWhen)} MYT${locNote?' · '+esc(locNote):''}<br>${km(lat,lon,LAT,LON).toFixed(0)} km from Kota Kinabalu airport · ${covText}<br><span class="note" style="margin:0">Local time zone ${esc(tzn)} · area lookup ${rd('geo')} · places table ${res.places.v?'read '+hhmm(new Date(res.places.v.readAt||res.places.at))+' MYT (kept in memory)':rd('places')}${cov==='inside'?(res.places.v?((town?' · nearest MetMalaysia town '+esc(town.p.name)+' ('+town.d.toFixed(0)+' km, '+esc(town.how)+'; placed '+esc(town.p.how||'by name')+')':' · no MetMalaysia town record within 60 km')+(dist?' · district record '+esc(dist.p.name)+' ('+dist.d.toFixed(0)+' km, '+esc(dist.how)+')':' · no district record within 60 km')):' · forecast-location lookup unavailable, so no MetMalaysia records this time'):''}</span></div>`;
   if(m&&m.current){const c=m.current;h+=`<div class="lbox"><h3>Now · model (${esc(lt(c.time))} local)</h3><b class="v">${num(c.temperature_2m,1)}°C</b> feels ${num(c.apparent_temperature,0)}°C<br>${esc(CODE_WORDS[c.weather_code]||'code '+c.weather_code)} · cloud ${num(c.cloud_cover)}% · humidity ${num(c.relative_humidity_2m)}%<br>wind ${num(c.wind_speed_10m)} km/h${fin(c.wind_direction_10m)?' '+DIR(c.wind_direction_10m):''}${fin(c.wind_gusts_10m)?', gusts '+num(c.wind_gusts_10m):''} · rain last ${fin(c.interval)?Math.round(c.interval/60)+' min':'interval'} ${num(c.precipitation,1)} mm<br><span class="note" style="margin:0">${rd('model')}</span></div>`}
   else h+=`<div class="lbox"><h3>Now · model</h3><span class="unavail">unavailable</span><br><span class="note" style="margin:0">${rd('model')}</span></div>`;
   if(ap){const o=res.metar&&res.metar.v?res.metar.v.slice(-1)[0]:null;h+=`<div class="lbox"><h3>Nearest airport report · ${esc(ap.a[1])} (${esc(ap.a[0])}, ${ap.d.toFixed(0)} km away)</h3>${o?`<b class="v">${num(o.temp)}°C</b> at ${esc(fmtT(o.t))} MYT<br>${esc(o.wx?(o.wx.includes('TS')?'Thunderstorm '+o.wx:o.wx):(({CLR:'Clear',SKC:'Clear',CAVOK:'Clear',FEW:'Few clouds',SCT:'Partly cloudy',BKN:'Mostly cloudy',OVC:'Overcast'})[o.cover]||'–'))} · dew point ${num(o.dewp)}° · wind ${fin(o.wspd)?(o.wspd===0?'calm':Math.round(o.wspd*1.852)+' km/h'+(fin(o.wdir)?' '+DIR(o.wdir):'')):'–'}<br>`:`<span class="unavail">no report</span><br>`}<span class="note" style="margin:0">${rd('metar')} · the airport's own weather, ${ap.d.toFixed(0)} km from you</span></div>`}
@@ -649,16 +675,19 @@ function renderLoc(){const R=LOCRES;if(!R)return;const {pos,res,area,cov,town,di
   if(m&&m.daily&&Array.isArray(m.daily.time)){const Dd=m.daily,g=(k,i)=>{const a=Dd[k];return Array.isArray(a)?a[i]:null};h+='<div class="days" style="margin-top:10px">'+Dd.time.map((d,i)=>`<div class="day"><b>${d===todayL?'Today':esc(ld(d))}</b><br><span class="ic">${codeIcon(g('weather_code',i))}</span><div style="font-weight:600">${num(g('temperature_2m_max',i))}° / ${num(g('temperature_2m_min',i))}°</div><div>${num(g('precipitation_probability_max',i))}% · ${num(g('precipitation_sum',i),1)} mm</div></div>`).join('')+'</div>'}
   h+='<div class="note">Model forecast for your point (Open-Meteo blend); hourly times and dates are local to the point ('+esc(tzn)+'); rain chance is for the hour starting at that time. Town and district wording is MetMalaysia\'s for the nearest forecast records (matched by name or distance, so approximate; the distances are shown). This card refreshes separately in each visible tab, every 10 minutes, or when you press Update. Your device position is saved in this browser until you press Forget; coordinates rounded to four decimals go to Open-Meteo (forecast) and to BigDataCloud (which country, state and district you are in); MetMalaysia receives nearby forecast-location ids and the airport relay an airport code; nothing is sent to GitHub.</div>';
   $('#locout').innerHTML=h;renderLocWarn();$('#locasof').textContent='checked '+hhmm(new Date(R.at))+' MYT'}
-function renderLocWarn(){const el=$('#locwarn'),R=LOCRES;if(!el||!R)return;const {area,cov}=R;
-  if(cov!=='inside'||!area.state){el.innerHTML='<h3>MetMalaysia warnings for your area</h3><span class="note" style="margin:0">'+(cov==='inside'?'state not identified; see the main warnings card above':'not applicable outside MetMalaysia\'s areas')+'</span>';return}
-  const st=D&&D.status&&D.status.metmalaysia_warnings,W=D&&Array.isArray(D.warnings)?D.warnings:null;
-  if(!st||!st.ok||!W){el.innerHTML='<h3>MetMalaysia warnings for your area</h3><span class="unavail">warning feed unavailable</span>';return}
-  const hits=[],und=[];W.forEach(w=>{if(!w)return;(Array.isArray(w.subsections)?w.subsections:[]).forEach(s=>{if(!s||s.sea)return;const c=areaCoverage(s.text,area,w.heading);if(c===true)hits.push({w,s});else if(c===null&&nameRe(area.state).test(s.text+' '+w.heading))und.push({w,s})})});
-  let h='<h3>MetMalaysia warnings for '+esc([area.district,area.division,area.state].filter(Boolean).join(' / '))+'</h3>';
-  if(hits.length)h+=hits.map(({w,s})=>{const f=effFrom(w,s),to=s.to?P(s.to):null,exp=to&&ended(s.to),fut=f.t.getTime()>Date.now();return`<div><b>${esc(s.title||w.heading)}</b> ${!to?'<span class="tag">validity not parsed</span>':exp?'<span class="tag drop">expired</span>':fut?'<span class="tag sec">upcoming</span>':'<span class="tag core">in force</span>'}<br><span class="note" style="margin:0">valid ${fmtDT(f.t.toISOString())}${esc(f.src)} – ${to?fmtDT(s.to):'?'} MYT</span></div>`}).join('');
-  else h+='<div>none names your area in the '+esc(String(D.warnings_retrieved??'–'))+' bulletins</div>';
-  if(und.length)h+='<div class="note">'+und.length+' bulletin'+(und.length>1?'s':'')+' naming '+esc(area.state)+' could not be read for your district: '+und.map(({w,s})=>esc(s.title||w.heading)).join('; ')+'. See the main warnings card.</div>';
-  h+='<span class="note" style="margin:0">'+esc(label('warn'))+' · re-judged every minute</span>';el.innerHTML=h}
+function renderLocWarn(){const el=$('#locwarn'),R=LOCRES;if(!el||!R)return;   // its own error boundary: a bad bulletin can only blank this box
+  try{const {area,cov}=R,prov=D&&D.status?label('warn'):'warning feed not loaded';
+    const head='<h3>MetMalaysia warnings for '+esc(cov==='inside'&&area.state?[area.district,area.division,area.state].filter(Boolean).join(' / '):'your area')+'</h3>',note=t=>head+'<span class="note" style="margin:0">'+t+' · '+esc(prov)+'</span>';
+    if(cov==='unknown'){el.innerHTML=note('the area lookup failed, so warnings for your area cannot be judged; see the main warnings card');return}
+    if(cov!=='inside'){el.innerHTML=note('not applicable outside MetMalaysia\'s areas');return}
+    if(!area.state||(!area.district&&!area.division)){el.innerHTML=note(area.state?'your position has no district (offshore or unresolved), so land warnings cannot be judged for it; see the main warnings card':'state not identified; see the main warnings card');return}
+    const as=assessWarnings(area);if(as.state==='unavailable'){el.innerHTML=head+'<span class="unavail">warning feed unavailable</span><br><span class="note" style="margin:0">'+esc(prov)+'</span>';return}
+    const row=(x,badge)=>`<div><b>${esc(x.name)}</b> ${badge}<br><span class="note" style="margin:0">valid ${fmtDT(x.from.toISOString())}${esc(x.f.src)} – ${fmtDT(x.to.toISOString())} MYT</span></div>`;
+    let h=head;as.active.forEach(x=>h+=row(x,'<span class="tag core">in force</span>'));as.upcoming.forEach(x=>h+=row(x,'<span class="tag sec">upcoming</span>'));as.unparsed.forEach(x=>h+=`<div><b>${esc(x.name)}</b> <span class="tag">validity not parsed</span></div>`);
+    if(!as.active.length&&!as.upcoming.length&&!as.unparsed.length)h+='<div>'+(as.undetermined.length?'none read as naming your area':'none names your area')+' in the '+esc(String(D.warnings_retrieved??'–'))+' bulletins</div>';
+    if(as.undetermined.length)h+='<div class="note">'+as.undetermined.length+' bulletin'+(as.undetermined.length>1?'s':'')+' naming '+esc(area.state)+' could not be read for your district: '+as.undetermined.map(x=>esc(x.name)).join('; ')+'. See the main warnings card.</div>';
+    h+='<span class="note" style="margin:0">'+esc(prov)+' · re-judged every minute</span>';el.innerHTML=h}
+  catch(e){el.innerHTML='<h3>MetMalaysia warnings for your area</h3><span class="unavail">could not be judged ('+esc(e&&e.message||'error')+'); see the main warnings card</span>'}}
 {const saved=locLS();if(saved&&fin(saved.lat)&&fin(saved.lon)){setLoc({lat:saved.lat,lon:saved.lon,acc:fin(saved.acc)?saved.acc:null,at:fin(saved.at)?saved.at:Date.now(),how:saved.how||'device',saved:true},false);
   const kick=()=>{locRestoreT=null;if(LOC&&!LOCRES&&!document.hidden)refreshLoc()};locRestoreT=setTimeout(kick,1500)}}
 document.addEventListener('visibilitychange',()=>{if(document.hidden||!LOC)return;if(!LOCRES||Date.now()-LOCRES.at>10*60e3)refreshLoc()});

@@ -209,29 +209,47 @@ def _alt(state):
 
 def area_coverage(text, state, division=None, district=None, ctx=""):
     """Same reading as areaCoverage() in index.html: True / False / None (cannot tell).
-    Reads "State: item, item (district, district) and item" after the state's name; in Sabah and Sarawak the items are divisions,
-    elsewhere districts; an item with a bracket list covers only the districts listed; a state named with no list covers the whole
-    state; whole names only, never substrings."""
+    Reads "State: item, item (district, district) and item" after the state's name (or, when only the heading/scope names the
+    state, the whole body as that state's list); in Sabah and Sarawak the items are divisions, elsewhere districts; an item with a
+    bracket list covers only the districts listed; a state named in the text with no list covers the whole state; a qualified
+    region ("Eastern Sabah") cannot be resolved; whole names only, never substrings."""
     if not state:
         return None
     alt = _alt(state)
     s_re = re.compile(r"(^|[^A-Za-z])" + alt + r"(?=$|[^A-Za-z])", re.I)
-    whole = text + " " + (ctx or "")
-    if not s_re.search(whole):
+    q_re = re.compile(r"\b(?:Eastern|Western|Northern|Southern|Central|Coastal|Interior|Upper|Lower)\s+" + alt + r"(?=$|[^A-Za-z])", re.I)
+    ctx_text = ctx or ""
+
+    def plain(t):  # "Eastern Sabah" is a region the page cannot resolve, never the whole state
+        return q_re.sub(" ", t)
+
+    in_text, in_ctx = bool(s_re.search(plain(text))), bool(s_re.search(plain(ctx_text)))
+    if not in_text and q_re.search(text):
+        return None
+    if not in_text and not in_ctx:
         return False
+
     def in_list(lst, name):
         return bool(lst and name and _name_re(name).search(lst))
 
-    m = re.search(r"(?:^|[^A-Za-z])" + alt + r"\s*:\s*(.*)", text, re.S | re.I)
-    if not m:
+    def same(x, y):
+        return bool(x and y and _name_re(x).search(y) and _name_re(y).search(x))
+
+    m = re.search(r"(?:^|[^A-Za-z])" + alt + r"\s*:\s*(.*)", text, re.S | re.I) if in_text else None
+    if in_text and not m:
         ml = re.search(r"(?:^|[^A-Za-z])" + alt + r"\s*\(([^)]*)\)", text, re.I)
         if ml:  # "State (district, district)": only those districts
             return in_list(ml.group(1), district) if district else None
-        return True if s_re.search(text) else None
-    seg = re.split(r"(?:^|\s)(?:[A-Z][A-Za-z.' ]*:)", m.group(1))[0]
+        return True  # state named in the text without any list: whole state
+    if m:
+        seg = m.group(1)
+    else:  # heading-only state: the body's list (after "over …") is that state's list
+        mo = re.search(r"\bover\s+(?:the\s+(?:areas?|states?|districts?|divisions?)\s+of\s+)?(.*)", text, re.S | re.I)
+        seg = mo.group(1) if mo else re.sub(r"^\s*(?:[IVX]+|\d+)\)\s*", "", text)
+    seg = re.split(r"(?:^|\s)(?:[A-Z][A-Za-z.' ]*:)", seg)[0]
     seg = re.split(r"\.\s|\s(?:within|until|from|is|are|expected|valid|issued|will|may)\b", seg, flags=re.I)[0]
     items, depth, cur, i = [], 0, "", 0
-    while i < len(seg):  # split on "," and " and " outside brackets only
+    while i < len(seg):  # split on ",", "•", ";" and " and " outside brackets only
         ch = seg[i]
         if ch == "(":
             depth += 1
@@ -239,7 +257,7 @@ def area_coverage(text, state, division=None, district=None, ctx=""):
             depth -= 1
         is_and = (depth == 0 and seg[i:i + 3].lower() == "and" and (i == 0 or seg[i - 1].isspace())
                   and (i + 3 >= len(seg) or seg[i + 3].isspace()))
-        if depth == 0 and (ch in ",•;" or is_and):  # MetMalaysia also separates items with "•"
+        if depth == 0 and (ch in ",•;" or is_and):
             items.append(cur)
             cur = ""
             if is_and:
@@ -255,10 +273,6 @@ def area_coverage(text, state, division=None, district=None, ctx=""):
             parsed.append((mm.group(1).strip(), mm.group(2)))
     if not parsed:
         return None
-
-    def same(a, b):
-        return bool(a and b and _name_re(a).search(b) and _name_re(b).search(a))
-
     if state in DIVISION_STATES:
         dv = next((p for p in parsed if division and same(p[0], division)), None)
         if dv:
@@ -271,12 +285,13 @@ def area_coverage(text, state, division=None, district=None, ctx=""):
     return False if district else None
 
 
-def covers_kk(text):
-    """Kota Kinabalu is covered when the subsection, read by area_coverage, names KK or Sabah's West Coast without leaving KK out."""
-    return area_coverage(text, "Sabah", "West Coast", "Kota Kinabalu") is True
+def covers_kk(text, ctx=""):
+    """Kota Kinabalu is covered when the subsection, read by area_coverage, names KK or Sabah's West Coast without leaving KK out.
+    ctx = the bulletin heading and section scope, which may carry the state when the subsection does not."""
+    return area_coverage(text, "Sabah", "West Coast", "Kota Kinabalu", ctx) is True
 
 
-def subsections(text):
+def subsections(text, head=""):
     """Split a MetMalaysia composite bulletin into numbered subsections with their own validity."""
     parts = re.split(r"(?=(?:\b[IVX]+\)|\b\d\))\s)", text)
     out = []
@@ -310,7 +325,7 @@ def subsections(text):
                 if m and parse_date(m.group(1)):
                     sub["to"] = parse_date(m.group(1)) + "T23:59:59"
         sub["sea"] = "waters" in p.lower()
-        sub["covers_kk"] = covers_kk(p)
+        sub["covers_kk"] = covers_kk(p, (head or "") + " " + (this_scope or ""))
         out.append(sub)
     return out
 
@@ -323,21 +338,25 @@ for w in warn or []:
             else "rain" if "RAIN" in head.upper() else "other")
     if "THUNDERSTORM" in head.upper() and kind == "other":
         kind = "thunder"
-    subs = subsections(tx)
+    subs = subsections(tx, head)
     if not subs and tx and kind != "cyclone":
         # an unnumbered single-warning bulletin: one subsection carrying the bulletin's own structured validity
         subs = [{"text": tx, "areas": [a for a in PLACES if a in tx], "from": w.get("valid_from"), "to": w.get("valid_to"),
-                 "title": head.title(), "scope": None, "sea": "waters" in tx.lower(), "covers_kk": covers_kk(tx)}]
+                 "title": head.title(), "scope": None, "sea": "waters" in tx.lower(), "covers_kk": covers_kk(tx, head)}]
     warnings.append({"issued": w["warning_issue"]["issued"], "heading": head, "kind": kind,
                      "valid_from": w.get("valid_from"), "valid_to": w.get("valid_to"), "text": tx,
                      "areas": [a for a in PLACES if a in tx], "subsections": subs,
                      "parsed": all(s["to"] for s in subs) and bool(subs),
                      "names_kk_land": any(s["covers_kk"] and not s["sea"] for s in subs)})
-seen, uniq = set(), []
-for w in warnings:
+seen, uniq = {}, []
+for w in warnings:  # duplicates with different bulletin validity are kept as a recorded conflict, never resolved by order
     k = (w["heading"], w["text"][:400])
-    if k not in seen:
-        seen.add(k); uniq.append(w)
+    first = seen.get(k)
+    if first is None:
+        seen[k] = w; uniq.append(w)
+    elif (first.get("valid_from"), first.get("valid_to")) != (w.get("valid_from"), w.get("valid_to")):
+        first.setdefault("valid_conflict", [f"{first.get('valid_from') or '?'} – {first.get('valid_to') or '?'}"]).append(
+            f"{w.get('valid_from') or '?'} – {w.get('valid_to') or '?'}")
 
 # ---------------------------------------------------------------- TAF: structured periods in MYT
 taf_out = None

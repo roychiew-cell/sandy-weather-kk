@@ -16,7 +16,7 @@ ALIAS = {"Georgetown": "George Town", "Bandaraya Melaka": "Melaka", "Kota Setar"
          "Tanah Tinggi Cameron": "Tanah Rata", "Tanah Rata - Brinchang": "Tanah Rata", "Jalan Duta": "Kuala Lumpur",
          "Kelana Jaya": "Petaling Jaya", "Sri Gombak": "Gombak", "Gombak (Taman Perwira )": "Gombak", "Bayan Baru": "Bayan Lepas",
          "Sungai Dua - Sungai Nibong": "Gelugor", "Bandar Baru Seri Manjung": "Seri Manjung", "Manjung": "Seri Manjung",
-         "Penawar": "Bandar Penawar", "Lojing": "Gua Musang", "Muallim": "Tanjung Malim", "Larut, Matang Dan Selama": "Taiping",
+         "Penawar": "Bandar Penawar", "Muallim": "Tanjung Malim", "Larut, Matang Dan Selama": "Taiping",
          "Setiu": "Permaisuri", "Besut": "Jerteh", "Samarahan": "Kota Samarahan", "Meradong": "Bintangor", "Subis": "Batu Niah",
          "Telang Usan": "Long Lama", "Bandar Tun Abdul Razak, Jengka": "Jengka", "Perak Tengah": "Seri Iskandar",
          "Hilir Perak": "Teluk Intan", "Batang Padang": "Tapah", "Kubang Pasu": "Jitra", "Kuala Muda": "Sungai Petani",
@@ -70,7 +70,8 @@ OVERRIDE = {"Ds019": (5.12, 100.49, "Perak", "Kerian", "Parit Buntar, district s
             "Ds040": (4.02, 101.02, "Perak", "Hilir Perak", "Teluk Intan, district seat (hand-set)"),
             "Tn119": (2.196, 102.249, "Melaka", "Melaka Tengah", "Melaka city (hand-set)"),
             "Tn175": (5.33, 100.28, "Pulau Pinang", "Barat Daya", "Sungai Ara, Penang (hand-set)"),
-            "Tn073": (3.17, 101.67, "WP Kuala Lumpur", "Kuala Lumpur", "Jalan Duta area (hand-set)")}
+            "Tn073": (3.17, 101.67, "WP Kuala Lumpur", "Kuala Lumpur", "Jalan Duta area (hand-set)"),
+            "Tn141": (4.63, 101.43, "Kelantan", "Gua Musang", "Lojing Highlands (hand-set, approximate; ~75 km from Gua Musang town)")}
 HAND_STATE = {"Nabawan": "Sabah", "Tongod": "Sabah", "Kota Marudu": "Sabah", "Yan": "Kedah", "Asajaya": "Sarawak", "Meradong": "Sarawak",
               "Setiu": "Terengganu", "Nilai": "Negeri Sembilan", "Bera": "Pahang", "Bandar Tun Abdul Razak, Jengka": "Pahang",
               "Sungai Dua - Sungai Nibong": "Pulau Pinang", "Gelugor": "Pulau Pinang"}

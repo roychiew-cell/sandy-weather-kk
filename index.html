@@ -51,13 +51,13 @@ details summary{cursor:pointer;color:var(--mu);font-size:12px}
 .rm .ticker span,.paused .ticker span{animation:none!important;padding-left:0;white-space:normal}
 .rm .bar i,.paused .bar i{transition:none!important}
 /* ---- cartoon theme (Roy, 8 Nov 2026: "very kiddo animated") ---- */
-:root{--bg:#5fb9ff;--card:rgba(255,253,245,.93);--bd:#ffb703;--tx:#2b2b4a;--mu:#5d6280;--ac:#ff5fa2;--wet:#3da5ff;--hot:#ff8a3d;--ok:#1f9d5a;--bad:#ff5c5c;--warn:#e0a200}
+:root{--bg:#5fb9ff;--card:rgba(255,253,245,.95);--bd:#ffb703;--tx:#2b2b4a;--mu:#4c5068;--ac:#b5125e;--wet:#3da5ff;--hot:#ff8a3d;--ok:#1f9d5a;--bad:#ff5c5c;--warn:#e0a200}
 body{font-family:'Fredoka','Baloo 2',-apple-system,system-ui,sans-serif;color:var(--tx)}
 h1{color:#fff;text-shadow:0 2px 0 #2b2b4a,0 0 12px rgba(0,0,0,.25);letter-spacing:.1em;font-weight:700}
 .hero,.card{background:var(--card);border:3px solid var(--bd);border-radius:26px;box-shadow:0 8px 0 rgba(43,43,74,.18);text-shadow:none}
 .hero{border-color:#ff5fa2}
-.card h2{color:#ff5fa2;letter-spacing:.06em;font-weight:700}
-.big{font-weight:700;color:#ff8a3d;text-shadow:3px 3px 0 #ffe14d;display:inline-block;animation:wobble 4s ease-in-out infinite}
+.card h2{color:#b5125e;letter-spacing:.06em;font-weight:700}
+.big{font-weight:700;color:#c2410c;text-shadow:3px 3px 0 #ffe14d;display:inline-block;animation:wobble 4s ease-in-out infinite}
 @keyframes wobble{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg)}}
 #cond{font-weight:600}
 .tile{border:3px solid #9be7ff;box-shadow:0 5px 0 rgba(43,43,74,.12);border-radius:20px}.tile:nth-child(2n){border-color:#ffd1ec}.tile:nth-child(3n){border-color:#c9f2b0}
@@ -66,10 +66,10 @@ h1{color:#fff;text-shadow:0 2px 0 #2b2b4a,0 0 12px rgba(0,0,0,.25);letter-spacin
 .call{border-color:#ff5fa2}.warn{border-color:#ffb703}
 .stale{background:#fff0f0;border:3px dashed #ff5c5c;color:#2b2b4a}
 .day{background:#fff;border:3px solid #9be7ff;border-radius:22px;box-shadow:0 5px 0 rgba(43,43,74,.12)}.day:nth-child(2n){border-color:#ffd1ec;background:#fff7fb}.day:nth-child(3n){border-color:#c9f2b0;background:#f6fff0}
-.day b{color:#ff5fa2;font-size:15px}.day .ic{animation:bob 2s ease-in-out infinite}
+.day b{color:#b5125e;font-size:15px}.day .ic{animation:bob 2s ease-in-out infinite}
 .bar{background:#e9eef7}
 th,td{border-bottom:1px solid #e3e8f2}.ticker{border-top:2px dashed #e3e8f2}
-.count{color:#ff8a3d;font-weight:700}
+.count{color:#c2410c;font-weight:700}
 .tag{border-width:2px;font-weight:600}
 .ctl{background:#fff;border:3px solid #ffb703;box-shadow:0 6px 0 rgba(43,43,74,.18)}
 .ctl button{background:#ffe14d;color:#2b2b4a;border:2px solid #2b2b4a;font-weight:700;font-family:inherit}
@@ -90,7 +90,7 @@ h1{position:absolute;top:14px;left:16px;margin:0}
 <div class="grid" style="flex:1;min-width:280px" id="tiles"></div></div>
 <div class="card"><h2>Next three parts of the day</h2><div class="days" id="parts"></div><div class="note" id="partsnote"></div></div>
 <div class="card call" id="call"><h2>Sandy's call</h2><p class="unavail">Loading…</p></div>
-<div class="card"><h2>7-day forecast</h2><div class="days" id="days"></div><div class="note">Morning / afternoon / night icons and temperatures: MetMalaysia town forecast (district wording on hover). Bar and odds: ECMWF ensemble, chance of 10 mm+ at the airport grid point. Press "Play 7 days" below to watch the week in the sky.</div></div>
+<div class="card"><h2>7-day forecast</h2><div class="days" id="days"></div><div class="note">Morning / afternoon / night icons and temperatures: MetMalaysia's town record for each date, else its district record (tagged), else the model (tagged); district wording on hover when both exist. Bar and odds: ECMWF ensemble, chance of 10 mm+ at the airport grid point. Press "Play 7 days" below to watch the week in the sky.</div></div>
 <div class="card warn" id="warn"><h2>MetMalaysia warnings</h2><p class="unavail">Loading…</p></div>
 <div class="card"><h2>Storm clock · airport forecast (TAF)</h2><div style="display:flex;flex-wrap:wrap;gap:20px;align-items:center"><div><div class="count" id="countdown"></div><div class="note" id="countnote"></div></div><svg id="clock" viewBox="0 0 640 90" style="flex:1;min-width:260px" role="img" aria-label="Today's timeline with the forecast thunderstorm periods"></svg></div><div class="ticker"><span id="tick"></span></div></div>
 <div class="card"><h2>Meet the weather crew</h2><div class="days" id="crew">
@@ -260,7 +260,7 @@ function render(){
     let s=`<rect x="${L}" y="34" width="${W-L-R}" height="18" rx="9" fill="rgba(43,43,74,.12)"/>`;
     if(bd&&di>=0&&arr(bd,'sunrise')&&arr(bd,'sunset')){const sr=+String(bd.sunrise[di]).slice(11,13)+(+String(bd.sunrise[di]).slice(14,16))/60,ss=+String(bd.sunset[di]).slice(11,13)+(+String(bd.sunset[di]).slice(14,16))/60;if(fin(sr)&&fin(ss))s+=`<rect x="${x(sr)}" y="34" width="${x(ss)-x(sr)}" height="18" rx="9" fill="rgba(255,209,102,.15)"/>`}
     const n=nowMYT(),dayStart=Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate())-8*3600e3;
-    tsPer.map(p=>({a:(p.from.getTime()-dayStart)/3600e3,b:(p.to.getTime()-dayStart)/3600e3,p})).filter(p=>p.b>0&&p.a<24).forEach(p=>{s+=`<rect x="${x(p.a)}" y="30" width="${x(p.b)-x(p.a)}" height="26" rx="6" fill="#e0a200" opacity="${p.p.prob!=null?.55:.85}">${ST()?'':'<animate attributeName="opacity" values=".45;.95;.45" dur="2.4s" repeatCount="indefinite"/>'}</rect><text x="${x(p.a)}" y="24" style="fill:#e0a200">⛈ ${esc((p.p.prob!=null?'PROB'+p.p.prob+' ':'')+p.p.change+' '+p.p.wx)} ${fmtT(p.p.from.toISOString())}–${fmtT(p.p.to.toISOString())}</text>`});
+    tsPer.map(p=>({a:(p.from.getTime()-dayStart)/3600e3,b:(p.to.getTime()-dayStart)/3600e3,p})).filter(p=>p.b>0&&p.a<24).forEach(p=>{s+=`<rect x="${x(p.a)}" y="30" width="${x(p.b)-x(p.a)}" height="26" rx="6" fill="#e0a200" opacity="${p.p.prob!=null?.55:.85}">${ST()?'':'<animate attributeName="opacity" values=".45;.95;.45" dur="2.4s" repeatCount="indefinite"/>'}</rect><text x="${x(p.a)}" y="24" style="fill:#7a5200">⛈ ${esc((p.p.prob!=null?'PROB'+p.p.prob+' ':'')+p.p.change+' '+p.p.wx)} ${fmtT(p.p.from.toISOString())}–${fmtT(p.p.to.toISOString())}</text>`});
     s+=`<line id="nowline" x1="0" x2="0" y1="22" y2="64" stroke="#2b2b4a" stroke-width="2"/><text id="nowtxt" x="0" y="78" style="fill:#2b2b4a">now</text>`;
     for(let h=0;h<=24;h+=6)s+=`<text x="${x(h)-8}" y="78">${pad(h%24)}h</text>`;$('#clock').innerHTML=s;
   });
@@ -272,12 +272,12 @@ function render(){
     const W=1000,H=230,L=34,R=10,T=14,B=30,t0=P(o[0].t).getTime(),t1=P(o[o.length-1].t).getTime(),x=t=>L+(W-L-R)*(P(t).getTime()-t0)/Math.max(1,t1-t0);
     const lo=Math.min(...o.map(a=>a.temp))-1,hi=Math.max(...o.map(a=>a.temp))+1,y=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo));let s='';
     let ep=[],c=null;o.forEach(a=>{if(String(a.wx||'').includes('TS')){const tt=P(a.t).getTime();if(c&&tt-P(c.last).getTime()<=45*60e3)c.last=a.t;else{c={first:a.t,last:a.t};ep.push(c)}}});
-    ep.forEach(e=>s+=`<rect x="${x(e.first)}" y="${T}" width="${Math.max(6,x(e.last)-x(e.first))}" height="${H-T-B}" fill="rgba(255,209,102,.18)"/><text x="${x(e.first)+4}" y="${T+12}" style="fill:#e0a200">⛈ TS reported ${fmtT(e.first)}–${fmtT(e.last)}</text>`);
+    ep.forEach(e=>s+=`<rect x="${x(e.first)}" y="${T}" width="${Math.max(6,x(e.last)-x(e.first))}" height="${H-T-B}" fill="rgba(255,209,102,.18)"/><text x="${x(e.first)+4}" y="${T+12}" style="fill:#7a5200">⛈ TS reported ${fmtT(e.first)}–${fmtT(e.last)}</text>`);
     const rt=o.filter(a=>String(a.recent||'').includes('TS')&&!String(a.wx||'').includes('TS'));
     rt.forEach(a=>s+=`<line x1="${x(a.t)}" x2="${x(a.t)}" y1="${T}" y2="${H-B}" stroke="#e0a200" stroke-dasharray="3 3" opacity=".6"/>`);
     o.filter(a=>/T(00|12):00/.test(String(a.t))).forEach(a=>s+=`<line x1="${x(a.t)}" x2="${x(a.t)}" y1="${T}" y2="${H-B}" stroke="rgba(43,43,74,.15)"/><text x="${x(a.t)+3}" y="${H-10}">${fmtD(a.t)} ${fmtT(a.t)}</text>`);
     s+=`<polyline points="${o.map(a=>`${x(a.t)},${y(a.temp)}`).join(' ')}" fill="none" stroke="#ffb347" stroke-width="2.5" stroke-dasharray="3000" stroke-dashoffset="${ST()?0:3000}">${anim('stroke-dashoffset',3000,0,'2.5s')}</polyline>`;
-    const mx=o.reduce((a,b)=>b.temp>a.temp?b:a);s+=`<circle cx="${x(mx.t)}" cy="${y(mx.temp)}" r="4" fill="#ffb347"/><text x="${x(mx.t)-30}" y="${y(mx.temp)-8}" style="fill:#ffb347">${mx.temp}°C</text>`;
+    const mx=o.reduce((a,b)=>b.temp>a.temp?b:a);s+=`<circle cx="${x(mx.t)}" cy="${y(mx.temp)}" r="4" fill="#ffb347"/><text x="${x(mx.t)-30}" y="${y(mx.temp)-8}" style="fill:#9a4a00">${mx.temp}°C</text>`;
     const la=o[o.length-1];s+=`<circle cx="${x(la.t)}" cy="${y(la.temp)}" r="5" fill="#2b2b4a">${ST()?'':'<animate attributeName="r" values="4;8;4" dur="1.6s" repeatCount="indefinite"/>'}</circle>`;
     for(let v=Math.ceil(lo);v<=hi;v+=3)s+=`<text x="2" y="${y(v)+4}">${v}°</text>`;$('#obs').innerHTML=s;
     $('#obsnote').textContent='Temperature measured every 30 minutes at Kota Kinabalu International Airport (METAR), last 36 hours before the data time. Shaded = active thunderstorm in the present-weather group; dashed lines = "recent thunderstorm" remark only'+(rt.length?' ('+rt.map(a=>fmtT(a.t)).join(', ')+')':'')+'. Times MYT. Rainfall amount is not reported in METAR.';
@@ -298,7 +298,7 @@ function render(){
       const t=String(tm[i0+i]);if(/T(00|06|12|18):00/.test(t))s+=`<text x="${x}" y="${H-10}">${t.slice(11,13)}h${t.endsWith('00:00')?' '+fmtD(t).slice(4):''}</text>`}
     const pts=[];for(let i=0;i<N;i++){const v=hv('temperature_2m',i0+i);if(fin(v))pts.push(`${L+i*bw+bw/2},${ty(v)}`)}
     s+=`<polyline points="${pts.join(' ')}" fill="none" stroke="#ffb347" stroke-width="2.5" stroke-dasharray="2000" stroke-dashoffset="${ST()?0:2000}">${anim('stroke-dashoffset',2000,0,'2s')}</polyline>`;
-    for(let v=Math.ceil(lo);v<=hi;v+=2)s+=`<text x="${W-R+4}" y="${ty(v)+4}" style="fill:#ffb347">${v}°</text>`;
+    for(let v=Math.ceil(lo);v<=hi;v+=2)s+=`<text x="${W-R+4}" y="${ty(v)+4}" style="fill:#9a4a00">${v}°</text>`;
     $('#hr').innerHTML=s;
     $('#hrtbl').innerHTML='<tr><th>Time (MYT)</th><th>Rain chance %</th><th>Rain mm</th><th>°C</th><th>Feels</th><th>Wind km/h</th><th>Cloud %</th></tr>'+Array.from({length:N},(_,j)=>{const i=i0+j;return`<tr><td>${fmtDT(tm[i])}</td><td>${num(hv('precipitation_probability',i))}</td><td>${num(hv('precipitation',i),1)}</td><td>${num(hv('temperature_2m',i),1)}</td><td>${num(hv('apparent_temperature',i),1)}</td><td>${num(hv('wind_speed_10m',i),1)}</td><td>${num(hv('cloud_cover',i))}</td></tr>`}).join('');
   });
@@ -311,13 +311,17 @@ function render(){
   section('#days',['#days'],()=>{
     const days=Array.isArray(D.days)?D.days.filter(d=>d>=viewToday):[]; if(!days.length)throw new Error('no forecast dates from today');
     const wcIcon=c=>!fin(c)?'·':c<=1?'☀️':c==2?'⛅':c==3?'☁️':c<=48?'🌫️':c<=67?'🌧️':c<=82?'🌦️':'⛈️';
-    const icon2=s=>s?icon(s):'·';
+    const known=s=>{const l=String(s||'').toLowerCase().trim();return !!l&&TR.some(([a])=>l==a)};
+    const icon2=s=>known(s)?icon(s):'·';
     $('#days').innerHTML=days.map((d,i)=>{const e=(D.ens||[]).find(x=>x&&x.day==d)||{},td=town&&town.days.find(r=>r&&r.date==d),dd=dist&&dist.days.find(r=>r&&r.date==d),m=td||dd,src=td?'town':dd?'district':'model',heavy=fin(e.p10)?e.p10:null;
       const bi=bd&&Array.isArray(bd.time)?bd.time.indexOf(d):-1, bmax=bi>=0&&arr(bd,'temperature_2m_max')?bd.temperature_2m_max[bi]:null, bmin=bi>=0&&arr(bd,'temperature_2m_min')?bd.temperature_2m_min[bi]:null, bcode=bi>=0&&arr(bd,'weather_code')?bd.weather_code[bi]:null;
+      // each temperature falls back on its own: town → district → model, and says where it came from when mixed
+      const pick=(f,mv)=>td&&fin(td[f])?[td[f],'town']:dd&&fin(dd[f])?[dd[f],'district']:fin(mv)?[mv,'model']:[null,null];
+      const [tmax,smax]=pick('max_temp',bmax),[tmin,smin]=pick('min_temp',bmin), tsrc=smax&&smin?(smax===smin?smax:smax+'/'+smin):null;
       const parts=m?[['am',m.morning_forecast],['pm',m.afternoon_forecast],['night',m.night_forecast]]:null, cmp=td&&dd?dd:null;
       return`<div class="day" style="animation:rise .7s ${i*90}ms both"><b>${d==viewToday?'Today':esc(fmtD(d))}</b>${src!=='town'?' <span class="tag">'+esc(src)+'</span>':''}
-      <div style="display:flex;justify-content:space-around;margin:6px 0 2px">${parts?parts.map(([k,v],j)=>`<span title="${esc(k)}: ${esc(v?tr(v):'not given')}${cmp?' · district: '+esc(tr(cmp[k=='am'?'morning_forecast':k=='pm'?'afternoon_forecast':'night_forecast'])):''}"><span class="ic" style="font-size:22px;animation-delay:${(i*3+j)*.2}s">${icon2(v)}</span><br><span class="note">${k}</span></span>`).join(''):`<span class="ic" style="font-size:26px">${wcIcon(bcode)}</span>`}</div>
-      <div style="font-size:15px">${m&&fin(m.max_temp)&&fin(m.min_temp)?num(m.max_temp)+'° / '+num(m.min_temp)+'°':fin(bmax)&&fin(bmin)?num(bmax)+'° / '+num(bmin)+'° <span class="note">(model)</span>':'<span class="unavail">no data</span>'}</div><div>${m&&m.afternoon_forecast?esc(tr(m.afternoon_forecast))+' (pm)':''}</div>
+      <div style="display:flex;justify-content:space-around;margin:6px 0 2px">${parts?parts.map(([k,v],j)=>`<span title="${esc(k)}: ${esc(v?(known(v)?tr(v):'unrecognised wording: '+v):'not given')}${cmp?' · district: '+esc(tr(cmp[k=='am'?'morning_forecast':k=='pm'?'afternoon_forecast':'night_forecast'])):''}"><span class="ic" style="font-size:22px;animation-delay:${(i*3+j)*.2}s">${icon2(v)}</span><br><span class="note">${k}</span></span>`).join(''):`<span class="ic" style="font-size:26px">${wcIcon(bcode)}</span>`}</div>
+      <div style="font-size:15px">${fin(tmax)&&fin(tmin)?num(tmax)+'° / '+num(tmin)+'°'+(tsrc&&tsrc!=='town'?' <span class="note">('+esc(tsrc)+')</span>':''):fin(tmax)||fin(tmin)?(fin(tmax)?num(tmax)+'° high':num(tmin)+'° low')+' <span class="note">('+esc(smax||smin)+')</span>':'<span class="unavail">no data</span>'}</div><div>${m&&known(m.afternoon_forecast)?esc(tr(m.afternoon_forecast))+' (pm)':''}</div>
       <div class="bar"><i data-w="${heavy??0}" style="background:${heavy>=30?'#ff6b6b':heavy>=20?'#e0a200':'#4aa3ff'}"></i></div>
       <div>${heavy!=null?heavy+'% chance 10 mm+<br>likely '+num(e.q10,1)+'–'+num(e.q90,1)+' mm':'<span class="unavail">ensemble n/a</span>'}</div></div>`}).join('');
     setTimeout(()=>document.querySelectorAll('.bar i').forEach(e=>e.style.width=e.dataset.w+'%'),RM||paused?0:300);
@@ -326,9 +330,9 @@ function render(){
     if(!recs.length)throw new Error('MetMalaysia forecast unavailable in this run');
     let s='<tr><th>Date</th><th>Record</th><th>Morning</th><th>Afternoon</th><th>Night</th><th>Min / max</th></tr>';
     const rr=[town,dist].filter(Boolean), dates=[...new Set(rr.flatMap(r=>r.days.map(x=>x.date)))].sort();
-    dates.forEach(d=>rr.forEach((r,ri)=>{const x=r.days.find(y=>y.date==d);if(!x)return;s+=`<tr>${ri==0?`<td rowspan="${rr.filter(q=>q.days.some(y=>y.date==d)).length}">${esc(fmtD(d))}</td>`:''}<td>${esc(r.kind)}</td><td title="${esc(x.morning_forecast)}">${esc(tr(x.morning_forecast))}</td><td title="${esc(x.afternoon_forecast)}">${esc(tr(x.afternoon_forecast))}</td><td title="${esc(x.night_forecast)}">${esc(tr(x.night_forecast))}</td><td>${num(x.min_temp)}° / ${num(x.max_temp)}°</td></tr>`}));
+    dates.forEach(d=>{const present=rr.map(r=>[r,r.days.find(y=>y&&y.date==d)]).filter(([r,x])=>x);present.forEach(([r,x],ri)=>{s+=`<tr>${ri==0?`<td rowspan="${present.length}">${esc(fmtD(d))}</td>`:''}<td>${esc(r.kind)}</td><td title="${esc(x.morning_forecast)}">${esc(tr(x.morning_forecast))}</td><td title="${esc(x.afternoon_forecast)}">${esc(tr(x.afternoon_forecast))}</td><td title="${esc(x.night_forecast)}">${esc(tr(x.night_forecast))}</td><td>${num(x.min_temp)}° / ${num(x.max_temp)}°</td></tr>`})});
     $('#mmt').innerHTML=s;
-    $('#mmnote').textContent='Records: '+Object.entries(D.metmy).map(([k,v])=>k+' ('+v.kind+')').join(', ')+'. The town record is used for the cards; the district covers a wider area and carries coverage wording ("a few places", "most places"). English is Sandy\'s literal translation of MetMalaysia\'s Malay (hover a cell for the original). MetMalaysia\'s own site may word the same phrase as "isolated" or "scattered"; "most places" is not a calibrated coverage figure.';
+    $('#mmnote').textContent='Records: '+Object.entries(D.metmy).map(([k,v])=>k+' ('+v.kind+')').join(', ')+'. The 7-day cards use, for each date, the town record, else the district record, else the model, and are tagged when it is not the town; each temperature falls back the same way. The district covers a wider area and carries coverage wording ("a few places", "most places"). English is Sandy\'s literal translation of MetMalaysia\'s Malay (hover a cell for the original). MetMalaysia\'s own site may word the same phrase as "isolated" or "scattered"; "most places" is not a calibrated coverage figure.';
   });
   // ensemble
   section('#ensnote',['#ens','#enstbl'],()=>{
@@ -336,10 +340,10 @@ function render(){
     const W=1000,H=250,L=40,R=44,T=20,B=34,n=E.length,cw=(W-L-R)/n;let s='';const y=p=>T+(H-T-B)*(1-p/100);
     for(let p=0;p<=100;p+=25)s+=`<line x1="${L}" x2="${W-R}" y1="${y(p)}" y2="${y(p)}" stroke="rgba(43,43,74,.12)"/><text x="4" y="${y(p)+4}">${p}%</text>`;
     const qmax=Math.ceil(Math.max(...E.map(e=>e.q90),10)/5)*5,ym=v=>T+(H-T-B)*(1-v/qmax);
-    for(let v=0;v<=qmax;v+=5)s+=`<text x="${W-R+6}" y="${ym(v)+4}" style="fill:#e0a200">${v} mm</text>`;
+    for(let v=0;v<=qmax;v+=5)s+=`<text x="${W-R+6}" y="${ym(v)+4}" style="fill:#7a5200">${v} mm</text>`;
     E.forEach((e,i)=>{const x=L+i*cw+cw*.14,w=cw*.26,d=(i*120)+'ms';
       [[e.p1,'#4aa3ff',0],[e.p10,'#ff6b6b',w+4]].forEach(([p,c,off])=>{const h=(H-T-B)*p/100;s+=`<rect x="${x+off}" y="${ST()?H-B-h:H-B}" width="${w}" height="${ST()?h:0}" rx="3" fill="${c}" opacity=".85">${anim('height',0,h,'1s',d)}${anim('y',H-B,H-B-h,'1s',d)}</rect><text x="${x+off}" y="${H-B-h-4}" style="fill:#2b2b4a">${num(p)}%</text>`});
-      const wx=x+2*w+16;s+=`<line x1="${wx}" x2="${wx}" y1="${ym(e.q10)}" y2="${ym(e.q90)}" stroke="#e0a200" stroke-width="2"/><circle cx="${wx}" cy="${ym(e.q50)}" r="3.5" fill="#e0a200"/><text x="${wx+5}" y="${ym(e.q90)+4}" style="fill:#e0a200">${num(e.q90,1)}</text><text x="${wx+5}" y="${ym(e.q10)+4}" style="fill:#e0a200">${num(e.q10,1)}</text>`;
+      const wx=x+2*w+16;s+=`<line x1="${wx}" x2="${wx}" y1="${ym(e.q10)}" y2="${ym(e.q90)}" stroke="#e0a200" stroke-width="2"/><circle cx="${wx}" cy="${ym(e.q50)}" r="3.5" fill="#e0a200"/><text x="${wx+5}" y="${ym(e.q90)+4}" style="fill:#7a5200">${num(e.q90,1)}</text><text x="${wx+5}" y="${ym(e.q10)+4}" style="fill:#7a5200">${num(e.q10,1)}</text>`;
       s+=`<text x="${x}" y="${H-12}">${e.day==viewToday?'Today':esc(fmtD(e.day))}</text>`});
     $('#ens').innerHTML=s;
     $('#enstbl').innerHTML='<tr><th>Date</th><th>Members</th><th>≥1 mm</th><th>≥10 mm</th><th>≥20 mm</th><th>10th pct</th><th>Median</th><th>90th pct</th><th>Median high</th></tr>'+E.map(e=>`<tr><td>${esc(fmtD(e.day))}</td><td>${num(e.n)}</td><td>${num(e.p1)}%</td><td>${num(e.p10)}%</td><td>${num(e.p20)}%</td><td>${num(e.q10,1)}</td><td>${num(e.q50,1)}</td><td>${num(e.q90,1)}</td><td>${num(e.tmax50,1)}°</td></tr>`).join('');
@@ -353,7 +357,7 @@ function render(){
     let s=`<text x="${L}" y="14">hourly temperature RMSE vs airport, °C (shorter is better)</text><text x="600" y="14">bias</text><text x="670" y="14">n</text><text x="720" y="14">fcst high</text><text x="820" y="14">≥1 mm in ${pad(win[0])}–${pad(win[1])}h?</text>`;
     sc.forEach(([k,v],i)=>{const y=26+i*rowH,w=(360)*Math.min(v.rmse,mx)/mx,c=v.rmse<1.5?'#1f9d5a':v.rmse<2.2?'#e0a200':'#ff6b6b';
       s+=`<text x="0" y="${y+16}" style="fill:#2b2b4a">${esc(k)}${v.n!==nmax?' *':''}</text><rect x="${L}" y="${y+4}" height="16" rx="4" width="${ST()?w:0}" fill="${c}">${anim('width',0,w,'1.1s',(i*90)+'ms')}</rect><text x="${L+w+6}" y="${y+16}" style="fill:#2b2b4a">${v.rmse.toFixed(2)}</text>`;
-      s+=`<text x="600" y="${y+16}" style="fill:${fin(v.bias)&&Math.abs(v.bias)<1?'#1f9d5a':'#e0a200'}">${fin(v.bias)?(v.bias>0?'+':'')+v.bias.toFixed(1)+'°':'–'}</text><text x="670" y="${y+16}">${num(v.n)}</text><text x="720" y="${y+16}" style="fill:${fin(v.tmax)&&fin(D.obs_y_max)&&Math.abs(v.tmax-D.obs_y_max)<=1?'#1f9d5a':'#ff6b6b'}">${fin(v.tmax)?v.tmax.toFixed(1)+'°':'–'}</text><text x="820" y="${y+16}" style="fill:${v.window_ge1mm==null?'#5d6280':v.window_ge1mm?'#1f9d5a':'#ff6b6b'}">${v.window_ge1mm==null?'n/a':(v.window_ge1mm?'yes':'no')+' · '+num(v.window_mm,1)+' mm'}</text>`});
+      s+=`<text x="600" y="${y+16}" style="fill:${fin(v.bias)&&Math.abs(v.bias)<1?'#1f7a47':'#7a5200'}">${fin(v.bias)?(v.bias>0?'+':'')+v.bias.toFixed(1)+'°':'–'}</text><text x="670" y="${y+16}">${num(v.n)}</text><text x="720" y="${y+16}" style="fill:${fin(v.tmax)&&fin(D.obs_y_max)&&Math.abs(v.tmax-D.obs_y_max)<=1?'#1f7a47':'#c0392b'}">${fin(v.tmax)?v.tmax.toFixed(1)+'°':'–'}</text><text x="820" y="${y+16}" style="fill:${v.window_ge1mm==null?'#5d6280':v.window_ge1mm?'#1f7a47':'#c0392b'}">${v.window_ge1mm==null?'n/a':(v.window_ge1mm?'yes':'no')+' · '+num(v.window_mm,1)+' mm'}</text>`});
     $('#score').setAttribute('viewBox',`0 0 ${W} ${40+sc.length*rowH}`);$('#score').innerHTML=s;
     $('#scoretbl').innerHTML='<tr><th>Model</th><th>RMSE °C</th><th>Bias °C</th><th>Hours paired</th><th>Fcst high</th><th>≥1 mm in window</th></tr>'+sc.map(([k,v])=>`<tr><td>${esc(k)}${v.n!==nmax?' *':''}</td><td>${v.rmse.toFixed(2)}</td><td>${fin(v.bias)?(v.bias>0?'+':'')+v.bias.toFixed(2):'–'}</td><td>${num(v.n)}</td><td>${fin(v.tmax)?v.tmax.toFixed(1)+'°':'–'}</td><td>${v.window_ge1mm==null?'n/a':(v.window_ge1mm?'yes':'no')+' · '+num(v.window_mm,1)+' mm'}</td></tr>`).join('');
     const ep=(D.ts_episodes_yday||[]).map(e=>fmtT(e.first)+'–'+fmtT(e.last)).join(', ');
@@ -501,7 +505,7 @@ function timelineStart(){ // establishes a NEW origin at the current hour; false
   origin=org;maxH=h;$('#scrub').max=maxH;$('#scrub').step=playSpan>24?1:.25;$('#scrub').hidden=false;$('#live').hidden=false;return true}
 function timelineRevalidate(){ // after new data: keep the origin and the selected forecast time where still covered
   if(!origin)return;const h=coverageFrom(origin);if(h<=0){timelineReset();return}
-  maxH=h;$('#scrub').max=maxH;if(cursorH>maxH){cursorH=maxH;playing=false;labels();playBtn().textContent='▶ Replay'}
+  maxH=h;$('#scrub').max=maxH;cursorH=Math.min(cursorH,maxH);if(cursorH>=maxH){playing=false;labels();playBtn().textContent='▶ Replay'}
   playAccum=cursorH/playSpeed;playStart=Date.now();$('#scrub').value=cursorH.toFixed(2)}
 function noPlayback(){const b=playBtn();b.textContent='No forecast hours to play';b.disabled=true;setTimeout(()=>{b.disabled=false;labels()},4000)}
 function advancePlayback(){if(!playing||paused)return;const el=playAccum+(Date.now()-playStart)/1000;cursorH=Math.min(maxH,el*playSpeed);$('#scrub').value=cursorH.toFixed(2);if(cursorH>=maxH){playing=false;labels();playBtn().textContent='▶ Replay'}}

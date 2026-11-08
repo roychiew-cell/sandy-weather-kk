@@ -88,10 +88,18 @@ h1{position:absolute;top:14px;left:16px;margin:0}
 <div id="stale" class="stale" hidden></div>
 <div class="hero"><div><div style="color:var(--mu)">Kota Kinabalu, Sabah · <span id="stamp">loading…</span></div><div class="big"><span id="temp">--</span><small>°C</small></div><div id="cond" style="font-size:18px"></div><div id="phase" class="note"></div></div>
 <div class="grid" style="flex:1;min-width:280px" id="tiles"></div></div>
+<div class="card"><h2>Next three parts of the day</h2><div class="days" id="parts"></div><div class="note" id="partsnote"></div></div>
 <div class="card call" id="call"><h2>Sandy's call</h2><p class="unavail">Loading…</p></div>
 <div class="card"><h2>7-day forecast</h2><div class="days" id="days"></div><div class="note">Morning / afternoon / night icons and temperatures: MetMalaysia town forecast (district wording on hover). Bar and odds: ECMWF ensemble, chance of 10 mm+ at the airport grid point. Press "Play 7 days" below to watch the week in the sky.</div></div>
 <div class="card warn" id="warn"><h2>MetMalaysia warnings</h2><p class="unavail">Loading…</p></div>
 <div class="card"><h2>Storm clock · airport forecast (TAF)</h2><div style="display:flex;flex-wrap:wrap;gap:20px;align-items:center"><div><div class="count" id="countdown"></div><div class="note" id="countnote"></div></div><svg id="clock" viewBox="0 0 640 90" style="flex:1;min-width:260px" role="img" aria-label="Today's timeline with the forecast thunderstorm periods"></svg></div><div class="ticker"><span id="tick"></span></div></div>
+<div class="card"><h2>Meet the weather crew</h2><div class="days" id="crew">
+<div class="day"><span class="ic" style="font-size:40px">🌞</span><br><b>Sunny</b><div class="note">Runs the sky by day. Spins her rays when it's hot and blushes at sunset.</div></div>
+<div class="day"><span class="ic" style="font-size:40px;animation-delay:.3s">☁️</span><br><b>Puff</b><div class="note">The cloud family. Smiling when it's fair, sleepy in the rain, grumpy when a storm is brewing.</div></div>
+<div class="day"><span class="ic" style="font-size:40px;animation-delay:.6s">⚡</span><br><b>Zap</b><div class="note">The lightning bolt. Only shows up when the airport forecast or the models expect thunder.</div></div>
+<div class="day"><span class="ic" style="font-size:40px;animation-delay:.9s">💧</span><br><b>Drip</b><div class="note">The raindrop gang. The more rain the models expect, the more of them fall.</div></div>
+<div class="day"><span class="ic" style="font-size:40px;animation-delay:1.2s">🌙</span><br><b>Luna</b><div class="note">Takes over after sunset with the stars and the town lights.</div></div>
+</div><div class="note">Sandy's own characters. Press "Play 24 h" to watch them change shifts through the day.</div></div>
 <div class="card"><h2>Radar now · MetMalaysia composite, Sabah and Sarawak</h2><a href="https://www.met.gov.my/pencerapan/radar-sabah-and-sarawak" target="_blank" rel="noopener"><img id="radar" alt="MetMalaysia composite radar image for Sabah and Sarawak; the time is printed on the image"></a><div class="note" id="radarnote">Live image from MetMalaysia (time stamp printed top right, MYT); reloaded every 10 minutes while the page is open. Reference only, not analysed by the page. Kota Kinabalu is on the west coast of the northern land mass.</div></div>
 <div class="card"><h2>What actually happened · KK airport, last 36 hours</h2><svg id="obs" viewBox="0 0 1000 230" width="100%" role="img" aria-label="Measured airport temperature over the last 36 hours"></svg><div class="note" id="obsnote"></div><details><summary>Data table</summary><div style="overflow:auto;max-height:260px"><table id="obstbl"></table></div></details></div>
 <div class="card"><h2 id="hrtitle">Next hours · rain chance and temperature</h2><svg id="hr" viewBox="0 0 1000 260" width="100%" role="img" aria-label="Hourly rain chance bars and temperature line"></svg><div class="note">Bars = rain chance % (Open-Meteo blend, left axis; a gap means no value). Orange line = temperature (right axis). Yellow band = TAF thunderstorm period. Times are MYT.</div><details><summary>Data table</summary><div style="overflow:auto;max-height:260px"><table id="hrtbl"></table></div></details></div>
@@ -206,6 +214,35 @@ function render(){
   });
   // TAF periods
   tsPer=(D.taf&&Array.isArray(D.taf.periods)?D.taf.periods:[]).filter(p=>p&&/TS/.test(String(p.wx||''))).map(p=>({from:P(p.from),to:P(p.to),change:String(p.change||''),prob:fin(p.prob)?p.prob:null,wx:String(p.wx||'')})).filter(p=>!isNaN(p.from)&&!isNaN(p.to)).sort((a,b)=>a.from-b.from);
+  // next three parts of the day: morning 06–12, afternoon 12–18, evening/night 18–06, rolling from the current part
+  section('#partsnote',['#parts'],()=>{
+    const recs0=D.metmy&&typeof D.metmy==='object'?Object.values(D.metmy).filter(m=>m&&Array.isArray(m.days)):[];
+    const town0=recs0.find(m=>m.kind=='town'), dist0=recs0.find(m=>m.kind=='district');
+    const TRL=[['ribut petir menyeluruh','Widespread thunderstorms'],['ribut petir di kebanyakan tempat','Thunderstorms in most places'],['ribut petir di beberapa tempat','Thunderstorms in a few places'],['ribut petir','Thunderstorms'],['hujan menyeluruh','Widespread rain'],['hujan di kebanyakan tempat','Rain in most places'],['hujan di beberapa tempat','Rain in a few places'],['tiada hujan','No rain'],['hujan','Rain'],['berangin','Windy'],['cerah','Fair'],['mendung','Cloudy']];
+    const trl=s=>{if(!s)return null;const l=String(s).toLowerCase().trim();for(const[a,b]of TRL)if(l==a)return b;return String(s)};
+    const icoW=s=>{const l=String(s||'').toLowerCase();return l.includes('ribut petir')?'⛈️':l.includes('hujan')&&!l.startsWith('tiada')?'🌧️':l.includes('tiada hujan')?'☀️':null};
+    const PARTS=[['Morning',6,12,'morning_forecast'],['Afternoon',12,18,'afternoon_forecast'],['Evening & night',18,30,'night_forecast']];   // 18–30 = 18:00 to 06:00 next day
+    const n=nowMYT(), h=n.getUTCHours()+n.getUTCMinutes()/60, dayMs=Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate())-8*3600e3;   // MYT midnight today as an instant
+    let idx=h<6?2:h<12?0:h<18?1:2, dayOff=h<6?-1:0;   // before 06:00 we are still in yesterday evening's part
+    const out=[];for(let k=0;k<3;k++){const p=PARTS[idx];out.push({part:p,start:dayMs+dayOff*864e5+p[1]*3600e3,end:dayMs+dayOff*864e5+p[2]*3600e3,date:dayStr(myt(new Date(dayMs+dayOff*864e5)))});idx++;if(idx>2){idx=0;dayOff++}}
+    const tm=arr(bh,'time')||[];
+    $('#parts').innerHTML=out.map((o,i)=>{
+      const [label,h0,h1,field]=o.part, rec=(town0&&town0.days.find(r=>r&&r.date==o.date))||(dist0&&dist0.days.find(r=>r&&r.date==o.date)), wording=rec?trl(rec[field]):null, drec=town0&&dist0?dist0.days.find(r=>r&&r.date==o.date):null;
+      const hours=[];tm.forEach((t,j)=>{const ms=P(t).getTime();if(ms>=o.start&&ms<o.end)hours.push(j)});
+      const g=k=>hours.map(j=>hv(k,j)).filter(fin);
+      const pop=g('precipitation_probability'),mm=g('precipitation'),tp=g('temperature_2m'),cape=g('cape'),code=g('weather_code');
+      const ts=tsPer.filter(p=>p.from.getTime()<o.end&&p.to.getTime()>o.start);
+      let ic=icoW(rec&&rec[field])||(code.length?(Math.max(...code)>=95?'⛈️':Math.max(...code)>=51?'🌧️':Math.max(...pop)>=50?'🌦️':'☀️'):'·'); if(ic==='☀️'&&h0>=18)ic='🌙';
+      const when=o.date==dayStr(n)?'Today':o.date==dayStr(new Date(n.getTime()+864e5))?'Tomorrow':fmtD(o.date);
+      const partly=i==0&&h>h0&&h<h1?' <span class="note">(from now)</span>':'';
+      return`<div class="day" style="animation:rise .7s ${i*90}ms both"><b>${esc(when)} · ${esc(label)}</b>${partly}<br><span class="ic" style="font-size:34px;animation-delay:${i*.3}s">${ic}</span>
+      <div style="font-size:15px">${wording?esc(wording):'<span class="unavail">no official wording</span>'}</div>
+      <div class="note">MetMalaysia ${rec?(town0&&rec===town0.days.find(r=>r&&r.date==o.date)?'town':'district'):'–'}${drec&&drec[field]&&trl(drec[field])!==wording?' · district: '+esc(trl(drec[field])):''}</div>
+      <div style="margin-top:6px">${pop.length?'rain chance up to <b>'+Math.max(...pop)+'%</b>':'<span class="unavail">no model hours</span>'}${mm.length?' · ~'+mm.reduce((a,b)=>a+b,0).toFixed(1)+' mm':''}</div>
+      <div>${tp.length?Math.round(Math.min(...tp))+'–'+Math.round(Math.max(...tp))+'°C':''}${cape.length&&Math.max(...cape)>2500?' · storm fuel high':''}</div>
+      ${ts.length?'<div class="note">TAF: '+ts.map(p=>esc((p.prob!=null?'PROB'+p.prob+' ':'')+p.change+' '+p.wx)+' '+fmtT(p.from.toISOString())+'–'+fmtT(p.to.toISOString())).join('; ')+'</div>':''}</div>`}).join('');
+    $('#partsnote').textContent='Morning 06:00–12:00, afternoon 12:00–18:00, evening and night 18:00–06:00, MYT. Rolling from the part of the day you are in now. Wording: MetMalaysia town forecast (district where the town says less); rain chance, rain amount, temperatures and storm fuel: Open-Meteo blend hours inside each part; TAF: the airport forecast\'s thunderstorm periods that overlap the part.';
+  });
   // call
   section('#call',[],()=>{
     const viewToday2=dayStr(nowMYT()), callValid=C&&C.valid_for===viewToday2;
@@ -557,7 +594,11 @@ function drawFrame(advance){
   if(rainI>0){drops.slice(0,Math.floor(drops.length*rainI*.6)).forEach(d=>{if(advance){d.y+=d.v*(1+rainI)*.9;d.x-=.0008;if(d.y>.9){d.y=-.05;d.x=Math.random()*1.1}}const x=d.x*w,y=d.y*hh,r=4+d.l*.25;cx.fillStyle='rgba(90,170,255,.9)';cx.beginPath();cx.moveTo(x,y-r*2.2);cx.quadraticCurveTo(x+r*1.1,y-r*.4,x,y+r*.9);cx.quadraticCurveTo(x-r*1.1,y-r*.4,x,y-r*2.2);cx.fill();cx.fillStyle='rgba(255,255,255,.7)';cx.beginPath();cx.arc(x-r*.3,y-r*.2,r*.25,0,7);cx.fill()})}
   // ---- cartoon lightning: thick yellow zigzag with a dark outline
   if(c.storm&&sp>0){if(advance&&now-lastF>(2500+Math.random()*6000)/sp){lastF=now;flash=1;const x0=w*(.15+Math.random()*.7);let pts=[[x0,hh*.1]];for(let i=1;i<7;i++)pts.push([pts[i-1][0]+(i%2?-1:1)*w*.03+(Math.random()-.5)*w*.02,hh*(.1+i*.09)]);bolt=pts}
-    if(flash>0){cx.fillStyle=`rgba(255,255,255,${.22*flash*sp})`;cx.fillRect(0,0,w,hh);if(bolt){stroke('#6b4a00',12);cx.beginPath();cx.moveTo(bolt[0][0],bolt[0][1]);bolt.slice(1).forEach(p=>cx.lineTo(p[0],p[1]));cx.stroke();stroke('#ffe14d',7);cx.stroke()}if(advance){flash-=.08;if(flash<=0)bolt=null}}}
+    if(flash>0){cx.fillStyle=`rgba(255,255,255,${.22*flash*sp})`;cx.fillRect(0,0,w,hh);if(bolt){stroke('#6b4a00',12);cx.beginPath();cx.moveTo(bolt[0][0],bolt[0][1]);bolt.slice(1).forEach(p=>cx.lineTo(p[0],p[1]));cx.stroke();stroke('#ffe14d',7);cx.stroke()}if(advance){flash-=.08;if(flash<=0)bolt=null}}
+    // Zap: a small bolt character hovering by the storm cloud
+    const zx=w*.5+Math.sin(now/700)*30, zy=hh*.22+Math.cos(now/900)*12;stroke('#6b4a00',5);cx.fillStyle='#ffe14d';cx.beginPath();cx.moveTo(zx,zy-28);cx.lineTo(zx+12,zy-6);cx.lineTo(zx+2,zy-6);cx.lineTo(zx+14,zy+22);cx.lineTo(zx-10,zy-2);cx.lineTo(zx,zy-2);cx.closePath();cx.fill();cx.stroke();face(zx+2,zy-12,14,'smile')}
+  // Drip: one big raindrop character among the rain
+  if(rainI>0){const dx=w*.3+Math.sin(now/1300)*40, dy=hh*(.15+((now/4000)%1)*.6), r=22;cx.fillStyle='#5aaaff';cx.beginPath();cx.moveTo(dx,dy-r*2.2);cx.quadraticCurveTo(dx+r*1.1,dy-r*.4,dx,dy+r*.9);cx.quadraticCurveTo(dx-r*1.1,dy-r*.4,dx,dy-r*2.2);cx.fill();stroke('#2b5aa8',3);cx.stroke();face(dx,dy-r*.2,r*.7,'smile')}
   const hud=$('#hud');
   if(!liveMode){hud.hidden=false;const ts=tsPer.find(p=>p.from.getTime()<=t&&p.to.getTime()>t);
     const skyWord=c.cloud==null?'cloud unknown':cl>.7?'☁️ cloudy':cl>.35?'⛅ partly cloudy':c.dayF>0?'☀️ sunny':'🌙 clear';

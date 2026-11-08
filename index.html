@@ -245,8 +245,8 @@ if(CH)CH.onmessage=ev=>{const m=ev.data;if(!m||m.tab===TAB)return;
   if(m.type==='src'&&L[m.k])commit(m.k,m.value,m.okAt,false,m.due);
   else if(m.type==='fail'&&L[m.k])applyFail(m.k,m.err,m.due,m.fails,m.failAt,false);
   else if(m.type==='hello'){if(leader)sendSnap()}
-  else if(m.type==='snap'){Object.keys(m.sources||{}).forEach(k=>{const r=m.sources[k];if(!L[k]||!r)return;if(r.value!=null&&r.okAt)commit(k,r.value,r.okAt,false,r.due);if(r.err&&r.failAt)applyFail(k,r.err,r.due,r.fails,r.failAt,false)});
-    if(archState(m.arch)){updateStale();renderStatus()}flushAnn()}
+  else if(m.type==='snap'){statusBatch++;try{Object.keys(m.sources||{}).forEach(k=>{const r=m.sources[k];if(!L[k]||!r)return;if(r.value!=null&&r.okAt)commit(k,r.value,r.okAt,false,r.due);if(r.err&&r.failAt)applyFail(k,r.err,r.due,r.fails,r.failAt,false)});
+    if(archState(m.arch))updateStale()}finally{statusBatch--;renderStatus();flushAnn()}}   // status transitions are judged once, on the snapshot's final state, never on its intermediate steps
   else if(m.type==='arch'){archState(m.st);if(validSnapshot(m.nd))applyArchive(m.nd,m.nc);else{updateStale();renderStatus()}}
   else if(m.type==='archfail'){if(archState(m.st)){updateStale();renderStatus()}}};
 const READERS={
@@ -279,10 +279,10 @@ function commit(k,v,okAt,broadcast,due){const s=L[k];if(!(okAt>s.okAt))return'du
 function afterChange(k){if(k==='radar'){if(L.radar.err)radarAsOf();else renderRadar()}if(!A){renderStatus();return}compose();if(k!=='radar'){if(SRC[k].fast)renderLive();else render()}renderSources();renderStatus();if(paused)drawFrame(false)}
 function addFrame(v){if(frames.length&&frames[frames.length-1].hash===v.hash)return;const url=URL.createObjectURL(new Blob([v.buf],{type:'image/png'}));frames.push({url,hash:v.hash,at:v.at||Date.now(),buf:v.buf});while(frames.length>18)URL.revokeObjectURL(frames.shift().url)}
 function tick(){if(document.hidden){dropLeader();return}claimLeader();if(!leader)return;Object.keys(SRC).forEach(k=>poll(k,false));loadArchive(false,true)}
-let pillEls=null;const lastState={},annQ=[];let annT=null;
+let pillEls=null,statusBatch=0;const lastState={},annQ=[];let annT=null;
 function announce(t){if(!annQ.includes(t))annQ.push(t);if(!annT)annT=setTimeout(flushAnn,0)}   // queued, so one message covers a whole batch of changes
 function flushAnn(){if(annT){clearTimeout(annT);annT=null}if(!annQ.length)return;const el=$('#srstate');if(el)el.textContent=annQ.join('. ')+'.';annQ.length=0}
-function renderStatus(){
+function renderStatus(){if(statusBatch)return;
   const words={live:'OK',stale:'stale',failed:'failed',waiting:'waiting',checking:'checking'},st$=$('#status');
   if(!pillEls){st$.innerHTML=Object.keys(SRC).map(k=>`<span class="pill" data-k="${k}"><i></i>${esc(SRC[k].name)} <b></b></span>`).join('')+'<span class="pill" data-k="archive"><i></i>Archive <b></b></span>';pillEls={};st$.querySelectorAll('.pill').forEach(p=>pillEls[p.dataset.k]=p)}
   const errs=[],ann=[];const setPill=(k,st,txt,err,name)=>{const p=pillEls[k],cls='pill '+st;if(p.className!==cls)p.className=cls;const b=p.querySelector('b');if(b.textContent!==txt)b.textContent=txt;const al=name+': '+txt+(err?' ('+err+')':'');if(p.getAttribute('aria-label')!==al)p.setAttribute('aria-label',al);if(err)errs.push(name+': '+err);
@@ -294,7 +294,7 @@ function renderStatus(){
   const aTxt=!A?(aSt==='failed'?'load failed':aSt==='checking'?'checking…':'waiting'):aSt==='checking'?'checking…':aSt==='failed'?'recheck failed · run of '+hhmm(P(A.generated)):(aSt==='stale'?'stale · ':'OK · ')+'run of '+hhmm(P(A.generated))+(archCheckedAt?', checked '+ago(archCheckedAt):'');setPill('archive',aSt,aTxt,lastFail?archErr:null,'Archive');
   const ed=$('#errs'),et=errs.join(' · ');ed.hidden=!errs.length;const ev=ed.querySelector('div');if(ev.textContent!==et)ev.textContent=et;ann.forEach(announce);
   const fastKeys=Object.keys(SRC).filter(k=>SRC[k].fast),anyIn=fastKeys.some(k=>L[k].inflight),nextDue=Math.min(...fastKeys.map(k=>L[k].due||Date.now()));
-  const left=Math.max(0,Math.round((nextDue-Date.now())/1000));$('#nextchk').textContent=document.hidden?'paused (tab hidden)':!leader?(coord==='none'?'starting…':'another tab is checking'):anyIn?'checking…':(coord==='none'?'this tab checks on its own · ':'')+'next check '+left+' s';$('#ring').style.setProperty('--p',(100*(1-Math.min(60,left)/60))+'%');
+  const left=Math.max(0,Math.round((nextDue-Date.now())/1000));$('#nextchk').textContent=document.hidden?'paused (tab hidden)':!leader?(coord==='none'?'starting…':'another tab is checking'):(coord==='none'?'this tab checks on its own · ':'')+(anyIn?'checking…':'next check '+left+' s');$('#ring').style.setProperty('--p',(100*(1-Math.min(60,left)/60))+'%');
 }
 // =============================== render (archive-driven sections) and renderLive (hero, obs, clock, warnings)
 function render(){

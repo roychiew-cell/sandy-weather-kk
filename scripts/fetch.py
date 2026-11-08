@@ -198,7 +198,7 @@ OTHER_STATES = ["Perlis", "Kedah", "Penang", "Pulau Pinang", "Perak", "Kelantan"
                 "Negeri Sembilan", "N. Sembilan", "Melaka", "Malacca", "Johor", "Sarawak", "Sabah", "Labuan"]
 DIVISIONS = {"Sabah": {"West Coast": ["Kota Kinabalu", "Penampang", "Papar", "Tuaran", "Kota Belud", "Ranau", "Putatan"],
                        "Interior": ["Beaufort", "Kuala Penyu", "Sipitang", "Tenom", "Keningau", "Tambunan", "Nabawan"],
-                       "Kudat": ["Kudat", "Kota Marudu", "Pitas"], "Sandakan": ["Sandakan", "Beluran", "Kinabatangan", "Tongod", "Telupid"],
+                       "Kudat": ["Kudat", "Kota Marudu", "Pitas"], "Sandakan": ["Sandakan", "Beluran", "Kinabatangan", "Tongod", "Telupid", "Paitan", "Labuk & Sugut"],
                        "Tawau": ["Tawau", "Lahad Datu", "Semporna", "Kunak", "Kalabakan"]},
              "Sarawak": {"Kuching": ["Kuching", "Bau", "Lundu"], "Samarahan": ["Samarahan", "Asajaya", "Simunjan"], "Serian": ["Serian", "Tebedu"],
                          "Sri Aman": ["Sri Aman", "Lubok Antu"], "Betong": ["Betong", "Saratok", "Pusa", "Kabong"], "Sarikei": ["Sarikei", "Meradong", "Julau", "Pakan"],
@@ -301,32 +301,32 @@ def area_coverage(text, state, division=None, district=None, ctx=""):
             cur += ch
         i += 1
     items.append(cur)
+    complete = depth == 0  # an item that does not parse, or unbalanced brackets, means the list is not fully read
     parsed = []
     for x in items:
+        if not x.strip():
+            continue
         mm = re.match(r"^\s*([^()]+?)\s*(?:\(([^)]*)\))?\s*\.?\s*$", x)
         if mm and mm.group(1).strip():
             parsed.append((mm.group(1).strip(), mm.group(2)))
+        else:
+            complete = False
     if not parsed:
         return None
-    def hit(p):
-        return bool(district and (same(p[0], district) or in_list(p[1], district)))
+    def hit(p):  # a division item with a bracket list is restricted to that list even when the division and district share a name (Sandakan, Kuching)
+        restricted_division = state in DIVISIONS and bool(division) and same(p[0], division) and p[1] is not None
+        return bool(district and ((same(p[0], district) and not restricted_division) or in_list(p[1], district)))
 
-    def understood():  # a negative needs the whole list understood
-        return all(recog(p[0]) and list_ok(p[1]) for p in parsed)
+    def understood():  # a negative needs the whole list read and understood
+        return complete and all(recog(p[0]) and list_ok(p[1]) for p in parsed)
 
     if state in DIVISION_STATES:
-        dv = next((p for p in parsed if division and same(p[0], division)), None)
-        if dv:
-            if dv[1] is None:
-                return True
-            if not district:
-                return None
-            if in_list(dv[1], district):
-                return True
-            return False if list_ok(dv[1]) else None
-        if any(hit(p) for p in parsed):
-            return True
-        return False if (division and understood()) else None
+        dvs = [p for p in parsed if division and same(p[0], division)]
+        if any(hit(p) for p in parsed) or any(p[1] is None for p in dvs):
+            return True  # every definite positive first
+        if not division or (dvs and not district):
+            return None
+        return False if understood() else None
     if any(hit(p) for p in parsed):
         return True
     return False if (district and understood()) else None

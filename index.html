@@ -581,7 +581,7 @@ setInterval(minute,60e3);setInterval(updateClock,1000);setInterval(tick,1000);se
 document.addEventListener('visibilitychange',()=>{if(document.hidden)dropLeader();else{tick();minute();renderStatus()}});
 // =============================== your location: GPS in the browser → nearest MetMalaysia town/district, nearest airport, warnings for the area, models for the point
 const AIRPORTS=[['WBKK','Kota Kinabalu',5.937,116.051],['WBKL','Labuan',5.301,115.25],['WBKW','Tawau',4.32,118.128],['WBKS','Sandakan',5.901,118.059],['WBKD','Lahad Datu',5.032,118.324],['WBKT','Kudat',6.923,116.836],['WBGG','Kuching',1.485,110.347],['WBGR','Miri',4.322,113.987],['WBGB','Bintulu',3.124,113.02],['WBGS','Sibu',2.262,111.985],['WBGJ','Limbang',4.808,115.01],['WBMU','Mulu',4.048,114.805],['WMKK','KLIA',2.746,101.71],['WMSA','Subang',3.131,101.549],['WMKP','Penang',5.297,100.277],['WMKJ','Senai',1.641,103.67],['WMKL','Langkawi',6.33,99.729],['WMKC','Kota Bharu',6.167,102.293],['WMKN','Kuala Terengganu',5.383,103.103],['WMKD','Kuantan',3.775,103.209],['WMKI','Ipoh',4.568,101.092],['WMKM','Melaka',2.263,102.252],['WMKA','Alor Setar',6.19,100.398],['WMKE','Kerteh',4.537,103.427],['WMBT','Tioman',2.818,104.16]];
-const DIVISIONS={'Sabah':{'West Coast':['Kota Kinabalu','Penampang','Papar','Tuaran','Kota Belud','Ranau','Putatan'],'Interior':['Beaufort','Kuala Penyu','Sipitang','Tenom','Keningau','Tambunan','Nabawan'],'Kudat':['Kudat','Kota Marudu','Pitas'],'Sandakan':['Sandakan','Beluran','Kinabatangan','Tongod','Telupid'],'Tawau':['Tawau','Lahad Datu','Semporna','Kunak','Kalabakan']},
+const DIVISIONS={'Sabah':{'West Coast':['Kota Kinabalu','Penampang','Papar','Tuaran','Kota Belud','Ranau','Putatan'],'Interior':['Beaufort','Kuala Penyu','Sipitang','Tenom','Keningau','Tambunan','Nabawan'],'Kudat':['Kudat','Kota Marudu','Pitas'],'Sandakan':['Sandakan','Beluran','Kinabatangan','Tongod','Telupid','Paitan','Labuk & Sugut'],'Tawau':['Tawau','Lahad Datu','Semporna','Kunak','Kalabakan']},
   'Sarawak':{'Kuching':['Kuching','Bau','Lundu'],'Samarahan':['Samarahan','Asajaya','Simunjan'],'Serian':['Serian','Tebedu'],'Sri Aman':['Sri Aman','Lubok Antu'],'Betong':['Betong','Saratok','Pusa','Kabong'],'Sarikei':['Sarikei','Meradong','Julau','Pakan'],'Sibu':['Sibu','Kanowit','Selangau'],'Mukah':['Mukah','Dalat','Daro','Matu','Tanjung Manis'],'Kapit':['Kapit','Song','Belaga','Bukit Mabong'],'Bintulu':['Bintulu','Tatau','Sebauh'],'Miri':['Miri','Marudi','Subis','Beluru','Telang Usan'],'Limbang':['Limbang','Lawas']}};
 const divisionOf=(state,district)=>{const d=DIVISIONS[state];if(!d||!district)return null;return Object.keys(d).find(k=>d[k].some(x=>district.toLowerCase().includes(x.toLowerCase())))||null};
 const stateWord=s=>String(s||'').replace(/^(WP|Wilayah Persekutuan|W\.P\.)\s+/i,'').replace(/Pulau Pinang/i,'Penang').replace(/^Federal Territory of\s+/i,'').trim();
@@ -616,13 +616,13 @@ function areaCoverage(text,ar,ctx){ // does a warning subsection cover an area {
   const items=[];let depth=0,cur='';for(let i=0;i<seg.length;i++){const ch=seg[i];if(ch==='(')depth++;else if(ch===')')depth--;   // split on "," and " and " outside brackets only
     const isAnd=depth===0&&seg.substr(i,3).toLowerCase()==='and'&&(i===0||/\s/.test(seg[i-1]))&&(i+3>=seg.length||/\s/.test(seg[i+3]));
     if(depth===0&&(ch===','||ch==='•'||ch===';'||isAnd)){items.push(cur);cur='';if(isAnd)i+=2}else cur+=ch}items.push(cur);   // MetMalaysia also separates items with "•"
-  const parsed=[];items.forEach(x=>{const mm=/^\s*([^()]+?)\s*(?:\(([^)]*)\))?\s*\.?\s*$/.exec(x);if(mm&&mm[1].trim())parsed.push({name:mm[1].trim(),list:mm[2]!=null?mm[2]:null})});
+  let complete=depth===0;const parsed=[];items.forEach(x=>{if(!x.trim())return;const mm=/^\s*([^()]+?)\s*(?:\(([^)]*)\))?\s*\.?\s*$/.exec(x);if(mm&&mm[1].trim())parsed.push({name:mm[1].trim(),list:mm[2]!=null?mm[2]:null});else complete=false});   // an item that does not parse, or unbalanced brackets, means the list is not fully read
   if(!parsed.length)return null;
-  const hit=p=>!!(ar.district&&(same(p.name,ar.district)||inList(p.list,ar.district))),understood=()=>parsed.every(p=>recog(p.name)&&listOK(p.list));   // a negative needs the whole list understood
-  if(DIVISIONS[S]){const dv=ar.division?parsed.find(p=>same(p.name,ar.division)):null;
-    if(dv){if(dv.list==null)return true;if(!ar.district)return null;if(inList(dv.list,ar.district))return true;return listOK(dv.list)?false:null}
-    if(parsed.some(hit))return true;
-    return (ar.division&&understood())?false:null}
+  const hit=p=>!!(ar.district&&((same(p.name,ar.district)&&!(DIVISIONS[S]&&ar.division&&same(p.name,ar.division)&&p.list!=null))||inList(p.list,ar.district))),understood=()=>complete&&parsed.every(p=>recog(p.name)&&listOK(p.list));   // a division item with a bracket list is restricted to that list even when the division and district share a name (Sandakan, Kuching); a negative needs the whole list read and understood
+  if(DIVISIONS[S]){const dvs=ar.division?parsed.filter(p=>same(p.name,ar.division)):[];
+    if(parsed.some(hit)||dvs.some(p=>p.list==null))return true;                      // every definite positive first
+    if(!ar.division||(dvs.length&&!ar.district))return null;
+    return understood()?false:null}
   if(parsed.some(hit))return true;
   return (ar.district&&understood())?false:null}
 let LOC=null,PLACEDB=null,locTimer=null,locSeq=0,locGen=0,locCtl=null,LOCRES=null,locRestoreT=null,locNote='';

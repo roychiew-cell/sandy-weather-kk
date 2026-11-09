@@ -19,12 +19,12 @@ ALIASES = {"tanah tinggi cameron": "cameron highlands", "larut, matang dan selam
            "larut matang & selama": "larut matang dan selama", "larut, matang & selama": "larut matang dan selama",
            "labuk sugut": "labuk & sugut", "labuk and sugut": "labuk & sugut", "timor laut": "timur laut", "maradong": "meradong"}
 # places whose bulletin names overlap or contain each other: a listed one never proves that the other is outside the warning
-SUBREGIONS = ["kinarut", "tamparuli", "membakut", "kemabong", "weston", "pensiangan", "sook", "paitan", "labuk & sugut", "siburan", "bario", "bintangor",
-              "pulau tioman", "larut", "matang", "larut matang", "selama", "sebauh"]
+SUBREGIONS = ["kinarut", "tamparuli", "membakut", "kemabong", "weston", "pensiangan", "sook", "paitan", "labuk & sugut", "spaoh", "bario", "bintangor",
+              "pulau tioman", "larut", "matang", "larut matang", "selama"]
 # the district each smaller region lies in: a listed smaller region proves nothing about its parent's neighbours, but it does touch its parent
 PARENTS = {"kinarut": "papar", "tamparuli": "tuaran", "membakut": "beaufort", "kemabong": "tenom", "weston": "beaufort", "pensiangan": "nabawan", "sook": "keningau",
-           "paitan": "beluran", "labuk & sugut": "beluran", "siburan": "serian", "bario": "telang usan", "bintangor": "meradong", "pulau tioman": "rompin",
-           "sebauh": "bintulu", "larut": "larut matang dan selama", "matang": "larut matang dan selama", "larut matang": "larut matang dan selama",
+           "paitan": "beluran", "labuk & sugut": "beluran", "spaoh": "betong", "bario": "miri", "bintangor": "meradong", "pulau tioman": "rompin",
+           "larut": "larut matang dan selama", "matang": "larut matang dan selama", "larut matang": "larut matang dan selama",
            "selama": "larut matang dan selama"}
 OVERLAPS = {"nabawan": ["pensiangan"], "pensiangan": ["nabawan"], "beluran": ["labuk & sugut", "paitan"], "labuk & sugut": ["beluran"], "paitan": ["beluran"],
             "larut matang dan selama": ["larut matang", "larut", "matang", "selama"], "larut matang": ["larut matang dan selama", "larut", "matang"],

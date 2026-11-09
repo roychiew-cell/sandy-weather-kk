@@ -28,6 +28,10 @@ const cases = [
   ['an unfinished state header is undetermined', 'Thunderstorms over Sabah:; Sarawak (Miri)' + tail, kk, { undetermined: 1 }],
   ['a foreign entry hiding the state is undetermined', 'Thunderstorms over Johor: Sarawak (Sabah: West Coast)' + tail, kk, { undetermined: 1 }],
   ['W.P. prefix across a line break covers Labuan', 'Thunderstorms over W.P.\nLabuan' + tail, { state: 'Labuan', division: null, district: 'Labuan' }, { active: 1 }],
+  ['Bario inside Miri is undetermined', 'Thunderstorms over Sarawak (Bario)' + tail, { state: 'Sarawak', division: 'Miri', district: 'Miri' }, { undetermined: 1 }],
+  ['Spaoh inside Betong is undetermined', 'Thunderstorms over Sarawak: Betong (Spaoh)' + tail, { state: 'Sarawak', division: 'Betong', district: 'Betong' }, { undetermined: 1 }],
+  ['a malformed foreign entry hiding the state is undetermined', 'Thunderstorms over Johor: (Sabah)' + tail, kk, { undetermined: 1 }],
+  ['a malformed foreign entry after a positive is undetermined, not active', 'Thunderstorms over Sabah: West Coast; Johor: (Sabah)' + tail, kk, { undetermined: 1 }],
   ['a bulletin that does not name the state is ignored', 'Thunderstorms over Selangor' + tail, kk, {}],
 ];
 let bad = 0;

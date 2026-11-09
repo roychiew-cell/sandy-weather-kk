@@ -189,6 +189,31 @@
    "state": "Sabah",
    "division": "Interior",
    "district": "Keningau"
+  },
+  "BET": {
+   "state": "Sarawak",
+   "division": "Betong",
+   "district": "Betong"
+  },
+  "TLU": {
+   "state": "Sarawak",
+   "division": "Miri",
+   "district": "Telang Usan"
+  },
+  "SRT": {
+   "state": "Sarawak",
+   "division": "Betong",
+   "district": "Saratok"
+  },
+  "BTL": {
+   "state": "Sarawak",
+   "division": "Bintulu",
+   "district": "Bintulu"
+  },
+  "SRN": {
+   "state": "Sarawak",
+   "division": "Serian",
+   "district": "Serian"
   }
  },
  "cases": [
@@ -1318,6 +1343,83 @@
    "ctx": "THUNDERSTORMS WARNING",
    "expect": false,
    "note": "R25-L1"
+  },
+  {
+   "text": "Thunderstorms over Sarawak (Bario) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "MIRI",
+   "ctx": "THUNDERSTORMS WARNING",
+   "expect": null,
+   "note": "R26-H1 Bario is in Miri district"
+  },
+  {
+   "text": "Thunderstorms over Sarawak: Miri (Bario) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "MIRI",
+   "ctx": "THUNDERSTORMS WARNING",
+   "expect": null,
+   "note": "R26-H1"
+  },
+  {
+   "text": "Thunderstorms over Sarawak (Spaoh) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "BET",
+   "ctx": "THUNDERSTORMS WARNING",
+   "expect": null,
+   "note": "R26-H1 Spaoh is a sub-district of Betong"
+  },
+  {
+   "text": "Thunderstorms over Sarawak: Betong (Spaoh) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "BET",
+   "ctx": "THUNDERSTORMS WARNING",
+   "expect": null,
+   "note": "R26-H1"
+  },
+  {
+   "text": "Thunderstorms over Sarawak: Miri (Bario) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "TLU",
+   "ctx": "THUNDERSTORMS WARNING",
+   "expect": false,
+   "note": "R26-H1 negative control: Bario is not Telang Usan"
+  },
+  {
+   "text": "Thunderstorms over Sarawak: Betong (Spaoh) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "SRT",
+   "ctx": "THUNDERSTORMS WARNING",
+   "expect": false,
+   "note": "R26-H1 negative control"
+  },
+  {
+   "text": "Thunderstorms over Johor: (Sabah) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORMS WARNING",
+   "expect": null,
+   "note": "R26-M1"
+  },
+  {
+   "text": "Thunderstorms over Johor: Sarawak (Sabah: West Coast (Kota Kinabalu)) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORMS WARNING",
+   "expect": null,
+   "note": "R26-M1"
+  },
+  {
+   "text": "Thunderstorms over Sabah: West Coast; Johor: (Sabah) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "KK",
+   "ctx": "THUNDERSTORMS WARNING",
+   "expect": null,
+   "note": "R26-M1"
+  },
+  {
+   "text": "Thunderstorms over Sarawak (Sebauh) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "BTL",
+   "ctx": "THUNDERSTORMS WARNING",
+   "expect": false,
+   "note": "R26-L1 Sebauh is a district"
+  },
+  {
+   "text": "Thunderstorms over Sarawak (Siburan) until 6:00 PM; Monday, 9 November 2026.",
+   "area": "SRN",
+   "ctx": "THUNDERSTORMS WARNING",
+   "expect": false,
+   "note": "R26-L1 Siburan is a district"
   }
  ]
 }

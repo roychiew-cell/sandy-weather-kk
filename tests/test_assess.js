@@ -23,6 +23,11 @@ const cases = [
   ['West Coast covers KK', 'Thunderstorms over Sabah: West Coast' + tail, kk, { active: 1 }],
   ['Kudat alone does not cover KK', 'Thunderstorms over Sabah: Kudat' + tail, kk, {}],
   ['qualification makes KK undetermined', 'Thunderstorms over Sabah: West Coast, Subject To Confirmation' + tail, kk, { undetermined: 1 }],
+  ['Kinarut inside Papar is undetermined', 'Thunderstorms over Sabah: West Coast (Kinarut)' + tail, { state: 'Sabah', division: 'West Coast', district: 'Papar' }, { undetermined: 1 }],
+  ['Tioman inside Rompin is undetermined', 'Thunderstorms over Pahang (Pulau Tioman)' + tail, { state: 'Pahang', division: null, district: 'Rompin' }, { undetermined: 1 }],
+  ['an unfinished state header is undetermined', 'Thunderstorms over Sabah:; Sarawak (Miri)' + tail, kk, { undetermined: 1 }],
+  ['a foreign entry hiding the state is undetermined', 'Thunderstorms over Johor: Sarawak (Sabah: West Coast)' + tail, kk, { undetermined: 1 }],
+  ['W.P. prefix across a line break covers Labuan', 'Thunderstorms over W.P.\nLabuan' + tail, { state: 'Labuan', division: null, district: 'Labuan' }, { active: 1 }],
   ['a bulletin that does not name the state is ignored', 'Thunderstorms over Selangor' + tail, kk, {}],
 ];
 let bad = 0;
@@ -33,5 +38,9 @@ cases.forEach(([name, text, area, want]) => {
 });
 const noEnd = make([bulletin('Thunderstorms over Sabah: West Coast' + tail, {}, { to: null })])(kk);
 if (noEnd.unparsed.length !== 1) { bad++; console.log('FAIL a matching warning without an end time must be unparsed', noEnd.unparsed.length); }
-console.log('assessWarnings: ' + bad + ' failures of ' + (cases.length + 1));
+[['cancelled heading', 'THUNDERSTORM WARNING CANCELLED'], ['qualified heading', 'THUNDERSTORM WARNING SUBJECT TO CONFIRMATION']].forEach(([name, heading]) => {
+  const r = make([bulletin('Thunderstorms over Sabah: West Coast' + tail, { heading })])(kk);
+  if (r.active.length || r.undetermined.length !== 1) { bad++; console.log('FAIL', name, 'active', r.active.length, 'undetermined', r.undetermined.length); }
+});
+console.log('assessWarnings: ' + bad + ' failures of ' + (cases.length + 3));
 process.exit(bad ? 1 : 0);

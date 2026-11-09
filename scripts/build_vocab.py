@@ -12,16 +12,23 @@ import json, pathlib, re
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 EXTRA = {"sabah": ["Pensiangan", "Paitan", "Labuk & Sugut", "Sook", "Kalabakan", "Membakut"], "sarawak": ["Sebuyau", "Gedong", "Tatau", "Bario", "Siburan"],
-         "pahang": ["Cameron Highlands", "Pulau Tioman"], "perak": ["Larut Matang dan Selama", "Larut", "Matang", "Selama"]}
+         "pahang": ["Cameron Highlands", "Pulau Tioman"], "perak": ["Larut Matang dan Selama", "Larut Matang", "Larut", "Matang", "Selama"]}
 # reviewed aliases: ordinary spellings of one place -> canonical lower-case name
 ALIASES = {"tanah tinggi cameron": "cameron highlands", "larut, matang dan selama": "larut matang dan selama",
            "larut, matang and selama": "larut matang dan selama", "larut matang and selama": "larut matang dan selama",
            "larut matang & selama": "larut matang dan selama", "larut, matang & selama": "larut matang dan selama",
            "labuk sugut": "labuk & sugut", "labuk and sugut": "labuk & sugut", "timor laut": "timur laut", "maradong": "meradong"}
 # places whose bulletin names overlap or contain each other: a listed one never proves that the other is outside the warning
+SUBREGIONS = ["kinarut", "tamparuli", "membakut", "kemabong", "weston", "pensiangan", "sook", "paitan", "labuk & sugut", "siburan", "bario", "bintangor",
+              "pulau tioman", "larut", "matang", "larut matang", "selama", "sebauh"]
+# the district each smaller region lies in: a listed smaller region proves nothing about its parent's neighbours, but it does touch its parent
+PARENTS = {"kinarut": "papar", "tamparuli": "tuaran", "membakut": "beaufort", "kemabong": "tenom", "weston": "beaufort", "pensiangan": "nabawan", "sook": "keningau",
+           "paitan": "beluran", "labuk & sugut": "beluran", "siburan": "serian", "bario": "telang usan", "bintangor": "meradong", "pulau tioman": "rompin",
+           "sebauh": "bintulu", "larut": "larut matang dan selama", "matang": "larut matang dan selama", "larut matang": "larut matang dan selama",
+           "selama": "larut matang dan selama"}
 OVERLAPS = {"nabawan": ["pensiangan"], "pensiangan": ["nabawan"], "beluran": ["labuk & sugut", "paitan"], "labuk & sugut": ["beluran"], "paitan": ["beluran"],
-            "larut matang dan selama": ["larut", "matang", "selama"], "larut": ["larut matang dan selama"], "matang": ["larut matang dan selama"],
-            "selama": ["larut matang dan selama"]}
+            "larut matang dan selama": ["larut matang", "larut", "matang", "selama"], "larut matang": ["larut matang dan selama", "larut", "matang"],
+            "larut": ["larut matang dan selama", "larut matang"], "matang": ["larut matang dan selama", "larut matang"], "selama": ["larut matang dan selama"]}
 # names that contain a separator and must be read as one name
 COMPOUNDS = ["larut, matang dan selama", "larut, matang and selama", "larut, matang & selama", "larut matang and selama", "larut matang & selama",
              "larut matang dan selama", "labuk & sugut", "labuk and sugut"]
@@ -42,9 +49,7 @@ def districts():
         if st:
             n = p["name"]
             by.setdefault(st, set()).update({canon(n), canon(re.sub(r"\s*\(.*?\)\s*", "", n))})
-    for st, names in EXTRA.items():
-        by.setdefault(st, set()).update(canon(x) for x in names)
-    return {k: sorted(v) for k, v in sorted(by.items())}
+    return {k: sorted(v - {canon(x) for x in SUBREGIONS}) for k, v in sorted(by.items())}
 
 
 def vocab():
@@ -73,6 +78,8 @@ def main():
     v = vocab()
     lines = {
         "KNOWN_DISTRICTS": (json.dumps(districts(), ensure_ascii=False, separators=(",", ":")), json.dumps(districts(), ensure_ascii=False)),
+        "PARENTS": (json.dumps(PARENTS, ensure_ascii=False, separators=(",", ":")), json.dumps(PARENTS, ensure_ascii=False)),
+        "SUBREGIONS": (json.dumps(SUBREGIONS, ensure_ascii=False, separators=(",", ":")), json.dumps(SUBREGIONS, ensure_ascii=False)),
         "OVERLAPS": (json.dumps(OVERLAPS, ensure_ascii=False, separators=(",", ":")), json.dumps(OVERLAPS, ensure_ascii=False)),
         "KNOWN_BY_STATE": (json.dumps(v, ensure_ascii=False, separators=(",", ":")), json.dumps(v, ensure_ascii=False)),
         "ALIASES": (json.dumps(ALIASES, ensure_ascii=False, separators=(",", ":")), json.dumps(ALIASES, ensure_ascii=False)),

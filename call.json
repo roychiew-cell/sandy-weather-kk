@@ -1,38 +1,40 @@
 {
-  "written_at": "2026-11-08T13:11+08:00",
-  "first_written_at": "2026-11-08T12:55+08:00",
-  "based_on_data_at": "2026-11-08T13:10+08:00",
-  "based_on_snapshot": "data/latest.json generated 2026-11-08T13:10:14+08:00 (GitHub run 42449689973, commit 9d60fa5)",
-  "valid_for": "2026-11-08",
-  "today_high": "32–33°C",
+  "written_at": "2026-11-09T08:34+08:00",
+  "first_written_at": "2026-11-09T08:34+08:00",
+  "based_on_data_at": "2026-11-09T08:32+08:00",
+  "based_on_snapshot": "data/latest.json generated 2026-11-09T08:32:54+08:00 (GitHub run 42540763217, commit d030fdb); airport reading 08:00, TAF issued 07:00, warnings retrieved 08:33",
+  "valid_for": "2026-11-09",
+  "today_high": "30–32°C",
+  "radar_checked": "MetMalaysia composite radar, 08:20 MYT: no echoes over Kota Kinabalu or the West Coast; light to moderate cells over the Kudat and Kota Marudu tip in the north and off the Sandakan coast, and a stronger cluster out at sea west of Sarawak. This is a by-eye look, not analysed by the page.",
+  "radar_image": "data/radar/2026-11-09_0820_COMP_SS.png",
   "sections": [
     {
       "label": "WARNING",
-      "text": "MetMalaysia issued a thunderstorm warning at 12:00 today for Sabah's West Coast division, which includes Kota Kinabalu, together with Interior, Kudat, Sandakan and Tawau areas: thunderstorms, heavy rain and strong winds until 15:00 MYT. The warnings card shows whether it is still in force."
+      "text": "No MetMalaysia land warning names Kota Kinabalu or Sabah's West Coast right now. Two land warnings are out but do not cover us: a thunderstorm warning for Tawau (Semporna and Tawau) and parts of Pahang until 09:00 today, and the continuous-rain alert for Kelantan, Terengganu, Pahang and, in Sabah, Kudat and the Sandakan areas, running to the end of Wednesday 11 Nov. At sea there is a thunderstorm warning for the waters off Sabah, Sarawak and Labuan until 10:00 this morning (strong winds up to 50 kmph, waves up to 3.5 m, dangerous to small boats), and a first-category strong-wind and rough-sea warning for Condore and Reef North far offshore until Tuesday. The warnings card shows whether anything newer has come out."
     },
     {
       "label": "TODAY",
-      "text": "Hot and bright so far: the airport measured 32°C with a few low clouds at 12:30, and the blended model put the feels-like temperature at 38°C at 12:00. Thunderstorms this afternoon are likely. The KK airport forecast (TAF) has temporary thunderstorm rain during 15:00–19:00 MYT; MetMalaysia's town forecast says thunderstorms this afternoon and no rain tonight (the district forecast says 'in a few places'); the blended model's hourly rain chance is 45% for 11:00–12:00, 77% for 12:00–13:00, 98% for 13:00–14:00 and 100% for 14:00–15:00 MYT, easing to 52% for 17:00–18:00 and 22% for 18:00–19:00. So the first cells can arrive before the TAF period. Today's model highs run 28.9–33.4°C (median 30.9°C); MetMalaysia gives 32°C town / 33°C district and the airport is already at 32°C, so I favour 32–33°C before the storms knock it back."
+      "text": "A calm, humid start: the airport measured 23°C overnight and 27°C at 08:00 with few clouds, light easterly wind (about 7 km/h) and a dew point of 23°C; the models call it overcast, which the airport does not support. Storm fuel (CAPE) in the blended model climbs from about 1,100 J/kg at 09:00 to 1,800 at 10:00 and 2,350 at 13:00, so it is moderate to high by early afternoon. Timing: the blended model's hourly rain chance is 13% for 08:00–09:00, 32% for 09:00–10:00, 51% for 10:00–11:00, 69% for 11:00–12:00, 88% for 12:00–13:00, then 100% for 13:00–16:00, 96% for 16:00–17:00, 72% for 17:00–18:00, 38% for 18:00–19:00 and 14% for 19:00–20:00 MYT. The KK airport forecast (TAF, issued 07:00) has temporary thunderstorm rain with a cumulonimbus cloud during 13:00–17:00 and visibility down to 4 km; MetMalaysia's town forecast says dry morning, thunderstorms in the afternoon, and rain tonight (the district forecast says thunderstorms 'in a few places' and rain 'in a few places' tonight). So showers are possible from late morning, with the main storms most likely 13:00–17:00. Temperature: the airport is already at 27°C, MetMalaysia gives 32°C town / 33°C district and the models 29.8–30.3°C; with cloud and rain building from late morning I expect 30–32°C, lower than yesterday's 32°C if the showers start early."
     },
     {
       "label": "RAIN AMOUNT",
-      "text": "The ECMWF ensemble is light for today at the airport grid point: 10th–90th percentile 1.4–7.4 mm, only a 4% chance of 10 mm or more. Yesterday's storm (active 14:13–18:00 at the airport) shows what 'light' can still mean under a cell: amounts are grid-point daily totals, not what falls on one street."
+      "text": "A wetter day than yesterday at the airport grid point: the ECMWF ensemble gives a middle estimate of 5.5 mm, a likely range of 2.4–9.9 mm, and a 10% chance of 10 mm or more (the blended model says 4.5 mm). Amounts are grid-point daily totals, not what falls on one street; under a storm cell a short burst can be much heavier than the daily figure suggests."
     },
     {
       "label": "THIS WEEK",
-      "text": "Dry mornings and afternoon thunderstorms every day, with the wet focus now on Tuesday 10 and Wednesday 11 Nov: the ensemble's chance of a 10 mm+ day is 4% today, 10% Monday, then 47% Tuesday and 41% Wednesday (likely 3.8–19.3 mm and 3.9–18.1 mm), easing to 35% Thursday and 22% Friday–Saturday. MetMalaysia keeps 'thunderstorms in a few places' each afternoon through Tuesday and adds rain on Monday night. Highs 32–33°C, lows 24–25°C. Separately, the continuous-rain alert for Kudat and the Sandakan areas runs to Wednesday 11 Nov; it does not name Kota Kinabalu."
+      "text": "Afternoon thunderstorms every day, and the wet focus is Tuesday 10 and Wednesday 11 Nov: the ensemble's chance of a 10 mm+ day is 10% today, 49% Tuesday (likely 4.1–17.3 mm) and 47% Wednesday (4.8–19.6 mm), then 25% Thursday, 24% Friday and Saturday and 6% on Sunday. MetMalaysia's town forecast has thunderstorms every afternoon through Thursday at least, adding thunderstorms at night on Wednesday and Thursday; the district forecast steps up to 'thunderstorms in most places' on Wednesday and 'widespread' on Thursday afternoon. Highs about 32–33°C by MetMalaysia (the models 29–30.5°C), lows 24–25°C. The continuous-rain alert for Kudat and the Sandakan areas runs to Wednesday; it does not name Kota Kinabalu."
     },
     {
       "label": "PLAN",
-      "text": "This call was first written at 12:55 and amended at 13:11 MYT; the morning's 'finish outdoor work by 13:00' advice has passed. From now: stay under cover through the afternoon, with the West Coast land thunderstorm warning in force until 15:00 and the airport's thunderstorm period 15:00–19:00; the evening and night look dry (town forecast: no rain). Tuesday and Wednesday afternoons are the ones most likely to disrupt site visits or driving this week. The separate coastal thunderstorm warning for Eastern Sabah waters expired at 13:00; check the warnings card for anything newer before going to sea."
+      "text": "Do outdoor work, site visits and driving this morning: the radar is clear over us now and the model's rain chance only passes 50% from about 10:00–11:00. Be under cover or ready to stop by around 11:00–13:00, expect the heaviest period 13:00–17:00 (airport thunderstorm period and the model's 100% window), and expect it to ease from about 17:00–18:00, with the evening mostly dry in the model (about 14% by 20:00). Tonight is the one place the sources disagree: MetMalaysia's town forecast says rain tonight, the model shows 10% or less overnight, so keep an umbrella for the late evening. Small boats should note the sea thunderstorm warning until 10:00. Tuesday and Wednesday afternoons are the likeliest to disrupt the week."
     },
     {
       "label": "CONFIDENCE",
-      "text": "Temperature: high (already measured at 32°C, official forecast agrees). Timing of today's storms: moderate to high (TAF, MetMalaysia and the model peak all point to mid-afternoon; exact local timing stays uncertain). Rain amount at your spot: low. The Tuesday–Wednesday wet signal: moderate, from one ensemble two to three days out."
+      "text": "Temperature: moderate (the 27°C start is measured, the high depends on how early the cloud and showers arrive). Storm timing: moderate to high for an afternoon storm 13:00–17:00 (TAF, MetMalaysia and the model peak agree); moderate for showers starting late morning (only the model says so). Rain amount at your spot: low. Tonight's rain: low to moderate, because the sources disagree. The Tuesday–Wednesday wet signal: moderate, from one ensemble two to three days out."
     },
     {
       "label": "WHY",
-      "text": "Forecasts made 24 hours ahead were checked against yesterday's airport readings: GFS (1.6°C error) and ECMWF (1.6°C) led, the blend 1.8°C, UK Met Office 2.4°C, JMA 2.6°C, GEM 2.7°C, ICON and CMA 3.1°C, ARPEGE 3.2°C; GEM, ICON and CMA ran 2.2–2.5°C too warm. GFS, ECMWF, the blend, JMA, GEM and ICON predicted rain in the 14:00–18:00 window; UK Met Office, CMA and ARPEGE did not, and a thunderstorm was in fact reported 14:13–18:00. Two days of comparison now, still a small sample; it informs my grouping of the models and no weights are computed. No radar check was made for this call."
+      "text": "Yesterday's call checked out: I said 32–33°C and the airport measured 32°C, and I warned that the first cells could arrive before the TAF period; the airport in fact reported a thunderstorm from 13:17 to 16:30 against a TAF window of 15:00–19:00. Forecasts made 24 hours ahead were compared with yesterday's airport readings: ECMWF (1.2°C error) and the blend (1.2°C) led, then GFS (1.6°C), UK Met Office (1.9°C), JMA (2.4°C), GEM (2.7°C), CMA (3.2°C), ARPEGE (3.4°C) and ICON (3.4°C); GEM, CMA, ARPEGE and ICON ran 2.3–2.9°C too warm. Only JMA and GEM predicted at least 1 mm in the 15:00–18:00 window; the others did not, though a thunderstorm was reported 13:17–16:30. Three days of comparison now, still a small sample; it informs my grouping of the models and no weights are computed. Radar was looked at by eye at 08:20 (see the note above)."
     }
   ]
 }

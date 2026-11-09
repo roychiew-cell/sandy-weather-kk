@@ -196,14 +196,7 @@ def parse_time(s):
 DIVISION_STATES = {"Sabah", "Sarawak"}
 OTHER_STATES = ["Perlis", "Kedah", "Penang", "Pulau Pinang", "Perak", "Kelantan", "Terengganu", "Pahang", "Selangor", "Kuala Lumpur", "Putrajaya",
                 "Negeri Sembilan", "N. Sembilan", "Melaka", "Malacca", "Johor", "Sarawak", "Sabah", "Labuan"]
-DIVISIONS = {"Sabah": {"West Coast": ["Kota Kinabalu", "Penampang", "Papar", "Tuaran", "Kota Belud", "Ranau", "Putatan"],
-                       "Interior": ["Beaufort", "Kuala Penyu", "Sipitang", "Tenom", "Keningau", "Tambunan", "Nabawan", "Pensiangan", "Sook"],
-                       "Kudat": ["Kudat", "Kota Marudu", "Pitas"], "Sandakan": ["Sandakan", "Beluran", "Kinabatangan", "Tongod", "Telupid", "Paitan", "Labuk & Sugut"],
-                       "Tawau": ["Tawau", "Lahad Datu", "Semporna", "Kunak", "Kalabakan"]},
-             "Sarawak": {"Kuching": ["Kuching", "Bau", "Lundu"], "Samarahan": ["Samarahan", "Asajaya", "Simunjan", "Sebuyau", "Gedong"], "Serian": ["Serian", "Tebedu"],
-                         "Sri Aman": ["Sri Aman", "Lubok Antu"], "Betong": ["Betong", "Saratok", "Pusa", "Kabong"], "Sarikei": ["Sarikei", "Meradong", "Julau", "Pakan"],
-                         "Sibu": ["Sibu", "Kanowit", "Selangau"], "Mukah": ["Mukah", "Dalat", "Daro", "Matu", "Tanjung Manis"], "Kapit": ["Kapit", "Song", "Belaga", "Bukit Mabong"],
-                         "Bintulu": ["Bintulu", "Tatau", "Sebauh"], "Miri": ["Miri", "Marudi", "Subis", "Beluru", "Telang Usan"], "Limbang": ["Limbang", "Lawas"]}}
+DIVISIONS = {"Sabah": {"West Coast": ["Kota Kinabalu", "Penampang", "Papar", "Tuaran", "Kota Belud", "Ranau", "Putatan", "Tamparuli", "Kinarut"], "Interior": ["Beaufort", "Kuala Penyu", "Sipitang", "Tenom", "Keningau", "Tambunan", "Nabawan", "Pensiangan", "Sook", "Membakut", "Kemabong", "Weston"], "Kudat": ["Kudat", "Kota Marudu", "Pitas"], "Sandakan": ["Sandakan", "Beluran", "Kinabatangan", "Tongod", "Telupid", "Paitan", "Labuk & Sugut"], "Tawau": ["Tawau", "Lahad Datu", "Semporna", "Kunak", "Kalabakan"]}, "Sarawak": {"Kuching": ["Kuching", "Bau", "Lundu"], "Samarahan": ["Samarahan", "Asajaya", "Simunjan", "Sebuyau", "Gedong"], "Serian": ["Serian", "Tebedu", "Siburan"], "Sri Aman": ["Sri Aman", "Lubok Antu", "Pantu", "Lingga"], "Betong": ["Betong", "Saratok", "Pusa", "Kabong", "Spaoh"], "Sarikei": ["Sarikei", "Meradong", "Julau", "Pakan", "Bintangor"], "Sibu": ["Sibu", "Kanowit", "Selangau"], "Mukah": ["Mukah", "Dalat", "Daro", "Matu", "Tanjung Manis"], "Kapit": ["Kapit", "Song", "Belaga", "Bukit Mabong"], "Bintulu": ["Bintulu", "Tatau", "Sebauh"], "Miri": ["Miri", "Marudi", "Subis", "Beluru", "Telang Usan", "Bario"], "Limbang": ["Limbang", "Lawas"]}}
 STATE_ALIAS = {"Penang": ["Penang", "Pulau Pinang"], "Negeri Sembilan": ["Negeri Sembilan", "N. Sembilan"], "Melaka": ["Melaka", "Malacca"],
                "Labuan": ["Labuan", "W.P. Labuan", "WP Labuan"], "Kuala Lumpur": ["Kuala Lumpur", "W.P. Kuala Lumpur", "WP Kuala Lumpur"],
                "Putrajaya": ["Putrajaya", "W.P. Putrajaya", "WP Putrajaya"]}  # how MetMalaysia bulletins spell the states
@@ -217,9 +210,11 @@ def _alt(state):
     return "(?:" + "|".join(re.escape(x) for x in STATE_ALIAS.get(state, [state])) + ")"
 
 
-KNOWN_BY_STATE = {"johor": ["ayer hitam", "batu pahat", "iskandar puteri", "johor bahru", "kluang", "kota tinggi", "kulai", "labis", "mersing", "muar", "pagoh", "pasir gudang", "pekan nenas", "penawar", "pontian", "segamat", "senai", "simpang renggam", "skudai", "tangkak", "ulu tiram", "yong peng"], "kedah": ["alor star", "baling", "bandar baharu", "gurun", "jitra", "kampong raja", "kota setar", "kuah", "kuala kedah", "kuala muda", "kuala nerang", "kubang pasu", "kulim", "langkawi", "padang terap", "pendang", "pokok sena", "sik", "sungai petani", "yan"], "kelantan": ["bachok", "gua musang", "jeli", "kota bharu", "kuala krai", "kubang kerian", "lojing", "machang", "pasir mas", "pasir puteh", "rantau panjang", "sabak", "tanah merah", "tumpat"], "kuala lumpur": ["ampang", "bandar utama", "bangsar", "bukit bintang", "jalan duta", "kepong", "kuala lumpur", "sentul", "sungai besi"], "labuan": ["labuan"], "melaka": ["alor gajah", "ayer keroh", "bandaraya melaka", "batu berendam", "durian tunggal", "jasin", "masjid tanah", "melaka tengah", "merlimau", "sungai udang", "tangga batu"], "negeri sembilan": ["bahau", "gemas", "jelebu", "jempol", "kuala klawang", "kuala pilah", "nilai", "port dickson", "rembau", "seremban", "tampin"], "pahang": ["bandar tun abdul razak, jengka", "bentong", "bera", "brinchang", "cameron highlands", "jerantut", "kuala lipis", "kuala rompin", "kuantan", "lipis", "maran", "mentakab", "muadzam shah", "pekan", "raub", "rompin", "tanah rata", "tanah rata - brinchang", "temerloh", "triang"], "penang": ["ayer itam", "balik pulau", "barat daya", "batu kawan", "bayan baru", "bayan lepas", "bukit mertajam", "bukit tengah", "butterworth", "gelugor", "georgetown", "jawi", "juru", "kepala batas", "nibong tebal", "perai", "seberang perai selatan", "seberang perai tengah", "seberang perai utara", "sungai ara", "sungai dua", "sungai dua - sungai nibong", "sungai nibong", "tanjung bungah", "tanjung tokong", "timur laut"], "perak": ["bagan datuk", "bagan serai", "bandar baru seri manjung", "batang padang", "batu gajah", "gerik", "gopeng", "hilir perak", "hulu perak", "ipoh", "kampar", "kerian", "kinta", "kuala kangsar", "larut matang dan selama", "lenggong", "manjung", "muallim", "parit buntar", "perak tengah", "selama", "serdang", "seri iskandar", "sitiawan", "slim river", "sungai siput", "taiping", "tanjong malim", "tapah", "teluk intan"], "perlis": ["kangar", "perlis"], "putrajaya": ["putrajaya"], "sabah": ["beaufort", "beluran", "kalabakan", "keningau", "kinabatangan", "kota belud", "kota kinabalu", "kota marudu", "kuala penyu", "kudat", "kunak", "labuk & sugut", "lahad datu", "membakut", "nabawan", "paitan", "papar", "penampang", "pensiangan", "pitas", "putatan", "ranau", "sandakan", "semporna", "sipitang", "sook", "tambunan", "tawau", "telupid", "tenom", "tongod", "tuaran"], "sarawak": ["asajaya", "bario", "bau", "belaga", "beluru", "betong", "bintulu", "bukit mabong", "dalat", "daro", "gedong", "julau", "kabong", "kanowit", "kapit", "kuching", "lawas", "limbang", "lingga", "lubok antu", "lundu", "marudi", "matu", "meradong", "miri", "mukah", "pakan", "pantu", "pusa", "samarahan", "saratok", "sarikei", "sebauh", "sebuyau", "selangau", "serian", "sibu", "siburan", "simunjan", "song", "sri aman", "subis", "tanjung manis", "tatau", "tebedu", "telang usan"], "selangor": ["bandar baru salak tinggi", "bangi", "banting", "batu caves", "cheras", "cyberjaya", "damansara", "gombak", "gombak (taman perwira )", "hulu langat", "hulu selangor", "kajang", "kelana jaya", "klang", "kuala kubu bharu", "kuala langat", "kuala selangor", "meru", "pelabuhan klang", "petaling", "petaling jaya", "puchong", "rawang", "sabak bernam", "selayang", "semenyih", "sepang", "serendah", "seri kembangan", "setapak", "shah alam", "sri gombak", "subang jaya", "sungai besar", "tanjong karang", "telok panglima garang", "ulu kelang"], "terengganu": ["bandar al-muktafi billah shah", "bandar permaisuri", "besut", "cukai", "dungun", "hulu terengganu", "jerteh", "jertih", "kemaman", "kertih", "kuala berang", "kuala nerus", "kuala terengganu", "marang", "paka", "setiu"]}  # VOCAB (generated by scripts/build_vocab.py)
-ALIASES = {"tanah tinggi cameron": "cameron highlands", "larut, matang dan selama": "larut matang dan selama", "larut, matang and selama": "larut matang dan selama", "larut matang and selama": "larut matang dan selama", "labuk sugut": "labuk & sugut", "labuk and sugut": "labuk & sugut"}  # VOCAB (generated by scripts/build_vocab.py)
-COMPOUNDS = ["larut, matang dan selama", "larut, matang and selama", "larut matang and selama", "larut matang dan selama", "labuk & sugut", "labuk and sugut"]  # VOCAB (generated by scripts/build_vocab.py)
+KNOWN_BY_STATE = {"johor": ["ayer hitam", "batu pahat", "iskandar puteri", "johor bahru", "kluang", "kota tinggi", "kulai", "labis", "mersing", "muar", "pagoh", "pasir gudang", "pekan nenas", "penawar", "pontian", "segamat", "senai", "simpang renggam", "skudai", "tangkak", "ulu tiram", "yong peng"], "kedah": ["alor star", "baling", "bandar baharu", "gurun", "jitra", "kampong raja", "kota setar", "kuah", "kuala kedah", "kuala muda", "kuala nerang", "kubang pasu", "kulim", "langkawi", "padang terap", "pendang", "pokok sena", "sik", "sungai petani", "yan"], "kelantan": ["bachok", "gua musang", "jeli", "kota bharu", "kuala krai", "kubang kerian", "lojing", "machang", "pasir mas", "pasir puteh", "rantau panjang", "sabak", "tanah merah", "tumpat"], "kuala lumpur": ["ampang", "bandar utama", "bangsar", "bukit bintang", "jalan duta", "kepong", "kuala lumpur", "sentul", "sungai besi"], "labuan": ["labuan"], "melaka": ["alor gajah", "ayer keroh", "bandaraya melaka", "batu berendam", "durian tunggal", "jasin", "masjid tanah", "melaka tengah", "merlimau", "sungai udang", "tangga batu"], "negeri sembilan": ["bahau", "gemas", "jelebu", "jempol", "kuala klawang", "kuala pilah", "nilai", "port dickson", "rembau", "seremban", "tampin"], "pahang": ["bandar tun abdul razak, jengka", "bentong", "bera", "brinchang", "cameron highlands", "jerantut", "kuala lipis", "kuala rompin", "kuantan", "lipis", "maran", "mentakab", "muadzam shah", "pekan", "pulau tioman", "raub", "rompin", "tanah rata", "tanah rata - brinchang", "temerloh", "triang"], "penang": ["ayer itam", "balik pulau", "barat daya", "batu kawan", "bayan baru", "bayan lepas", "bukit mertajam", "bukit tengah", "butterworth", "gelugor", "georgetown", "jawi", "juru", "kepala batas", "nibong tebal", "perai", "seberang perai selatan", "seberang perai tengah", "seberang perai utara", "sungai ara", "sungai dua", "sungai dua - sungai nibong", "sungai nibong", "tanjung bungah", "tanjung tokong", "timur laut"], "perak": ["bagan datuk", "bagan serai", "bandar baru seri manjung", "batang padang", "batu gajah", "gerik", "gopeng", "hilir perak", "hulu perak", "ipoh", "kampar", "kerian", "kinta", "kuala kangsar", "larut", "larut matang dan selama", "lenggong", "manjung", "matang", "muallim", "parit buntar", "perak tengah", "selama", "serdang", "seri iskandar", "sitiawan", "slim river", "sungai siput", "taiping", "tanjong malim", "tapah", "teluk intan"], "perlis": ["kangar", "perlis"], "putrajaya": ["putrajaya"], "sabah": ["beaufort", "beluran", "kalabakan", "keningau", "kinabatangan", "kota belud", "kota kinabalu", "kota marudu", "kuala penyu", "kudat", "kunak", "labuk & sugut", "lahad datu", "membakut", "nabawan", "paitan", "papar", "penampang", "pensiangan", "pitas", "putatan", "ranau", "sandakan", "semporna", "sipitang", "sook", "tambunan", "tawau", "telupid", "tenom", "tongod", "tuaran"], "sarawak": ["asajaya", "bario", "bau", "belaga", "beluru", "betong", "bintulu", "bukit mabong", "dalat", "daro", "gedong", "julau", "kabong", "kanowit", "kapit", "kuching", "lawas", "limbang", "lingga", "lubok antu", "lundu", "marudi", "matu", "meradong", "miri", "mukah", "pakan", "pantu", "pusa", "samarahan", "saratok", "sarikei", "sebauh", "sebuyau", "selangau", "serian", "sibu", "siburan", "simunjan", "song", "sri aman", "subis", "tanjung manis", "tatau", "tebedu", "telang usan"], "selangor": ["bandar baru salak tinggi", "bangi", "banting", "batu caves", "cheras", "cyberjaya", "damansara", "gombak", "gombak (taman perwira )", "hulu langat", "hulu selangor", "kajang", "kelana jaya", "klang", "kuala kubu bharu", "kuala langat", "kuala selangor", "meru", "pelabuhan klang", "petaling", "petaling jaya", "puchong", "rawang", "sabak bernam", "selayang", "semenyih", "sepang", "serendah", "seri kembangan", "setapak", "shah alam", "sri gombak", "subang jaya", "sungai besar", "tanjong karang", "telok panglima garang", "ulu kelang"], "terengganu": ["bandar al-muktafi billah shah", "bandar permaisuri", "besut", "cukai", "dungun", "hulu terengganu", "jerteh", "jertih", "kemaman", "kertih", "kuala berang", "kuala nerus", "kuala terengganu", "marang", "paka", "setiu"]}  # VOCAB (generated by scripts/build_vocab.py)
+KNOWN_DISTRICTS = {"johor": ["batu pahat", "johor bahru", "kluang", "kota tinggi", "kulai", "mersing", "muar", "pontian", "segamat", "tangkak"], "kedah": ["baling", "bandar baharu", "kota setar", "kuala muda", "kubang pasu", "kulim", "langkawi", "padang terap", "pendang", "pokok sena", "sik", "yan"], "kelantan": ["bachok", "gua musang", "jeli", "kota bharu", "kuala krai", "machang", "pasir mas", "pasir puteh", "tanah merah", "tumpat"], "kuala lumpur": ["kuala lumpur"], "labuan": ["labuan"], "melaka": ["alor gajah", "jasin", "melaka tengah"], "negeri sembilan": ["jelebu", "jempol", "kuala pilah", "port dickson", "rembau", "seremban", "tampin"], "pahang": ["bentong", "bera", "cameron highlands", "jerantut", "kuantan", "lipis", "maran", "pekan", "pulau tioman", "raub", "rompin", "temerloh"], "penang": ["barat daya", "seberang perai selatan", "seberang perai tengah", "seberang perai utara", "timur laut"], "perak": ["bagan datuk", "batang padang", "hilir perak", "hulu perak", "kampar", "kerian", "kinta", "kuala kangsar", "larut", "larut matang dan selama", "manjung", "matang", "muallim", "perak tengah", "selama"], "perlis": ["perlis"], "putrajaya": ["putrajaya"], "sabah": ["beaufort", "beluran", "kalabakan", "keningau", "kinabatangan", "kota belud", "kota kinabalu", "kota marudu", "kuala penyu", "kudat", "kunak", "labuk & sugut", "lahad datu", "membakut", "nabawan", "paitan", "papar", "penampang", "pensiangan", "pitas", "putatan", "ranau", "sandakan", "semporna", "sipitang", "sook", "tambunan", "tawau", "telupid", "tenom", "tongod", "tuaran"], "sarawak": ["asajaya", "bario", "bau", "belaga", "beluru", "betong", "bintulu", "bukit mabong", "dalat", "daro", "gedong", "julau", "kabong", "kanowit", "kapit", "kuching", "lawas", "limbang", "lingga", "lubok antu", "lundu", "marudi", "matu", "meradong", "miri", "mukah", "pakan", "pantu", "pusa", "samarahan", "saratok", "sarikei", "sebauh", "sebuyau", "selangau", "serian", "sibu", "siburan", "simunjan", "song", "sri aman", "subis", "tanjung manis", "tatau", "tebedu", "telang usan"], "selangor": ["gombak", "hulu langat", "hulu selangor", "klang", "kuala langat", "kuala selangor", "petaling", "sabak bernam", "sepang"], "terengganu": ["besut", "dungun", "hulu terengganu", "kemaman", "kuala nerus", "kuala terengganu", "marang", "setiu"]}  # VOCAB (generated by scripts/build_vocab.py)
+ALIASES = {"tanah tinggi cameron": "cameron highlands", "larut, matang dan selama": "larut matang dan selama", "larut, matang and selama": "larut matang dan selama", "larut matang and selama": "larut matang dan selama", "larut matang & selama": "larut matang dan selama", "larut, matang & selama": "larut matang dan selama", "labuk sugut": "labuk & sugut", "labuk and sugut": "labuk & sugut", "timor laut": "timur laut", "maradong": "meradong"}  # VOCAB (generated by scripts/build_vocab.py)
+COMPOUNDS = ["larut, matang dan selama", "larut, matang and selama", "larut, matang & selama", "larut matang and selama", "larut matang & selama", "larut matang dan selama", "labuk & sugut", "labuk and sugut"]  # VOCAB (generated by scripts/build_vocab.py)
+OVERLAPS = {"nabawan": ["pensiangan"], "pensiangan": ["nabawan"], "beluran": ["labuk & sugut", "paitan"], "labuk & sugut": ["beluran"], "paitan": ["beluran"], "larut matang dan selama": ["larut", "matang", "selama"], "larut": ["larut matang dan selama"], "matang": ["larut matang dan selama"], "selama": ["larut matang dan selama"]}  # VOCAB (generated by scripts/build_vocab.py)
 STATE_KEYS = {"perlis", "kedah", "penang", "perak", "kelantan", "terengganu", "pahang", "selangor", "kuala lumpur", "putrajaya",
               "negeri sembilan", "melaka", "johor", "sarawak", "sabah", "labuan"}
 
@@ -234,22 +229,31 @@ def _canon(n):
     return ALIASES.get(x, x)
 
 
+def _spaced(n):
+    return re.escape(n).replace("\\ ", r"\s+")
+
+
 KNOWN_ST = {k: set(v) for k, v in KNOWN_BY_STATE.items()}
+KNOWN_DIST = {k: set(v) for k, v in KNOWN_DISTRICTS.items()}
 for _st, _d in DIVISIONS.items():
-    _s = KNOWN_ST.setdefault(_st.lower(), set())
+    _k = _st.lower()
+    KNOWN_ST.setdefault(_k, set())
+    KNOWN_DIST.setdefault(_k, set())
     for _dv, _ds in _d.items():
-        _s.add(_dv.lower())
-        _s.update(_canon(x) for x in _ds)
+        KNOWN_ST[_k].add(_dv.lower())
+        for _x in _ds:
+            KNOWN_ST[_k].add(_canon(_x))
+            KNOWN_DIST[_k].add(_canon(_x))
 SORTED_COMPOUNDS = sorted(COMPOUNDS, key=len, reverse=True)
-COMPOUND_RES = [re.compile(r"(^|[^A-Za-z])" + re.escape(c).replace("\\ ", r"\s+") + r"(?![A-Za-z])", re.I) for c in SORTED_COMPOUNDS]
-_PFX = re.compile(r"^\s*((?:W\.?P\.?\s+|Wilayah Persekutuan\s+)?(?:" + "|".join(re.escape(x) for x in OTHER_STATES) + r"))\s*:\s*(.*)$", re.I | re.S)
-INTRO_RE = re.compile(r"^(?:(?:thunderstorms?|continuous rain|heavy rain|rain|strong winds?|winds?|,|and|\s)+(?:(?:is|are)\s+expected(?:\s+to\s+occur)?)?\s*)?$", re.I)
+COMPOUND_RES = [re.compile(r"(^|[^A-Za-z])" + _spaced(c) + r"(?![A-Za-z])", re.I) for c in SORTED_COMPOUNDS]
+_PFX = re.compile(r"^\s*((?:W\.?P\.?\s+|Wilayah\s+Persekutuan\s+)?(?:" + "|".join(_spaced(x) for x in OTHER_STATES) + r"))\s*:\s*(.*)$", re.I | re.S)
+INTRO_RE = re.compile(r"^(?:(?:thunderstorms?|continuous rain|continuous heavy rain|continuous torrential rain|heavy rain|torrential rain|rain|strong winds?|winds?|,|and|\s)+(?:(?:is|are)\s+expected(?:\s+to\s+occur)?)?\s*)?$", re.I)
 _DATE = r"(?:[A-Za-z]+,\s*)?\d{1,2}\s+[A-Za-z]+\s+\d{4}"
 _TIME = r"\d{1,2}[:.]\d{2}\s*(?:AM|PM)"
 TAIL_RE = re.compile(r"^\s*(?:until\s+" + _TIME + r"(?:\s*;\s*" + _DATE + r")?|until\s+" + _DATE + r"|within the period of\s+" + _DATE + r"\s+until\s+" + _DATE + r")\s*\.?\s*$", re.I)
 NEGATION_RE = re.compile(r"\b(?:no|not|nil|none|except|excluding|excludes?|excluded|exclusion|without|unless|other than|apart from)\b", re.I)
-GENERIC_HEAD = {"WARNING", "WARNINGS", "THUNDERSTORM", "THUNDERSTORMS", "RAIN", "CONTINUOUS", "HEAVY", "STRONG", "WINDS", "WIND", "ALERT", "SECTION",
-                "A", "B", "C", "D", "FOR", "LAND", "AREAS", "STATE", "STATES", "OF", "THE", "AND", "I", "II", "III", "IV", "V", "WP", "W", "P",
+GENERIC_HEAD = {"WARNING", "WARNINGS", "THUNDERSTORM", "THUNDERSTORMS", "RAIN", "CONTINUOUS", "HEAVY", "STRONG", "WINDS", "WIND", "ALERT", "SEVERE", "DANGER",
+                "CATEGORY", "SECTION", "A", "B", "C", "D", "FOR", "LAND", "AREAS", "STATE", "STATES", "OF", "THE", "AND", "I", "II", "III", "IV", "V", "WP", "W", "P",
                 "WILAYAH", "PERSEKUTUAN", "PULAU", "PINANG", "NEGERI", "SEMBILAN", "KUALA", "LUMPUR", "N"}
 
 
@@ -257,6 +261,12 @@ def _state_key(n):
     x = re.sub(r"^(?:w\.?p\.?|wilayah persekutuan)\s+", "", _norm(n))
     x = {"pulau pinang": "penang", "n. sembilan": "negeri sembilan", "malacca": "melaka"}.get(x, x)
     return x if x in STATE_KEYS else None
+
+
+def _norm_states(t):
+    for n in [x for x in OTHER_STATES if " " in x]:
+        t = re.sub(_spaced(n), lambda m: re.sub(r"\s+", " ", m.group(0)), t, flags=re.I)
+    return t
 
 
 def _protect_compounds(t):
@@ -272,7 +282,7 @@ def _restore_compounds(t):
 def _clean_scope(ctx, alt):
     """A heading or scope names the state 'plainly' only when nothing but the state and generic warning words is left."""
     t = re.sub(alt, " ", (ctx or "").upper(), flags=re.I)
-    t = re.sub("(?:" + "|".join(re.escape(x) for x in OTHER_STATES) + ")", " ", t, flags=re.I)
+    t = re.sub("(?:" + "|".join(_spaced(x) for x in OTHER_STATES) + ")", " ", t, flags=re.I)
     return all(w in GENERIC_HEAD for w in re.findall(r"[A-Z]+", t))
 
 
@@ -326,25 +336,20 @@ def _split_clause(c):
     return [e for e in (_restore_compounds(x).strip() for x in out) if e], bal
 
 
-def _prose(raw):
-    """An entry with lower-case words is prose, not a name."""
-    t = re.sub(r"\b(?:and|dan)\b", " ", raw, flags=re.I)
-    t = re.sub(r"\([^()]*\)", lambda m: m.group(0).upper(), t)
-    return bool(re.search(r"(^|[\s(])[a-z]", t))
-
-
 def area_coverage(text, state, division=None, district=None, ctx=""):
     """Same reading as areaCoverage() in index.html: True / False / None (cannot tell).
     A closed reading of a warning's area clause: the whole text must fit the grammar (a short weather intro, "over [the states of]", a
     clause of entries that are state names, known divisions or names in the owning state's vocabulary with at most one bracket list each,
-    and a strict time tail). Anything else is None; a positive survives only other unresolved *entries*, never a structural failure."""
+    and a strict time tail). Anything else is None. A positive survives only an unresolved *list* inside a recognised entry; free text in the
+    name position, negation, overlapping place names and unknown parentage are structural failures."""
     if not state:
         return None
     sk = _state_key(state)
-    alt = _alt(state)
+    alt = "(?:" + "|".join(_spaced(x) for x in STATE_ALIAS.get(state, [state])) + ")"
     s_re = re.compile(r"(^|[^A-Za-z])" + alt + r"(?=$|[^A-Za-z])", re.I)
     q_re = re.compile(r"\b(?:Eastern|Western|Northern|Southern|Central|Coastal|Interior|Upper|Lower)\s+" + alt + r"(?=$|[^A-Za-z])", re.I)
     ctx_text = ctx or ""
+    text = _norm_states(text)
 
     def plain(t):
         return q_re.sub(" ", t)
@@ -352,7 +357,7 @@ def area_coverage(text, state, division=None, district=None, ctx=""):
     in_text, in_ctx = bool(s_re.search(plain(text))), bool(s_re.search(plain(ctx_text)))
     if not in_text and not in_ctx:  # the state is not named: not covered (a qualified region such as "Eastern Sabah" is unresolved)
         return None if (q_re.search(text) or q_re.search(ctx_text)) else False
-    if NEGATION_RE.search(text):  # negation or exclusion wording anywhere: never an affirmative reading
+    if NEGATION_RE.search(text) or NEGATION_RE.search(ctx_text):  # negation or exclusion wording in the text or its heading
         return None
     intro, clause, tail = _extract_clause(text)
     if not INTRO_RE.match(re.sub(r"\s+", " ", intro).strip()) or not TAIL_RE.match(tail):  # unsupported introduction or time tail
@@ -363,6 +368,7 @@ def area_coverage(text, state, division=None, district=None, ctx=""):
     divs = DIVISIONS.get(state)
     dkey = {k.lower(): k for k in divs} if divs else {}
     vocab = KNOWN_ST.get(sk, set())
+    dist_set = KNOWN_DIST.get(sk, set())
     dist_names = {_canon(d) for ds in (divs or {}).values() for d in ds}
 
     def district_divs(n):
@@ -374,6 +380,15 @@ def area_coverage(text, state, division=None, district=None, ctx=""):
         dd = district_divs(dist)
         if len(dd) == 1:
             adiv = next(iter(dd))
+    overlap = OVERLAPS.get(dist, []) if dist else []
+    flags = {"overlap": False, "town": False}
+
+    def note(ns):  # a listed name that overlaps the queried district, or a town where districts are expected, can never prove exclusion
+        for n in ns:
+            if n in overlap:
+                flags["overlap"] = True
+            if n not in dist_set and not (divs and n in dkey):
+                flags["town"] = True
 
     def eval_list(lst, parent_div):
         items = [_restore_compounds(x).strip() for x in re.split(r"\s*(?:,|;|•)\s*|\s+(?:and|dan)\s+", _protect_compounds(lst), flags=re.I)]
@@ -384,13 +399,15 @@ def area_coverage(text, state, division=None, district=None, ctx=""):
             if n not in vocab:
                 return None
             if parent_div and divs:
-                dd = district_divs(n)
-                if dd and parent_div not in dd:
-                    return None  # empty, unknown, other-state or cross-division names: unresolved
+                if n in dkey and n not in dist_names:
+                    return None
+                if parent_div not in district_divs(n):
+                    return None  # unknown, other-state, division-only or unrelated-division members: unresolved
         return ns
 
     cur = sk if (in_ctx and _clean_scope(ctx_text, alt)) else None
-    pos = unres = bad = pending = restricted = False  # restricted: a list or district item was weighed, so a district the vocabulary does not know cannot be judged
+    pos = unres = bad = pending = restricted = False
+    pending_owner = None
     for raw in entries:
         prefix, rest = None, raw
         pm = _PFX.match(raw)
@@ -401,7 +418,10 @@ def area_coverage(text, state, division=None, district=None, ctx=""):
         lst = mm.group(2) if mm and mm.group(2) is not None else None
         pk = _state_key(prefix) if prefix else None
         if prefix:
+            if pending and (pending_owner == sk or pending_owner is None):
+                bad = True
             pending = (not name) and lst is None
+            pending_owner = pk
             cur = pk
         elif pending and name:
             pending = False
@@ -415,10 +435,12 @@ def area_coverage(text, state, division=None, district=None, ctx=""):
                 bad = True  # an entry that does not parse belongs to the state in effect
             continue
         if not name:
-            continue  # "Sabah:" on its own only sets the state (checked at the end)
+            continue  # "Sabah:" on its own only sets the state (checked when the next entry or the end arrives)
         if nk:
             cur = nk
             if nk != sk:
+                if s_re.search(plain(raw)):
+                    bad = True  # another state's entry must not hide this state, even inside its bracket list
                 continue
             if lst is None:  # a state entry: the whole state, or only the districts in its list
                 pos = True
@@ -426,26 +448,24 @@ def area_coverage(text, state, division=None, district=None, ctx=""):
             ns = eval_list(lst, None)
             if ns is None:
                 unres = True
-                if _prose(raw):
-                    bad = True
                 continue
             restricted = True
-            if not dist:
-                unres = True
-                continue
-            if dist in ns:
-                pos = True
-            elif divs:
+            note(ns)
+            if divs:
                 for n in ns:  # a division named in a state list counts only when it is not also a district name
                     if n in dkey and n not in dist_names and adiv == n:
                         pos = True
+            if dist and dist in ns:
+                pos = True
+            if not pos and not dist:
+                unres = True
             continue
         if cur is None:
             bad = True  # cannot say which state this item belongs to
             continue
         if cur != sk:
             if s_re.search(plain(rest)):
-                bad = True  # another state's entry must not hide a mention of this state
+                bad = True
             continue
         n = _canon(name)
         if divs and n in dkey:  # a Sabah/Sarawak division, optionally restricted to a list of its districts
@@ -458,20 +478,18 @@ def area_coverage(text, state, division=None, district=None, ctx=""):
             ns = eval_list(lst, n)
             if ns is None:
                 unres = True
-                if _prose(raw):
-                    bad = True
                 continue
             restricted = True
-            if not dist:
-                if adiv and adiv != n:
-                    continue
+            note(ns)
+            if dist:
+                if dist in ns and (not adiv or adiv == n):
+                    pos = True
+            elif not adiv or adiv == n:
                 unres = True
-                continue
-            if dist in ns and (not adiv or adiv == n):
-                pos = True
             continue
         if n in vocab and lst is None:  # a district item
             restricted = True
+            note([n])
             if not dist:
                 dd = district_divs(n)
                 if adiv and dd and adiv not in dd:
@@ -481,16 +499,14 @@ def area_coverage(text, state, division=None, district=None, ctx=""):
             if n == dist:
                 pos = True
             continue
-        unres = True  # unknown wording, qualifiers, a bracket list on a district: cannot tell
-        if _prose(raw):
-            bad = True
-    if pending:
-        unres = True  # a state header with nothing under it
+        bad = True  # free text or an unknown name where a place is expected: structural failure
+    if pending and (pending_owner == sk or pending_owner is None):
+        bad = True  # a state header with nothing under it
     if bad:
         return None
     if pos:
         return True
-    if unres:
+    if unres or flags["overlap"] or flags["town"]:
         return None
     return None if (restricted and dist and dist not in vocab) else False
 

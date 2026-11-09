@@ -11,21 +11,40 @@ registered so the parser does not split them. A name that is not in the owning s
 import json, pathlib, re
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-EXTRA = {"sabah": ["Pensiangan", "Paitan", "Labuk & Sugut", "Sook", "Kalabakan"], "sarawak": ["Sebuyau", "Gedong", "Tatau"],
-         "pahang": ["Cameron Highlands"], "perak": ["Larut Matang dan Selama"]}
+EXTRA = {"sabah": ["Pensiangan", "Paitan", "Labuk & Sugut", "Sook", "Kalabakan", "Membakut"], "sarawak": ["Sebuyau", "Gedong", "Tatau", "Bario", "Siburan"],
+         "pahang": ["Cameron Highlands", "Pulau Tioman"], "perak": ["Larut Matang dan Selama", "Larut", "Matang", "Selama"]}
 # reviewed aliases: ordinary spellings of one place -> canonical lower-case name
 ALIASES = {"tanah tinggi cameron": "cameron highlands", "larut, matang dan selama": "larut matang dan selama",
            "larut, matang and selama": "larut matang dan selama", "larut matang and selama": "larut matang dan selama",
-           "labuk sugut": "labuk & sugut", "labuk and sugut": "labuk & sugut"}
+           "larut matang & selama": "larut matang dan selama", "larut, matang & selama": "larut matang dan selama",
+           "labuk sugut": "labuk & sugut", "labuk and sugut": "labuk & sugut", "timor laut": "timur laut", "maradong": "meradong"}
+# places whose bulletin names overlap or contain each other: a listed one never proves that the other is outside the warning
+OVERLAPS = {"nabawan": ["pensiangan"], "pensiangan": ["nabawan"], "beluran": ["labuk & sugut", "paitan"], "labuk & sugut": ["beluran"], "paitan": ["beluran"],
+            "larut matang dan selama": ["larut", "matang", "selama"], "larut": ["larut matang dan selama"], "matang": ["larut matang dan selama"],
+            "selama": ["larut matang dan selama"]}
 # names that contain a separator and must be read as one name
-COMPOUNDS = ["larut, matang dan selama", "larut, matang and selama", "larut matang and selama", "larut matang dan selama",
-             "labuk & sugut", "labuk and sugut"]
+COMPOUNDS = ["larut, matang dan selama", "larut, matang and selama", "larut, matang & selama", "larut matang and selama", "larut matang & selama",
+             "larut matang dan selama", "labuk & sugut", "labuk and sugut"]
 STATE_FIX = {"pulau pinang": "penang", "wp kuala lumpur": "kuala lumpur", "wp putrajaya": "putrajaya", "wp labuan": "labuan"}
 
 
 def canon(n):
     x = re.sub(r"\s+", " ", n).strip().lower()
     return ALIASES.get(x, x)
+
+
+def districts():
+    by = {}
+    for p in json.loads((ROOT / "places.json").read_text(encoding="utf-8"))["places"]:
+        if p["kind"] != "district":
+            continue
+        st = STATE_FIX.get((p.get("state") or "").strip().lower(), (p.get("state") or "").strip().lower())
+        if st:
+            n = p["name"]
+            by.setdefault(st, set()).update({canon(n), canon(re.sub(r"\s*\(.*?\)\s*", "", n))})
+    for st, names in EXTRA.items():
+        by.setdefault(st, set()).update(canon(x) for x in names)
+    return {k: sorted(v) for k, v in sorted(by.items())}
 
 
 def vocab():
@@ -53,6 +72,8 @@ def vocab():
 def main():
     v = vocab()
     lines = {
+        "KNOWN_DISTRICTS": (json.dumps(districts(), ensure_ascii=False, separators=(",", ":")), json.dumps(districts(), ensure_ascii=False)),
+        "OVERLAPS": (json.dumps(OVERLAPS, ensure_ascii=False, separators=(",", ":")), json.dumps(OVERLAPS, ensure_ascii=False)),
         "KNOWN_BY_STATE": (json.dumps(v, ensure_ascii=False, separators=(",", ":")), json.dumps(v, ensure_ascii=False)),
         "ALIASES": (json.dumps(ALIASES, ensure_ascii=False, separators=(",", ":")), json.dumps(ALIASES, ensure_ascii=False)),
         "COMPOUNDS": (json.dumps(COMPOUNDS, ensure_ascii=False, separators=(",", ":")), json.dumps(COMPOUNDS, ensure_ascii=False)),

@@ -61,15 +61,15 @@ a{color:var(--ac)}
 @media(max-width:520px){.status{flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);mask-image:linear-gradient(90deg,#000 88%,transparent)}.status::-webkit-scrollbar{display:none}}
 .rm *,.paused *{animation-play-state:paused!important}.rm .card,.paused .card{animation:none!important;opacity:1!important;transform:none!important}.rm .ticker span,.paused .ticker span{animation:none!important;padding-left:0;white-space:normal}.rm .bar i,.paused .bar i{transition:none!important}
 .viewbar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;background:rgba(10,18,32,.8);border:1px solid var(--bd);border-radius:12px;padding:8px 14px;margin-bottom:14px;font-size:13px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
-.viewbar button{margin-left:auto;background:rgba(56,189,248,.14);color:var(--ac);border:1px solid rgba(56,189,248,.4);border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer;font-family:inherit}.viewbar button:disabled{opacity:.5;cursor:default}
-body.view-loc .kk-only,body.view-loc #play,body.view-loc #play7,body.view-loc #scrub,body.view-loc #live,body.view-loc #tllab{display:none!important}
+.viewbar .btns{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}.viewbar button{background:rgba(56,189,248,.14);color:var(--ac);border:1px solid rgba(56,189,248,.4);border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer;font-family:inherit}.viewbar button:disabled{opacity:.5;cursor:default}
+body.view-loc .kk-only,body.view-loc #stale,body.view-loc #play,body.view-loc #play7,body.view-loc #scrub,body.view-loc #live,body.view-loc #tllab{display:none!important}
 body.view-loc #status::before{content:"Kota Kinabalu feeds:";color:var(--mu);margin-right:2px;white-space:nowrap;flex:none}
 </style></head><body><canvas id="sky"></canvas>
 <header class="top"><div class="brand">Sandy<span id="brandsub">Kota Kinabalu weather</span></div><div id="clock">--:--:-- MYT</div><div class="status" id="status" role="status" aria-live="off"></div><span class="pill" id="nextpill"><span class="ring" id="ring"></span><span id="nextchk">next check 60 s</span></span><details id="errs" class="errs" hidden><summary>Check errors</summary><div></div></details><div id="srstate" class="sr" aria-live="polite"></div></header>
 <div id="hud" hidden></div>
 <div class="tl"><button id="play">▶ 24 h</button><button id="play7">▶ 7 days</button><input id="scrub" type="range" min="0" max="24" step="0.25" value="0" aria-label="Scrub forecast hours ahead" hidden><button id="live" hidden>● Live</button><span class="lab" id="tllab">timeline</span><button id="pause">Pause motion</button></div>
 <main>
-<div class="viewbar" id="viewbar"><span id="viewtxt" role="status">Showing Kota Kinabalu.</span><button id="viewtoggle" data-act="ask">📍 Use my location</button></div>
+<div class="viewbar" id="viewbar"><span id="viewtxt" role="status">Showing Kota Kinabalu.</span><span class="btns"><button id="viewupdate" hidden>Update my location</button><button id="viewtoggle" data-act="ask">📍 Use my location</button></span></div>
 <div id="stale" class="stale" hidden aria-live="polite"></div>
 <div class="card hero" id="hero"><div><div class="sub" id="stamp">loading…</div><div class="big"><span id="temp" class="num" aria-hidden="true">--</span><span id="tempsr" class="sr"></span><small>°C</small></div><div class="cond" id="cond"></div><div class="sub" id="phase"></div><div class="sub" id="modelnow"></div></div><div class="grid" id="tiles"></div></div>
 <div class="card" id="keycard"><h2>At a glance<span class="asof" id="keyasof"></span></h2><div class="grid" id="key"></div></div>
@@ -693,7 +693,7 @@ function setLoc(pos,save){LOC=pos;locNote='';if(save){try{localStorage.setItem('
 function useLocation(lat,lon,acc,how,at){setLoc({lat,lon,acc:fin(acc)?acc:null,at:fin(at)?at:Date.now(),how:how||'device',saved:false},true);refreshLoc()}
 function forgetLocation(){locGen++;locSeq++;if(locCtl){locCtl.superseded=true;try{locCtl.abort()}catch(e){}locCtl=null}if(locRestoreT){clearTimeout(locRestoreT);locRestoreT=null}if(locTimer){clearInterval(locTimer);locTimer=null}
   LOC=null;LOCRES=null;locErr=null;viewSess=null;let cleared=true;try{localStorage.removeItem('sandy-loc');if(localStorage.getItem('sandy-loc'))cleared=false}catch(e){cleared=false}
-  $('#locout').innerHTML=cleared?'':'<p class="note">Cleared from this page, but this browser\'s storage could not be cleared; clear site data in the browser to be sure.</p>';$('#locasof').textContent='';$('#locforget').hidden=true;$('#locintro').hidden=false;const b=$('#locbtn');b.disabled=false;b.textContent='Use my location';viewChanged()}
+  $('#locout').innerHTML=cleared?'':'<p class="note">Cleared from this page, but this browser\'s storage could not be cleared; clear site data in the browser to be sure.</p>';$('#locasof').textContent='';$('#locforget').hidden=true;$('#locintro').hidden=false;const b=$('#locbtn');b.disabled=false;b.textContent='Use my location';document.querySelectorAll('#viewbar button').forEach(x=>{x.disabled=false});viewChanged()}
 $('#locforget').onclick=forgetLocation;
 async function refreshLoc(){const pos=LOC;if(!pos)return;const my=++locSeq,g=locGen;if(locCtl){locCtl.superseded=true;try{locCtl.abort()}catch(e){}}const ctl=new AbortController();locCtl=ctl;$('#locasof').textContent='checking…';locErr=null;
   const {lat,lon}=pos,la4=lat.toFixed(4),lo4=lon.toFixed(4),res={};const grab=async(k,fn)=>{const t0=Date.now();try{res[k]={v:await fn(),at:Date.now()}}catch(e){res[k]={err:e.message||'failed',at:t0}}};
@@ -762,19 +762,22 @@ const awayFromHome=()=>!!LOC&&km(LOC.lat,LOC.lon,LAT,LON)>40;
 const viewLoc=()=>!!LOC&&viewSess!=='home'&&awayFromHome();
 const locReady=()=>!!(LOC&&LOCRES&&LOCRES.res&&LOCRES.res.model&&LOCRES.res.model.v&&LOCRES.res.model.v.current&&km(LOCRES.pos.lat,LOCRES.pos.lon,LOC.lat,LOC.lon)<5);
 const locFailed=()=>!LOC?null:(locErr||((LOCRES&&km(LOCRES.pos.lat,LOCRES.pos.lon,LOC.lat,LOC.lon)<5&&LOCRES.res.model&&LOCRES.res.model.err)||null));
-function placeName(){const g=LOCRES&&LOCRES.res.geo&&LOCRES.res.geo.v,n=g&&(g.city||g.locality||g.principalSubdivision||g.countryName);return n||(LOC?'your location':'Kota Kinabalu')}
+function placeName(){const g=LOC&&LOCRES&&LOCRES.res.geo&&LOCRES.res.geo.v&&km(LOCRES.pos.lat,LOCRES.pos.lon,LOC.lat,LOC.lon)<5?LOCRES.res.geo.v:null,n=g&&(g.city||g.locality||g.principalSubdivision||g.countryName);return n||(LOC?'your location':'Kota Kinabalu')}   // a lookup for an old position is never used for a new one
 (()=>{const keep=new Set(['hero','keycard','loc']);document.querySelectorAll('main > .card').forEach(c=>{if(!keep.has(c.id)&&!c.querySelector('#foot'))c.classList.add('kk-only')})})();   // the Kota Kinabalu sections, hidden while the location view is on
-function renderView(){const on=viewLoc(),nm=placeName(),nm2=nm==='your location'?'Your location':nm,prevOn=document.body.classList.contains('view-loc'),tx=$('#viewtxt'),bt=$('#viewtoggle');
-  document.body.classList.toggle('view-loc',on);$('#brandsub').textContent=(on?nm2:'Kota Kinabalu')+' weather';document.title='Sandy · '+(on?nm2:'Kota Kinabalu')+' weather';
+function renderView(){const on=viewLoc(),nm=placeName(),nm2=nm==='your location'?'Your location':nm,prevOn=document.body.classList.contains('view-loc'),tx=$('#viewtxt'),bt=$('#viewtoggle'),up=$('#viewupdate'),put=(el,t)=>{if(el.textContent!==t)el.textContent=t};   // identical text is not rewritten, so the status region does not re-announce
+  const dkm=LOC?Math.round(km(LOC.lat,LOC.lon,LAT,LON)):0,old=!!LOC&&Date.now()-LOC.at>30*60e3,fixed=LOC?'your saved position of '+fmtDT(new Date(LOC.at).toISOString())+' MYT':'';   // an old fix is said to be old, never "where you are now"
+  document.body.classList.toggle('view-loc',on);put($('#brandsub'),(on?nm2:'Kota Kinabalu')+' weather');document.title='Sandy · '+(on?nm2:'Kota Kinabalu')+' weather';
   if(on&&origin)timelineReset();
-  if(!LOC){tx.textContent='Showing Kota Kinabalu.';bt.textContent='📍 Use my location';bt.dataset.act='ask'}
-  else if(!awayFromHome()){tx.textContent='Showing Kota Kinabalu, which is where you are.';bt.textContent='Update my location';bt.dataset.act='ask'}
-  else if(on){tx.textContent='Showing '+nm2+', where you are now ('+Math.round(km(LOC.lat,LOC.lon,LAT,LON))+' km from Kota Kinabalu).';bt.textContent='Show Kota Kinabalu';bt.dataset.act='home'}
-  else{tx.textContent='Showing Kota Kinabalu. You are in '+nm+'.';bt.textContent='Show '+nm;bt.dataset.act='loc'}
-  if(on){renderLocHero();renderLocKey()}else if(prevOn&&D)renderLive();
+  up.hidden=!(old&&awayFromHome());
+  if(!LOC){put(tx,'Showing Kota Kinabalu.');put(bt,'📍 Use my location');bt.dataset.act='ask'}
+  else if(!awayFromHome()){put(tx,old?'Showing Kota Kinabalu, based on '+fixed+' (within 40 km of it). Moved? Update my location.':'Showing Kota Kinabalu, which is where you are.');put(bt,'Update my location');bt.dataset.act='ask'}
+  else if(on){put(tx,'Showing '+nm2+(old?', from '+fixed+'. Not there now? Update my location.':', where you are now ('+dkm+' km from Kota Kinabalu).'));put(bt,'Show Kota Kinabalu');bt.dataset.act='home'}
+  else{put(tx,'Showing Kota Kinabalu. '+(nm==='your location'?'You are '+dkm+' km away':'You are in '+nm)+(old?' (from '+fixed+')':'')+'.');put(bt,nm==='your location'?'Show my location':'Show '+nm);bt.dataset.act='loc'}
+  if(on){renderLocHero();renderLocKey()}
+  else if(prevOn){if(D)renderLive();else{$('#stamp').textContent=archErr?'archive could not be loaded ('+archErr+')':'Loading Kota Kinabalu…';setNum($('#temp'),null,0,$('#tempsr'));['#cond','#phase','#modelnow','#tiles','#key','#keyasof'].forEach(q=>{$(q).textContent=''})}}   // no archive yet: do not leave the visitor's readings under the Kota Kinabalu header
   drawFrame(false)}
 $('#viewtoggle').onclick=()=>{const a=$('#viewtoggle').dataset.act;if(a==='ask')askLocation();else if(a==='home'){viewSess='home';renderView()}else if(a==='loc'){viewSess=null;renderView()}};
-setInterval(()=>{if(viewLoc()&&!document.hidden){renderLocHero();renderLocKey()}},60e3);   // ages and the part of the day move on without a new request
+setInterval(()=>{if(LOC&&!document.hidden)renderView()},60e3);   // ages and the part of the day move on without a new request
 // ---- Singapore: NEA's open real-time data (official forecast and gauges), read by the page directly
 async function neaFetch(lat,lon,ctl){
   const get=p=>fetchJSON('https://api-open.data.gov.sg/v2/real-time/api/'+p,15000,ctl).then(j=>{if(!j||j.code!==0||!j.data)throw new Error('unexpected answer');return j.data});
@@ -796,18 +799,20 @@ function neaBox(R){const r=R.res.nea;if(!r)return'';const hm2=t=>t?hhmm(new Date
 const rdLoc=(R,k)=>R.res[k]?(R.res[k].err?'failed at '+hhmm(new Date(R.res[k].at))+' MYT':'read '+hhmm(new Date(R.res[k].at))+' MYT'):'';
 // ---- the best "now" for the point: a nearby official station or airport report, else the model
 function locNow(R){const res=R.res,m=res.model.v,c=(m&&m.current)||{},now=Date.now(),nea=res.nea&&res.nea.v,ap=R.ap,o=res.metar&&res.metar.v?res.metar.v.filter(x=>fin(x.temp)).slice(-1)[0]:null,sk={CLR:'Clear',SKC:'Clear',CAVOK:'Clear',FEW:'Few clouds',SCT:'Partly cloudy',BKN:'Mostly cloudy',OVC:'Overcast'};
-  const out={temp:fin(c.temperature_2m)?c.temperature_2m:null,tsrc:'model estimate for your point',cond:CODE_WORDS[c.weather_code]||'',csrc:'model',hum:fin(c.relative_humidity_2m)?c.relative_humidity_2m:null,windKmh:fin(c.wind_speed_10m)?c.wind_speed_10m:null,wdir:fin(c.wind_direction_10m)?c.wind_direction_10m:null,rainMm:null,rainSrc:'',metarWx:null,cover:null};
-  if(ap&&o&&ap.d<=30&&now-P(o.t).getTime()<90*60e3){const wx=String(o.wx||'');out.temp=o.temp;out.tsrc=ap.a[1]+' airport report '+fmtT(o.t)+' MYT ('+ap.d.toFixed(0)+' km)';if(fin(o.wspd))out.windKmh=o.wspd*1.852;if(fin(o.wdir))out.wdir=o.wdir;if(fin(o.dewp)&&fin(o.temp))out.hum=Math.round(100*Math.exp(17.625*o.dewp/(243.04+o.dewp))/Math.exp(17.625*o.temp/(243.04+o.temp)));
-    out.metarWx=wx;out.cover=o.cover;const wxw={BR:'Mist',HZ:'Haze',FG:'Fog',FU:'Smoke',DU:'Dust',SA:'Sand'},w=wx.includes('TS')?'Thunderstorm':/RA|SH|DZ/.test(wx)?'Rain':wxw[wx.replace(/^[-+]/,'')]||sk[o.cover]||wx;if(w){out.cond=w;out.csrc=ap.a[1]+' airport report'}}
+  const off=m&&fin(m.utc_offset_seconds)?m.utc_offset_seconds:8*3600,lclk=ms=>{const d=new Date(ms+off*1000);return pad(d.getUTCHours())+':'+pad(d.getUTCMinutes())};
+  const out={temp:fin(c.temperature_2m)?c.temperature_2m:null,tsrc:'model estimate for your point',cond:CODE_WORDS[c.weather_code]||'',csrc:'model',hum:fin(c.relative_humidity_2m)?c.relative_humidity_2m:null,humSrc:'model',windKmh:fin(c.wind_speed_10m)?c.wind_speed_10m:null,windSrc:'model',wdir:fin(c.wind_direction_10m)?c.wind_direction_10m:null,dirSrc:'model',rainMm:null,rainSrc:'',metarWx:null,cover:null};
+  if(ap&&o&&ap.d<=30&&now-P(o.t).getTime()<90*60e3){const wx0=String(o.wx||''),wx=wx0.split(/\s+/).filter(t=>t&&!/^[-+]?VC/.test(t)).join(' '),vc=/VCTS/.test(wx0)?'Thunderstorm nearby':/VCSH/.test(wx0)?'Showers nearby':'';   // "in the vicinity" is not at the station
+    out.temp=o.temp;out.tsrc=ap.a[1]+' airport report '+lclk(P(o.t).getTime())+' local ('+ap.d.toFixed(0)+' km)';if(fin(o.wspd)){out.windKmh=o.wspd*1.852;out.windSrc='airport report'}if(fin(o.wdir)){out.wdir=o.wdir;out.dirSrc='airport report'}if(fin(o.dewp)&&fin(o.temp)){out.hum=Math.round(100*Math.exp(17.625*o.dewp/(243.04+o.dewp))/Math.exp(17.625*o.temp/(243.04+o.temp)));out.humSrc='airport report'}
+    out.metarWx=wx;out.cover=o.cover;const wxw={BR:'Mist',HZ:'Haze',FG:'Fog',FU:'Smoke',DU:'Dust',SA:'Sand'},w=wx.includes('TS')?'Thunderstorm':/RA|SH|DZ/.test(wx)?'Rain':wxw[wx.replace(/^[-+]/,'')]||vc||sk[o.cover]||wx;if(w){out.cond=w;out.csrc=ap.a[1]+' airport report'}}
   if(nea){const fr=(r,km2)=>r&&r.at&&now-Date.parse(r.at)<40*60e3&&r.d<=km2;
-    if(fr(nea.temp,15)){out.temp=nea.temp.value;out.tsrc='NEA station '+nea.temp.name+' ('+nea.temp.d.toFixed(0)+' km), '+hhmm(new Date(Date.parse(nea.temp.at)))+' MYT'}
-    if(fr(nea.rh,15))out.hum=nea.rh.value;if(fr(nea.wind,15))out.windKmh=nea.wind.value*1.852;
+    if(fr(nea.temp,15)){out.temp=nea.temp.value;out.tsrc='NEA station '+nea.temp.name+' ('+nea.temp.d.toFixed(0)+' km), '+lclk(Date.parse(nea.temp.at))+' local'}
+    if(fr(nea.rh,15)){out.hum=nea.rh.value;out.humSrc='NEA station'}if(fr(nea.wind,15)){out.windKmh=nea.wind.value*1.852;out.windSrc='NEA station'}
     if(fr(nea.rain,10)){out.rainMm=nea.rain.value;out.rainSrc='NEA gauge '+nea.rain.name+' ('+nea.rain.d.toFixed(1)+' km), last 5 min'}
-    if(out.rainMm>0){out.cond='Raining now';out.csrc=out.rainSrc}else if(nea.two&&nea.two.forecast&&!(out.metarWx)){out.cond=nea.two.forecast;out.csrc='NEA 2-hour forecast for '+nea.two.area}}
+    if(out.rainMm>0){out.cond='Raining now';out.csrc=out.rainSrc}else if(nea.two&&nea.two.forecast&&out.csrc==='model'){out.cond=nea.two.forecast;out.csrc='NEA 2-hour forecast for '+nea.two.area+' (a forecast, not an observation)'}}   // observed wording wins; the official forecast beats the bare model
   return out}
 function locSun(m,Ld){const dd=m.daily||{},di=Array.isArray(dd.time)?dd.time.indexOf(dayStr(Ld)):-1,hm=s=>+String(s).slice(11,13)+(+String(s).slice(14,16))/60;let sr=6.1,ss=17.9,srt='',sst='';if(di>=0&&Array.isArray(dd.sunrise)&&Array.isArray(dd.sunset)){const a=hm(dd.sunrise[di]),b=hm(dd.sunset[di]);if(fin(a)&&fin(b)){sr=a;ss=b;srt=String(dd.sunrise[di]).slice(11,16);sst=String(dd.sunset[di]).slice(11,16)}}return{sr,ss,srt,sst,di}}
 function renderLocHero(){section('#hero',['#tiles'],()=>{if(!LOC)return;const nm=placeName();
-  if(!locReady()){const er=locFailed();$('#stamp').textContent=er?'The forecast for '+nm+' could not be loaded ('+er+').':nm==='your location'?'Finding your location…':'Loading '+nm+'…';setNum($('#temp'),null,0,$('#tempsr'));$('#cond').textContent=er?'Press "Show Kota Kinabalu" above, or try again in a minute.':'';$('#phase').textContent='';$('#modelnow').textContent='';$('#tiles').innerHTML='';return}
+  if(!locReady()){const er=locFailed();$('#stamp').textContent=er?'The forecast for '+nm+' could not be loaded ('+er+').':nm==='your location'?'Loading the forecast for your location…':'Loading '+nm+'…';setNum($('#temp'),null,0,$('#tempsr'));$('#cond').textContent=er?'Press "Show Kota Kinabalu" above, or try again in a minute.':'';$('#phase').textContent='';$('#modelnow').textContent='';$('#tiles').innerHTML='';return}
   const R=LOCRES,m=R.res.model.v,c=m.current,off=fin(m.utc_offset_seconds)?m.utc_offset_seconds:8*3600,Ld=new Date(Date.now()+off*1000),hod=Ld.getUTCHours()+Ld.getUTCMinutes()/60,{sr,ss,srt,sst,di}=locSun(m,Ld),n=locNow(R),dd=m.daily||{};
   const g=R.res.geo&&R.res.geo.v,where=[nm,g&&g.countryName&&g.countryName!==nm?g.countryName:null].filter(Boolean).join(', ');
   $('#stamp').textContent=where+' · local time '+pad(Ld.getUTCHours())+':'+pad(Ld.getUTCMinutes())+' ('+(m.timezone||'')+') · '+rdLoc(R,'model');
@@ -815,26 +820,30 @@ function renderLocHero(){section('#hero',['#tiles'],()=>{if(!LOC)return;const nm
   $('#phase').textContent=phaseOf(hod,sr,ss)+(srt?' · sunrise '+srt+', sunset '+sst+' (local)':'');
   $('#modelnow').textContent='Temperature: '+n.tsrc+'. Conditions: '+n.csrc+'.';
   const dir=d=>['N','NE','E','SE','S','SW','W','NW'][Math.round(d/45)%8],uv=di>=0&&Array.isArray(dd.uv_index_max)?dd.uv_index_max[di]:null,tiles=[];
-  tiles.push(['Feels like (model)',num(c.apparent_temperature,0)+'°C']);tiles.push(['Humidity',fin(n.hum)?num(n.hum,0)+'%':'–']);
-  tiles.push(['Wind',fin(n.windKmh)?num(n.windKmh,0)+' km/h'+(fin(n.wdir)?' '+dir(n.wdir):''):'–']);
+  tiles.push(['Feels like (model)',num(c.apparent_temperature,0)+'°C']);tiles.push(['Humidity ('+n.humSrc+')',fin(n.hum)?num(n.hum,0)+'%':'–']);
+  tiles.push(['Wind: speed '+n.windSrc+(fin(n.wdir)?', direction '+n.dirSrc:''),fin(n.windKmh)?num(n.windKmh,0)+' km/h'+(fin(n.wdir)?' '+dir(n.wdir):''):'–']);
   tiles.push([n.rainMm!=null?'Rain, '+n.rainSrc:'Model rain, previous '+(fin(c.interval)?Math.round(c.interval/60)+' min':'interval'),num(n.rainMm!=null?n.rainMm:c.precipitation,1)+' mm']);
   tiles.push(['Pressure (model)',fin(c.pressure_msl)?num(c.pressure_msl)+' hPa':'–']);tiles.push(['UV peak today (model)',fin(uv)?uv.toFixed(0):'–']);
   $('#tiles').innerHTML=tiles.map(([k,v])=>`<div class="tile"><b>${esc(v)}</b><span>${esc(k)}</span></div>`).join('')})}
-function warnTile(area,nm){const lab=()=>{try{return label('warn')}catch(e){return 'warning feed not loaded'}},as=assessWarnings(area);let t,s,css='';
+function warnTile(area,nm,see){see=see||' (see the warnings card)';const lab=()=>{try{return label('warn')}catch(e){return 'warning feed not loaded'}},as=assessWarnings(area);let t,s,css='';
   if(as.state==='unavailable'){t='Warning status unknown';s='the MetMalaysia feed did not answer · '+lab()}
   else if(as.active.length){const h=as.active[0];t='⚠ '+h.name+' warning in force';s='for '+nm+' until '+fmtMs(h.to)+' MYT · '+lab();css='color:var(--warn)'}
-  else if(as.unparsed.length){const h=as.unparsed[0];t='⚠ '+h.name+' warning names '+nm;s=(h.f&&h.f.conflict?'its start is unresolved (the bulletin copies disagree)':'its validity could not be read')+' (see the warnings card) · '+lab();css='color:var(--warn)'}
+  else if(as.unparsed.length){const h=as.unparsed[0];t='⚠ '+h.name+' warning names '+nm;s=(h.f&&h.f.conflict?'its start is unresolved (the bulletin copies disagree)':'its validity could not be read')+see+' · '+lab();css='color:var(--warn)'}
   else if(as.upcoming.length){const h=as.upcoming[0];t='Warning ahead: '+h.name;s='from '+fmtMs(h.from)+' MYT · '+lab()}
-  else if(as.undetermined.length){t='Warning status undetermined';s=as.undetermined.length+' bulletin'+(as.undetermined.length>1?'s':'')+' naming '+(area.state||'the state')+' could not be read for '+nm+' · '+lab()}
+  else if(as.undetermined.length){t='Warning status undetermined';s=as.undetermined.length+' bulletin'+(as.undetermined.length>1?'s':'')+' naming '+(area.state||'the state')+' could not be read for '+nm+see+' · '+lab()}
   else{t='No warning covers '+nm;s='in the '+(D&&D.warnings_retrieved!=null?D.warnings_retrieved:'–')+' MetMalaysia bulletins · '+lab()}
   return[t,s,css]}
 function renderLocKey(){section('#keycard',['#key'],()=>{if(!LOC)return;const tile=([a,b,c])=>`<div class="tile kt"><b style="${esc(c||'')}">${esc(a)}</b><span>${esc(b)}</span></div>`;
   if(!locReady()){const er=locFailed();$('#key').innerHTML=tile([er?'Could not load the forecast for your location':'Loading…',er?String(er):'reading the official sources for your location','']);$('#keyasof').textContent='';return}
   const R=LOCRES,res=R.res,m=res.model.v,area=R.area,nea=res.nea&&res.nea.v,off=fin(m.utc_offset_seconds)?m.utc_offset_seconds:8*3600,now=Date.now(),nm=placeName(),tiles=[],g=res.geo&&res.geo.v,country=(g&&g.countryName)||area.country||'this country';
   const inMY=R.cov==='inside',haveArea=inMY&&area.state&&(area.district||area.division),Lh=new Date(now+off*1000),hodL=Lh.getUTCHours();
-  const airTile=()=>{const o=res.metar&&res.metar.v?res.metar.v.filter(x=>fin(x.temp)).slice(-1)[0]:null;return R.ap&&o?[R.ap.a[1]+' airport: '+num(o.temp)+'°C'+(o.wx?', '+o.wx:''),'report '+fmtT(o.t)+' MYT · '+R.ap.d.toFixed(0)+' km from you · '+rdLoc(R,'metar'),String(o.wx||'').includes('TS')?'color:var(--warn)':'']:['No airport report nearby','no listed airport within 100 km of you','']};
+  const lc=t=>{const d=P(t);if(isNaN(d))return'–';const Lq=new Date(d.getTime()+off*1000);return pad(Lq.getUTCHours())+':'+pad(Lq.getUTCMinutes())};
+  const airTile=()=>{const o=res.metar&&res.metar.v?res.metar.v.filter(x=>fin(x.temp)).slice(-1)[0]:null;
+    if(R.ap&&o)return[R.ap.a[1]+' airport: '+num(o.temp)+'°C'+(o.wx?', '+o.wx:''),'report '+lc(o.t)+' local · '+R.ap.d.toFixed(0)+' km from you · '+rdLoc(R,'metar'),String(o.wx||'').includes('TS')?'color:var(--warn)':''];
+    if(R.ap)return[R.ap.a[1]+' airport report unavailable',(res.metar&&res.metar.err?'the read failed ('+res.metar.err+')':'no recent report')+' · '+R.ap.d.toFixed(0)+' km from you · '+rdLoc(R,'metar'),''];
+    return['No airport report nearby','no listed airport within 100 km of you','']};
   // 1 and 2: the official reading for the place
-  if(inMY){tiles.push(haveArea?warnTile(area,area.district||area.division):['Warnings: your district was not identified','the area lookup gave '+(area.state||'Malaysia')+' without a district, so land warnings cannot be judged for this point; see met.gov.my','']);
+  if(inMY){tiles.push(haveArea?warnTile(area,area.district||area.division,' (see met.gov.my)'):['Warnings: your district was not identified','the area lookup gave '+(area.state||'Malaysia')+' without a district, so land warnings cannot be judged for this point; see met.gov.my','']);
     const rows=(k)=>res[k]&&res[k].v?res[k].v:null,today=dayStr(Lh),pdate=hodL<6?dayStr(new Date(Lh.getTime()-864e5)):today,field=hodL<6||hodL>=18?'night_forecast':hodL<12?'morning_forecast':'afternoon_forecast',pname=hodL<6?"night (from yesterday's forecast)":hodL<12?'morning':hodL<18?'afternoon':'night';
     const pick=d=>{const t=rows('town')&&rows('town').find(r=>r&&r.date===d);if(t)return[t,'town'];const x=rows('dist')&&rows('dist').find(r=>r&&r.date===d);return x?[x,'district']:[null,null]};const [rec,rsrc]=pick(pdate),[trec,tsrc]=pick(today),near=rsrc==='town'?R.town:rsrc==='district'?R.dist:null;
     tiles.push(rec?[tr(rec[field])+' this '+pname,'MetMalaysia '+rsrc+(near?' '+near.p.name+' ('+near.d.toFixed(0)+' km)':'')+(trec?' · '+num(trec.min_temp)+'–'+num(trec.max_temp)+'°C today ('+tsrc+')':'')+' · '+rdLoc(R,rsrc==='town'?'town':'dist'),'']:['Official wording unavailable for this '+pname,'MetMalaysia records near you could not be read','']);
@@ -852,7 +861,7 @@ function renderLocKey(){section('#keycard',['#key'],()=>{if(!LOC)return;const ti
   const dd=m.daily||{},di=Array.isArray(dd.time)?dd.time.indexOf(dayStr(Lh)):-1,code=di>=0&&Array.isArray(dd.weather_code)?dd.weather_code[di]:null,hi=di>=0&&dd.temperature_2m_max?dd.temperature_2m_max[di]:null,lo=di>=0&&dd.temperature_2m_min?dd.temperature_2m_min[di]:null,pm=di>=0&&dd.precipitation_probability_max?dd.precipitation_probability_max[di]:null,mmsum=di>=0&&dd.precipitation_sum?dd.precipitation_sum[di]:null;
   const off2=nea&&nea.day?' · NEA: '+num(nea.day.tlow)+'–'+num(nea.day.thigh)+'°C':'';
   tiles.push(di>=0?[(CODE_WORDS[code]||'Today')+' today · '+num(hi)+'° / '+num(lo)+'°','model: rain chance up to '+num(pm)+'%, about '+num(mmsum,1)+' mm'+off2+' · '+rdLoc(R,'model'),'']:['Today unavailable','no daily model values','']);
-  $('#key').innerHTML=tiles.map(tile).join('');$('#keyasof').textContent=nm+' · re-judged every minute'})}
+  $('#key').innerHTML=tiles.map(tile).join('');$('#keyasof').textContent=nm+' · redrawn every minute, sources read every 10 min'})}
 function locCond(tms){const R=LOCRES,m=R.res.model.v,cur=m.current,off=fin(m.utc_offset_seconds)?m.utc_offset_seconds:8*3600,Ld=new Date(tms+off*1000),hod=Ld.getUTCHours()+Ld.getUTCMinutes()/60,{sr,ss}=locSun(m,Ld),n=locNow(R);
   const dayF=hod>sr&&hod<ss?Math.sin(Math.PI*(hod-sr)/(ss-sr)):-Math.sin(Math.PI*((hod-ss+24)%24)/(24-(ss-sr)));
   const cover={CLR:5,SKC:5,CAVOK:5,FEW:20,SCT:45,BKN:75,OVC:95}[n.cover],c={hod,dayF,sr,ss,cloud:cover!=null?cover:(fin(cur.cloud_cover)?cur.cloud_cover:null),pop:null,mm:null,temp:n.temp,code:cur.weather_code,iso:null,rain:null,storm:null,stormProb:null,inTS:false,covered:true,basis:'your location',wind:n.windKmh,wdir:n.wdir,hum:n.hum,rainI:0};
@@ -860,10 +869,13 @@ function locCond(tms){const R=LOCRES,m=R.res.model.v,cur=m.current,off=fin(m.utc
   if(n.metarWx!=null){rain=/RA|SH|DZ/.test(n.metarWx)||/TS/.test(n.metarWx);storm=/TS/.test(n.metarWx)}
   if(n.rainMm!=null){rain=n.rainMm>0||storm;amt=Math.max(n.rainMm,0)}
   c.rain=rain;c.storm=storm;c.stormProb=storm?100:null;c.rainI=rain?Math.min(1,.3+amt*2+(storm?.2:0)):0;return c}
-function askLocation(){const b=$('#locbtn');if(!navigator.geolocation){$('#locout').innerHTML='<p class="unavail">This browser has no location service.</p>';return}const g=locGen;b.disabled=true;b.textContent='Locating…';$('#viewtoggle').disabled=true;
-  const done=()=>{b.disabled=false;$('#viewtoggle').disabled=false};
-  navigator.geolocation.getCurrentPosition(p=>{if(g!==locGen)return;done();viewSess=null;useLocation(p.coords.latitude,p.coords.longitude,p.coords.accuracy,'device',p.timestamp)},e=>{if(g!==locGen)return;done();b.textContent=LOC?'Update my location':'Use my location';const msg='Location not available: '+(e.code===1?'permission refused (allow location for this site in your browser settings)':e.code===2?'position unavailable':'timed out')+'.';$('#locout').insertAdjacentHTML('afterbegin','<p class="unavail">'+esc(msg)+'</p>');$('#viewtxt').textContent=msg},{enableHighAccuracy:true,timeout:20000,maximumAge:60000})}
-$('#locbtn').onclick=askLocation;
+function askLocation(){const b=$('#locbtn'),bars=[...document.querySelectorAll('#viewbar button')],say=t=>{$('#viewtxt').textContent=t};
+  if(!navigator.geolocation){$('#locout').innerHTML='<p class="unavail">This browser has no location service.</p>';say('This browser has no location service.');return}
+  const g=locGen,idle=()=>{b.disabled=false;bars.forEach(x=>{x.disabled=false});b.textContent=LOC?'Update my location':'Use my location'};
+  b.disabled=true;bars.forEach(x=>{x.disabled=true});b.textContent='Locating…';
+  const wd=setTimeout(()=>{idle();say('No answer from the location service yet (the permission prompt may have been dismissed). Press the button to try again.')},30000);   // some browsers fire neither callback when the prompt is dismissed
+  navigator.geolocation.getCurrentPosition(p=>{clearTimeout(wd);idle();if(g!==locGen)return;viewSess=null;useLocation(p.coords.latitude,p.coords.longitude,p.coords.accuracy,'device',p.timestamp)},e=>{clearTimeout(wd);idle();if(g!==locGen)return;const msg='Location not available: '+(e.code===1?'permission refused (allow location for this site in your browser settings)':e.code===2?'position unavailable':'timed out')+'.';$('#locout').insertAdjacentHTML('afterbegin','<p class="unavail">'+esc(msg)+'</p>');say(msg)},{enableHighAccuracy:true,timeout:20000,maximumAge:60000})}
+$('#locbtn').onclick=askLocation;$('#viewupdate').onclick=askLocation;
 // a saved position is re-read quietly when the browser has already been allowed to share it, so a trip (Kota Kinabalu → Singapore) updates without a tap
 function silentFix(){lastSilent=Date.now();if(!LOC||!navigator.geolocation||!navigator.permissions||!navigator.permissions.query||document.hidden)return;
   navigator.permissions.query({name:'geolocation'}).then(st=>{if(st.state!=='granted')return;const g=locGen;navigator.geolocation.getCurrentPosition(p=>{if(g!==locGen||!LOC)return;if(km(LOC.lat,LOC.lon,p.coords.latitude,p.coords.longitude)>2||Date.now()-LOC.at>60*60e3)useLocation(p.coords.latitude,p.coords.longitude,p.coords.accuracy,'device',p.timestamp)},()=>{},{enableHighAccuracy:false,timeout:15000,maximumAge:300000})}).catch(()=>{})}

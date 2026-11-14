@@ -10,7 +10,7 @@ Sources (chosen for Kota Kinabalu, 7 Nov 2026):
   ECMWF 51-member ensemble, 9 deterministic models, blend, air quality via open-meteo.com
   Previous-run forecasts (issued the day before) for yesterday's scorecard via previous-runs-api.open-meteo.com
 """
-import json, os, sys, math, time, urllib.request, urllib.parse, datetime as dt, statistics as S
+import json, os, sys, math, time, urllib.request, urllib.error, urllib.parse, datetime as dt, statistics as S
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RAW = os.path.join(ROOT, "data", "raw")
@@ -40,10 +40,11 @@ status = {}                            # name -> {"ok": bool, "url": ..., "at": 
 
 
 def fetch(name, url):
-    """GET url, archive the raw body, return parsed JSON or None."""
-    at = dt.datetime.now(MYT).isoformat(timespec="seconds")
+    """GET url, archive the raw body, return parsed JSON or None. Transient failures (timeouts, network errors, 5xx, 429) are retried up to 3 times."""
     err = None
-    for attempt in range(1, 4):         # 14 Nov 2026: 3 of 8 hourly runs lost the Open-Meteo blend to a TLS handshake timeout; retry before giving up
+    at = None
+    for attempt in range(1, 4):         # 14 Nov 2026: 3 of 8 hourly runs lost the Open-Meteo blend to a TLS handshake timeout
+        at = dt.datetime.now(MYT).isoformat(timespec="seconds")
         try:
             req = urllib.request.Request(url, headers=UA)
             with urllib.request.urlopen(req, timeout=45) as r:
@@ -57,10 +58,13 @@ def fetch(name, url):
             return data
         except Exception as e:
             err = e
-            print("RETRY" if attempt < 3 else "FAILED", name, "attempt", attempt, e, file=sys.stderr)
-            if attempt < 3:
-                time.sleep(4 * attempt)
-    status[name] = {"ok": False, "url": url, "at": at, "error": ("after 3 attempts: " + str(err))[:300]}
+            retryable = not (isinstance(e, urllib.error.HTTPError) and e.code < 500 and e.code != 429)
+            again = retryable and attempt < 3
+            print("RETRY" if again else "FAILED", name, "attempt", attempt, e, file=sys.stderr)
+            if not again:
+                break
+            time.sleep(4 * attempt)
+    status[name] = {"ok": False, "url": url, "at": at, "error": ("after %d attempt(s): " % attempt) + str(err)[:300]}
     return None
 
 

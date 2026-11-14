@@ -10,7 +10,7 @@ Sources (chosen for Kota Kinabalu, 7 Nov 2026):
   ECMWF 51-member ensemble, 9 deterministic models, blend, air quality via open-meteo.com
   Previous-run forecasts (issued the day before) for yesterday's scorecard via previous-runs-api.open-meteo.com
 """
-import json, os, sys, math, urllib.request, urllib.parse, datetime as dt, statistics as S
+import json, os, sys, math, time, urllib.request, urllib.parse, datetime as dt, statistics as S
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RAW = os.path.join(ROOT, "data", "raw")
@@ -42,19 +42,26 @@ status = {}                            # name -> {"ok": bool, "url": ..., "at": 
 def fetch(name, url):
     """GET url, archive the raw body, return parsed JSON or None."""
     at = dt.datetime.now(MYT).isoformat(timespec="seconds")
-    try:
-        req = urllib.request.Request(url, headers=UA)
-        with urllib.request.urlopen(req, timeout=60) as r:
-            body = r.read()
-        data = json.loads(body)
-        with open(os.path.join(RAW, name + ".json"), "w") as f:
-            json.dump({"url": url, "retrieved_at": at, "response": data}, f)
-        status[name] = {"ok": True, "url": url, "at": at}
-        return data
-    except Exception as e:
-        status[name] = {"ok": False, "url": url, "at": at, "error": str(e)[:300]}
-        print("FAILED", name, e, file=sys.stderr)
-        return None
+    err = None
+    for attempt in range(1, 4):         # 14 Nov 2026: 3 of 8 hourly runs lost the Open-Meteo blend to a TLS handshake timeout; retry before giving up
+        try:
+            req = urllib.request.Request(url, headers=UA)
+            with urllib.request.urlopen(req, timeout=45) as r:
+                body = r.read()
+            data = json.loads(body)
+            with open(os.path.join(RAW, name + ".json"), "w") as f:
+                json.dump({"url": url, "retrieved_at": at, "response": data}, f)
+            status[name] = {"ok": True, "url": url, "at": at}
+            if attempt > 1:
+                status[name]["attempts"] = attempt
+            return data
+        except Exception as e:
+            err = e
+            print("RETRY" if attempt < 3 else "FAILED", name, "attempt", attempt, e, file=sys.stderr)
+            if attempt < 3:
+                time.sleep(4 * attempt)
+    status[name] = {"ok": False, "url": url, "at": at, "error": ("after 3 attempts: " + str(err))[:300]}
+    return None
 
 
 def om(host, **q):
